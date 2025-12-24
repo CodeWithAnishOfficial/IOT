@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  ocpp-server:
+    build:
+      context: ../../
+      dockerfile: apps/ocpp-server/Dockerfile
+    ports:
+      - "9220:9220"
+    environment:
+      - OCPP_PORT=9220
+    networks:
+      - ev-network
+
+  api-gateway:
+    build:
+      context: ../../
+      dockerfile: apps/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - GATEWAY_PORT=3000
+    depends_on:
+      - ocpp-server
+      - user-api
+      - admin-api
+    networks:
+      - ev-network
+
+  user-api:
+    build:
+      context: ../../
+      dockerfile: apps/user-api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - USER_API_PORT=3001
+    networks:
+      - ev-network
+
+  admin-api:
+    build:
+      context: ../../
+      dockerfile: apps/admin-api/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - ADMIN_API_PORT=3002
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    networks:
+      - ev-network
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - ev-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - ev-network
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - ev-network
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - ev-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # Web UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - ev-network
+
+networks:
+  ev-network:
+    driver: bridge

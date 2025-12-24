@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./apps/ocpp-server" },
+    { "path": "./apps/api-gateway" },
+    { "path": "./apps/user-api" },
+    { "path": "./apps/admin-api" }
+  ]
+}

@@ -1,0 +1,112 @@
+{{- if .Values.infrastructure.mongodb.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: {{ .Values.infrastructure.mongodb.image }}
+          ports:
+            - containerPort: {{ .Values.infrastructure.mongodb.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  ports:
+    - port: {{ .Values.infrastructure.mongodb.port }}
+      targetPort: {{ .Values.infrastructure.mongodb.port }}
+  selector:
+    app: mongodb
+{{- end }}
+---
+{{- if .Values.infrastructure.redis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.infrastructure.redis.image }}
+          ports:
+            - containerPort: {{ .Values.infrastructure.redis.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  ports:
+    - port: {{ .Values.infrastructure.redis.port }}
+      targetPort: {{ .Values.infrastructure.redis.port }}
+  selector:
+    app: redis
+{{- end }}
+---
+{{- if .Values.infrastructure.rabbitmq.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.infrastructure.rabbitmq.image }}
+          ports:
+            - containerPort: {{ .Values.infrastructure.rabbitmq.ports.amqp }}
+            - containerPort: {{ .Values.infrastructure.rabbitmq.ports.management }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ .Values.infrastructure.rabbitmq.auth.user }}
+            - name: RABBITMQ_DEFAULT_PASS
+              value: {{ .Values.infrastructure.rabbitmq.auth.password }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+spec:
+  ports:
+    - port: {{ .Values.infrastructure.rabbitmq.ports.amqp }}
+      name: amqp
+    - port: {{ .Values.infrastructure.rabbitmq.ports.management }}
+      name: management
+  selector:
+    app: rabbitmq
+{{- end }}

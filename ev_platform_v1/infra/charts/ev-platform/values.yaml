@@ -1,0 +1,89 @@
+# Global configuration
+global:
+  environment: development
+
+# Common environment variables
+env:
+  MONGODB_URI: "mongodb://mongodb:27017/ev_platform"
+  REDIS_URL: "redis://redis:6379"
+  RABBITMQ_URL: "amqp://user:password@rabbitmq:5672"
+  JWT_SECRET: "supersecretkey"
+
+# Services configuration
+services:
+  ocpp-server:
+    enabled: true
+    image:
+      repository: ev-platform/ocpp-server
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicaCount: 1
+    service:
+      type: ClusterIP
+      port: 9220
+    env:
+      OCPP_PORT: "9220"
+
+  api-gateway:
+    enabled: true
+    image:
+      repository: ev-platform/api-gateway
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicaCount: 1
+    service:
+      type: NodePort
+      port: 3000
+      nodePort: 30000
+    env:
+      GATEWAY_PORT: "3000"
+
+  user-api:
+    enabled: true
+    image:
+      repository: ev-platform/user-api
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicaCount: 1
+    service:
+      type: ClusterIP
+      port: 3001
+    env:
+      USER_API_PORT: "3001"
+
+  admin-api:
+    enabled: true
+    image:
+      repository: ev-platform/admin-api
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicaCount: 1
+    service:
+      type: ClusterIP
+      port: 3002
+    env:
+      ADMIN_API_PORT: "3002"
+
+# Infrastructure dependencies (simplified for dev)
+infrastructure:
+  mongodb:
+    enabled: true
+    image: mongo:latest
+    port: 27017
+    persistence:
+      enabled: false # For dev
+
+  redis:
+    enabled: true
+    image: redis:alpine
+    port: 6379
+
+  rabbitmq:
+    enabled: true
+    image: rabbitmq:3-management
+    ports:
+      amqp: 5672
+      management: 15672
+    auth:
+      user: user
+      password: password

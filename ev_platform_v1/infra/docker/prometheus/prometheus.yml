@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'ocpp-server'
+    static_configs:
+      - targets: ['ocpp-server:9220']
+
+  - job_name: 'user-api'
+    static_configs:
+      - targets: ['user-api:3001']
+
+  - job_name: 'admin-api'
+    static_configs:
+      - targets: ['admin-api:3002']
+      
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
