@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IVehicle extends Document {
   user_id: string; // Email or User ID
   make: string;
-  model: string;
+  modelName: string;
   year: number;
   vin?: string;
   plate_no?: string;
@@ -15,7 +15,7 @@ export interface IVehicle extends Document {
 const VehicleSchema: Schema = new Schema({
   user_id: { type: String, required: true },
   make: { type: String, required: true },
-  model: { type: String, required: true },
+  modelName: { type: String, required: true },
   year: { type: Number, required: true },
   vin: { type: String },
   plate_no: { type: String },

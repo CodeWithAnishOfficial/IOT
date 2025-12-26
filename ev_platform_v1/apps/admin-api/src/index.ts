@@ -13,7 +13,11 @@ import dashboardRoutes from './routes/dashboard.routes';
 import supportRoutes from './routes/support.routes';
 import sessionRoutes from './routes/session.routes';
 import siteRoutes from './routes/site.routes';
+import roleRoutes from './routes/role.routes';
+import authRoutes from './routes/auth.routes';
+import { SeederService } from './services/seeder.service';
 import client from 'prom-client';
+import path from 'path';
 
 dotenv.config();
 
@@ -28,16 +32,19 @@ collectDefaultMetrics({ register: client.register });
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
 app.use('/stations', chargingStationRoutes);
 app.use('/sites', siteRoutes);
+app.use('/roles', roleRoutes);
 app.use('/commands', remoteCommandRoutes);
 app.use('/users', userRoutes);
 app.use('/tariffs', tariffRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/support', supportRoutes);
 app.use('/sessions', sessionRoutes);
+app.use('/auth', authRoutes);
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
@@ -51,6 +58,10 @@ app.get('/health', (req, res) => {
 const start = async () => {
   try {
     await Database.getInstance().connect(MONGO_URI);
+    
+    // Seed initial data
+    await SeederService.seed();
+
     app.listen(PORT, () => {
       logger.info(`Admin API running on port ${PORT}`);
     });

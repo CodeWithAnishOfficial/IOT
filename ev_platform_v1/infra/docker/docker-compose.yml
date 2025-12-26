@@ -9,6 +9,12 @@ services:
       - "9220:9220"
     environment:
       - OCPP_PORT=9220
+      - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+    depends_on:
+      - redis
+      - rabbitmq
     networks:
       - ev-network
 
@@ -20,10 +26,14 @@ services:
       - "3000:3000"
     environment:
       - GATEWAY_PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - ADMIN_API_URL=http://admin-api:3002
+      - USER_API_URL=http://user-api:3001
     depends_on:
       - ocpp-server
       - user-api
       - admin-api
+      - redis
     networks:
       - ev-network
 
@@ -35,6 +45,12 @@ services:
       - "3001:3001"
     environment:
       - USER_API_PORT=3001
+      - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+    depends_on:
+      - redis
+      - rabbitmq
     networks:
       - ev-network
 
@@ -46,9 +62,27 @@ services:
       - "3002:3002"
     environment:
       - ADMIN_API_PORT=3002
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+    depends_on:
+      - redis
+      - rabbitmq
     networks:
       - ev-network
+
+  # admin-web:
+  #   build:
+  #     context: ../../frontend/admin-web
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - VITE_APP_API_URL=http://localhost:3000
+  #   ports:
+  #     - "3004:80"
+  #   depends_on:
+  #     - api-gateway
+  #   networks:
+  #     - ev-network
 
   redis:
     image: redis:alpine
@@ -83,6 +117,10 @@ services:
       - "3003:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_COOKIE_SAMESITE=none
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     depends_on:
       - prometheus
     networks:

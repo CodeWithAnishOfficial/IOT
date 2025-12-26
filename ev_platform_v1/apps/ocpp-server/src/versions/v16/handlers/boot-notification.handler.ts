@@ -14,7 +14,7 @@ export async function handleBootNotification(connection: OCPPConnection, payload
     { 
       $set: { 
         vendor: chargePointVendor,
-        model: chargePointModel,
+        modelName: chargePointModel,
         serial_number: chargePointSerialNumber,
         firmware_version: firmwareVersion,
         updated_at: new Date()

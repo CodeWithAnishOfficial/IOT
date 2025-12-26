@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler", // Change "Node" to "Bundler"
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.mjs"]
+}

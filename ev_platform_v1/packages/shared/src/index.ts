@@ -11,6 +11,7 @@ export * from './models/reservation.model';
 export * from './models/vehicle.model';
 export * from './models/support-ticket.model';
 export * from './models/site.model';
+export * from './models/role.model';
 export * from './redis.service';
 export * from './rabbitmq.service';
 export * from './tracing';

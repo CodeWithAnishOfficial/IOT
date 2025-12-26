@@ -9,7 +9,9 @@ export const generateOtpSchema = z.object({
 export const verifyOtpSchema = z.object({
   body: z.object({
     email_id: z.string().email(),
-    otp: z.string().or(z.number()) // OTP can be string or number in input
+    otp: z.string().or(z.number()),
+    username: z.string().optional(),
+    phone_no: z.string().optional()
   })
 });
 

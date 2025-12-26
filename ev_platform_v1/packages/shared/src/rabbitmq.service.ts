@@ -20,30 +20,37 @@ export class RabbitMQService {
     return RabbitMQService.instance;
   }
 
-  public async connect(): Promise<void> {
+  public async connect(retries = 10, delay = 5000): Promise<void> {
     if (this.connection) return;
 
-    try {
-      this.logger.info(`Connecting to RabbitMQ at ${this.url}`);
-      this.connection = await amqp.connect(this.url);
-      this.channel = await this.connection.createChannel();
-      
-      this.connection.on('error', (err: any) => {
-        this.logger.error('RabbitMQ connection error', err);
-        this.connection = null;
-        this.channel = null;
-      });
+    while (retries > 0) {
+      try {
+        this.logger.info(`Connecting to RabbitMQ at ${this.url}`);
+        this.connection = await amqp.connect(this.url);
+        this.channel = await this.connection.createChannel();
+        
+        this.connection.on('error', (err: any) => {
+          this.logger.error('RabbitMQ connection error', err);
+          this.connection = null;
+          this.channel = null;
+        });
 
-      this.connection.on('close', () => {
-        this.logger.warn('RabbitMQ connection closed');
-        this.connection = null;
-        this.channel = null;
-      });
+        this.connection.on('close', () => {
+          this.logger.warn('RabbitMQ connection closed');
+          this.connection = null;
+          this.channel = null;
+        });
 
-      this.logger.info('Connected to RabbitMQ');
-    } catch (error) {
-      this.logger.error('Failed to connect to RabbitMQ', error);
-      throw error;
+        this.logger.info('Connected to RabbitMQ');
+        return;
+      } catch (error) {
+        this.logger.error(`Failed to connect to RabbitMQ. Retries left: ${retries - 1}`, error);
+        retries -= 1;
+        if (retries === 0) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
 

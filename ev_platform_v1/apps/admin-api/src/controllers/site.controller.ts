@@ -65,4 +65,17 @@ export class SiteController {
       res.status(500).json({ error: true, message: error.message });
     }
   }
+
+  static async uploadImage(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: true, message: 'No file uploaded' });
+      }
+      const filePath = `/uploads/images/${req.file.filename}`;
+      res.json({ error: false, message: 'File uploaded', url: filePath });
+    } catch (error: any) {
+      logger.error('Error uploading file', error);
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
 }

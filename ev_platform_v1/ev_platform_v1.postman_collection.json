@@ -1,0 +1,1600 @@
+{
+	"info": {
+		"_postman_id": "ev-platform-v1-collection",
+		"name": "EV Platform V1",
+		"description": "Collection for EV Platform V1 (User API & Admin API)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User API",
+			"item": [
+				{
+					"name": "Auth",
+					"item": [
+						{
+							"name": "Register",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_id\": \"newuser@example.com\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/auth/register",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"auth",
+										"register"
+									]
+								}
+							}
+						},
+						{
+							"name": "Generate OTP",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_id\": \"user@example.com\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/auth/generate-otp",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"auth",
+										"generate-otp"
+									]
+								}
+							}
+						},
+						{
+							"name": "Verify OTP",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_id\": \"user@example.com\",\n    \"otp\": \"123456\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/auth/verify-otp",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"auth",
+										"verify-otp"
+									]
+								}
+							}
+						},
+                        {
+							"name": "Verify OTP (Registration)",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_id\": \"newuser@example.com\",\n    \"otp\": \"123456\",\n    \"username\": \"New User\",\n    \"phone_no\": \"+1234567890\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/auth/verify-otp",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"auth",
+										"verify-otp"
+									]
+								}
+							}
+						},
+						{
+							"name": "Login (Password)",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_id\": \"user@example.com\",\n    \"password\": \"password123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/auth/login",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"auth",
+										"login"
+									]
+								}
+							}
+						},
+						{
+							"name": "Google Login",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"idToken\": \"GOOGLE_ID_TOKEN\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/auth/google-login",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"auth",
+										"google-login"
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Profile",
+					"item": [
+						{
+							"name": "Get Profile",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/profile/me",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"profile",
+										"me"
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Profile",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"New Name\",\n    \"phone_no\": \"+1234567890\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/profile/me",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"profile",
+										"me"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Sessions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/profile/sessions",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"profile",
+										"sessions"
+									]
+								}
+							}
+						},
+						{
+							"name": "Email Invoice",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/profile/sessions/:id/invoice",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"profile",
+										"sessions",
+										":id",
+										"invoice"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "SESSION_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Wallet",
+					"item": [
+						{
+							"name": "Get Balance",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/wallet/balance",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"wallet",
+										"balance"
+									]
+								}
+							}
+						},
+						{
+							"name": "Add Money",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"amount\": 100\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/wallet/add-money",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"wallet",
+										"add-money"
+									]
+								}
+							}
+						},
+						{
+							"name": "Verify Payment",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"razorpay_order_id\": \"order_123\",\n    \"razorpay_payment_id\": \"pay_123\",\n    \"razorpay_signature\": \"sig_123\",\n    \"amount\": 100\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/wallet/verify-payment",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"wallet",
+										"verify-payment"
+									]
+								}
+							}
+						},
+						{
+							"name": "Request Refund",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"transaction_id\": \"pay_123\",\n    \"reason\": \"Double charged\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/wallet/refund",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"wallet",
+										"refund"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Transactions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/wallet/transactions",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"wallet",
+										"transactions"
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Reservation",
+					"item": [
+						{
+							"name": "Create Reservation",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"charger_id\": \"CH001\",\n    \"connector_id\": 1,\n    \"expiry_minutes\": 15\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/reservations/create",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"reservations",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Reservations",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/reservations/list",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"reservations",
+										"list"
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Search",
+					"item": [
+						{
+							"name": "Nearby Stations",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{userBaseUrl}}/search/nearby?lat=37.7749&lng=-122.4194&radius=5000",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"search",
+										"nearby"
+									],
+									"query": [
+										{
+											"key": "lat",
+											"value": "37.7749"
+										},
+										{
+											"key": "lng",
+											"value": "-122.4194"
+										},
+										{
+											"key": "radius",
+											"value": "5000"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Station Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{userBaseUrl}}/search/station/:id",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"search",
+										"station",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "STATION_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Vehicle",
+					"item": [
+						{
+							"name": "List Vehicles",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/vehicles/list",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"vehicles",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"name": "Add Vehicle",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"make\": \"Tesla\",\n    \"modelName\": \"Model 3\",\n    \"variant\": \"Long Range\",\n    \"reg_no\": \"KA01AB1234\",\n    \"connector_types\": [\"Type2\", \"CCS2\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/vehicles/add",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"vehicles",
+										"add"
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete Vehicle",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/vehicles/delete/:id",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"vehicles",
+										"delete",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "VEHICLE_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Support",
+					"item": [
+						{
+							"name": "Create Ticket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"subject\": \"Issue with charger\",\n    \"message\": \"Charger not working at Site A\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/support/create",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"support",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "My Tickets",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{userBaseUrl}}/support/list",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"support",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"name": "Reply to Ticket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"message\": \"This is a follow up reply.\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{userBaseUrl}}/support/:id/reply",
+									"host": [
+										"{{userBaseUrl}}"
+									],
+									"path": [
+										"support",
+										":id",
+										"reply"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "TICKET_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Admin API",
+			"item": [
+				{
+					"name": "Charging Stations",
+					"item": [
+						{
+							"name": "List Stations",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/charging-stations/list",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"charging-stations",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"name": "Create Station",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"charger_id\": \"CH002\",\n    \"name\": \"Station B\",\n    \"location\": {\n        \"lat\": 37.7749,\n        \"lng\": -122.4194,\n        \"address\": \"456 Market St\"\n    },\n    \"connectors\": [\n        { \"connector_id\": 1, \"type\": \"CCS2\", \"max_power_kw\": 50 }\n    ],\n    \"site_id\": \"SITE_ID_HERE\",\n    \"tariff_id\": \"TARIFF_ID_HERE\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/charging-stations/create",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"charging-stations",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Station",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/charging-stations/details/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"charging-stations",
+										"details",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "STATION_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Station",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"status\": \"Available\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/charging-stations/update/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"charging-stations",
+										"update",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "STATION_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete Station",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/charging-stations/delete/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"charging-stations",
+										"delete",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "STATION_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Sites",
+					"item": [
+						{
+							"name": "List Sites",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/sites/list",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"sites",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"name": "Create Site",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Downtown Plaza\",\n    \"address\": \"123 Main St\",\n    \"city\": \"San Francisco\",\n    \"state\": \"CA\",\n    \"zip\": \"94105\",\n    \"location\": {\n        \"type\": \"Point\",\n        \"coordinates\": [-122.4194, 37.7749]\n    }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/sites/create",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"sites",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Site",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/sites/details/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"sites",
+										"details",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "SITE_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Site",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Site Name\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/sites/update/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"sites",
+										"update",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "SITE_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete Site",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/sites/delete/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"sites",
+										"delete",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "SITE_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Users",
+					"item": [
+						{
+							"name": "Create User",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_id\": \"admin_created@example.com\",\n    \"username\": \"Admin Created User\",\n    \"phone_no\": \"+1987654321\",\n    \"role_id\": 5,\n    \"rfid_tag\": \"RFID123456\",\n    \"status\": true,\n    \"password\": \"defaultPass123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/users/create",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"users",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "Update User",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"Updated Name\",\n    \"status\": false,\n    \"password\": \"newSecurePass\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/users/update/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"users",
+										"update",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "USER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete User",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/users/delete/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"users",
+										"delete",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "USER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "List Users",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/users/list?page=1&limit=10",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"users",
+										"list"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get User",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/users/details/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"users",
+										"details",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "USER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Toggle Block Status",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"status\": false\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/users/status/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"users",
+										"status",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "USER_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Dashboard",
+					"item": [
+						{
+							"name": "Get Stats",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/dashboard/stats",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"dashboard",
+										"stats"
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Tariff",
+					"item": [
+						{
+							"name": "Create Tariff",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Standard Tariff\",\n    \"currency\": \"USD\",\n    \"price_per_kwh\": 0.25,\n    \"connection_fee\": 1.00\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/tariffs/create",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"tariffs",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "List Tariffs",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/tariffs/list",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"tariffs",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Tariff",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"price_per_kwh\": 0.30\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/tariffs/update/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"tariffs",
+										"update",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "TARIFF_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete Tariff",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/tariffs/delete/:id",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"tariffs",
+										"delete",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "TARIFF_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Roles",
+					"item": [
+						{
+							"name": "List Roles",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/roles/list",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"roles",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"name": "Create Role",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"role_id\": 6,\n    \"role_name\": \"Analyst\",\n    \"description\": \"Data analysis only\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/roles/create",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"roles",
+										"create"
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Role",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"Updated Description\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/roles/:id/update",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"roles",
+										":id",
+										"update"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "6"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete Role",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{adminBaseUrl}}/roles/:id/delete",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"roles",
+										":id",
+										"delete"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "6"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Remote Commands",
+					"item": [
+						{
+							"name": "Send Command",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"command\": \"GetConfiguration\",\n    \"payload\": {\n        \"key\": [\"HeartbeatInterval\"]\n    }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/remote-commands/:id/send",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"remote-commands",
+										":id",
+										"send"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "CHARGER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Remote Start",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"charger_id\": \"CH001\",\n    \"connector_id\": 1,\n    \"id_tag\": \"TAG123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/remote-commands/:id/start-transaction",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"remote-commands",
+										":id",
+										"start-transaction"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "CHARGER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Remote Stop",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"charger_id\": \"CH001\",\n    \"transaction_id\": 101\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/remote-commands/:id/stop-transaction",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"remote-commands",
+										":id",
+										"stop-transaction"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "CHARGER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Reset",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"charger_id\": \"CH001\",\n    \"type\": \"Soft\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/remote-commands/:id/reset",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"remote-commands",
+										":id",
+										"reset"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "CHARGER_ID"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Unlock Connector",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"charger_id\": \"CH001\",\n    \"connector_id\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{adminBaseUrl}}/remote-commands/:id/unlock-connector",
+									"host": [
+										"{{adminBaseUrl}}"
+									],
+									"path": [
+										"remote-commands",
+										":id",
+										"unlock-connector"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "CHARGER_ID"
+										}
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "userBaseUrl",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "adminBaseUrl",
+			"value": "http://localhost:3001/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "userToken",
+			"value": "YOUR_JWT_TOKEN_HERE",
+			"type": "string"
+		}
+	]
+}

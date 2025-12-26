@@ -4,7 +4,8 @@ import helmet from 'helmet';
 import { Logger } from '@ev-platform-v1/shared';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import client from 'prom-client';
-import rateLimit from 'express-rate-limit';
+import { limiter } from './middlewares/rateLimit.middleware';
+import gatewayRoutes from './routes/gateway.routes';
 
 export class App {
   public app: Application;
@@ -27,81 +28,67 @@ export class App {
   private initializeMiddlewares() {
     this.app.use(cors());
     this.app.use(helmet());
-    
-    // Rate Limiting
-    const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // Limit each IP to 100 requests per windowMs
-      standardHeaders: true,
-      legacyHeaders: false,
-    });
     this.app.use(limiter);
-
-    // Remove body parsers for proxy routes if necessary, but here we might need them for some logic.
-    // However, proxies usually handle streams. If we use express.json() globally, it might interfere with proxying bodies.
-    // For now, let's keep it but be aware. Actually, standard practice is to apply it only to non-proxy routes.
-    // But since we are proxying to APIs that expect JSON, it's fine if we parse it? No, if we parse it, we need to restream it.
-    // Simplest is to NOT parse globally.
-    // this.app.use(express.json()); 
+    
+    // Logging middleware
+    this.app.use((req, res, next) => {
+        this.logger.info(`${req.method} ${req.url}`);
+        next();
+    });
   }
 
   private initializeRoutes() {
-    this.app.get('/health', (req, res) => {
-      res.status(200).json({ status: 'UP', service: 'API-Gateway' });
-    });
-
-    this.app.get('/metrics', async (req, res) => {
-      res.set('Content-Type', client.register.contentType);
-      res.end(await client.register.metrics());
-    });
+    // Gateway Routes
+    this.app.use('/', gatewayRoutes);
 
     // Proxy to User API
-    this.app.use('/auth', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
+    const userApiUrl = process.env.USER_API_URL || 'http://127.0.0.1:3001';
+    
+    const userServices = [
+        '/auth', '/wallet', '/profile', '/search', 
+        '/reservations', '/events', '/vehicles', '/support'
+    ];
 
-    this.app.use('/wallet', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
-
-    this.app.use('/profile', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
-
-    this.app.use('/search', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
-
-    this.app.use('/reservations', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
-
-    this.app.use('/events', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
-
-    this.app.use('/vehicles', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
-
-    this.app.use('/support', createProxyMiddleware({ 
-      target: process.env.USER_API_URL || 'http://localhost:3001',
-      changeOrigin: true,
-    }));
+    userServices.forEach(service => {
+        this.app.use(service, createProxyMiddleware({ 
+            target: userApiUrl,
+            changeOrigin: true,
+            onError: (err, req, res) => {
+                this.logger.error(`Proxy Error on ${service}`, err);
+                res.status(502).json({ error: true, message: 'Bad Gateway' });
+            }
+        }));
+    });
 
     // Proxy to Admin API
+    const adminApiUrl = process.env.ADMIN_API_URL || 'http://127.0.0.1:3002';
+    
+    // Explicitly proxy admin services if accessed without /admin prefix
+    const adminServices = [
+      '/stations', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard'
+    ];
+
+    adminServices.forEach(service => {
+      this.app.use(service, createProxyMiddleware({
+        target: adminApiUrl,
+        changeOrigin: true,
+        onError: (err, req, res) => {
+          this.logger.error(`Proxy Error on ${service}`, err);
+          res.status(502).json({ error: true, message: 'Bad Gateway' });
+        }
+      }));
+    });
+
+    // We map /admin/* to /* on the admin-api
     this.app.use('/admin', createProxyMiddleware({ 
-      target: process.env.ADMIN_API_URL || 'http://localhost:3002',
+      target: adminApiUrl,
       changeOrigin: true,
       pathRewrite: {
-        '^/admin': '/', 
+        '^/admin': '', 
+      },
+      onError: (err, req, res) => {
+          this.logger.error(`Proxy Error on /admin`, err);
+          res.status(502).json({ error: true, message: 'Bad Gateway' });
       }
     }));
   }
@@ -112,4 +99,5 @@ export class App {
     });
   }
 }
+
 

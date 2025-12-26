@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Tariff, Logger } from '@ev-platform-v1/shared';
+import { Tariff, Logger, ChargingStation } from '@ev-platform-v1/shared';
 
 const logger = new Logger('TariffController');
 
@@ -38,6 +38,12 @@ export class TariffController {
   static async deleteTariff(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      
+      const stationsCount = await ChargingStation.countDocuments({ tariff_id: id });
+      if (stationsCount > 0) {
+        return res.status(400).json({ error: true, message: `Cannot delete tariff. It is assigned to ${stationsCount} stations.` });
+      }
+
       await Tariff.findByIdAndDelete(id);
       res.json({ error: false, message: 'Tariff deleted' });
     } catch (error: any) {

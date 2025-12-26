@@ -14,7 +14,7 @@ export class VehicleController {
       const vehicle = await Vehicle.create({
         user_id: userId,
         make,
-        model,
+        modelName: model,
         year,
         vin,
         plate_no,

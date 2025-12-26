@@ -15,7 +15,7 @@ export interface IChargingStation extends Document {
   
   // Device Details
   vendor?: string;
-  model?: string;
+  modelName?: string;
   firmware_version?: string;
   serial_number?: string;
   
@@ -49,7 +49,7 @@ const ChargingStationSchema: Schema = new Schema({
   
   // Device Details
   vendor: { type: String },
-  model: { type: String },
+  modelName: { type: String },
   firmware_version: { type: String },
   serial_number: { type: String },
   

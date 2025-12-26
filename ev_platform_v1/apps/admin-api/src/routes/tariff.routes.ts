@@ -3,9 +3,20 @@ import { TariffController } from '../controllers/tariff.controller';
 
 const router = Router();
 
-router.get('/', TariffController.getAllTariffs);
-router.post('/', TariffController.createTariff);
-router.put('/:id', TariffController.updateTariff);
-router.delete('/:id', TariffController.deleteTariff);
+// Route: GET /tariffs/list
+// Description: List all tariffs
+router.get('/list', TariffController.getAllTariffs);
+
+// Route: POST /tariffs/create
+// Description: Create a new tariff plan
+router.post('/create', TariffController.createTariff);
+
+// Route: PUT /tariffs/update/:id
+// Description: Update an existing tariff plan
+router.put('/update/:id', TariffController.updateTariff);
+
+// Route: DELETE /tariffs/delete/:id
+// Description: Delete a tariff plan
+router.delete('/delete/:id', TariffController.deleteTariff);
 
 export default router;

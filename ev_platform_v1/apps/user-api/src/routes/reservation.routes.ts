@@ -8,7 +8,9 @@ const redis = RedisService.getInstance();
 
 router.use(authMiddleware);
 
-router.post('/', async (req: Request, res: Response) => {
+// Route: POST /reservations/create
+// Description: Create a new reservation for a connector
+router.post('/create', async (req: Request, res: Response) => {
   try {
     const { charger_id, connector_id, expiry_minutes = 15 } = req.body;
     // @ts-ignore
@@ -53,7 +55,9 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/', async (req: Request, res: Response) => {
+// Route: GET /reservations/list
+// Description: List all reservations for the current user
+router.get('/list', async (req: Request, res: Response) => {
     try {
         // @ts-ignore
         const userId = req.user.email_id;

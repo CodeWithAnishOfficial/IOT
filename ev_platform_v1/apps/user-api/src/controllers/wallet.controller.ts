@@ -93,4 +93,30 @@ export class WalletController {
       res.status(500).json({ error: true, message: error.message });
     }
   }
+
+  static async requestRefund(req: Request, res: Response) {
+    try {
+      const { transaction_id, reason } = req.body;
+      // @ts-ignore
+      const userId = req.user?.email_id;
+
+      const transaction = await WalletTransaction.findOne({ 
+        transaction_id, 
+        user_id: userId 
+      });
+
+      if (!transaction) {
+        return res.status(404).json({ error: true, message: 'Transaction not found' });
+      }
+
+      // In a real system, this would trigger a gateway refund or create a support ticket
+      // For now, we'll just log it
+      logger.info(`Refund requested for ${transaction_id} by ${userId}: ${reason}`);
+
+      res.json({ error: false, message: 'Refund request submitted successfully' });
+    } catch (error: any) {
+      logger.error('Error requesting refund', error);
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
 }

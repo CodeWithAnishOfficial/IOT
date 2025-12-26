@@ -26,24 +26,35 @@ const sendCommand = async (req: Request, res: Response) => {
   }
 };
 
-router.post('/:id/command', sendCommand);
+// Route: POST /remote-commands/:id/send
+// Description: Send a generic OCPP command to a charger
+router.post('/:id/send', sendCommand);
 
 // Convenience routes
-router.post('/:id/remote-start', (req, res) => {
+
+// Route: POST /remote-commands/:id/start-transaction
+// Description: Remote start a transaction
+router.post('/:id/start-transaction', (req, res) => {
   req.body.command = 'RemoteStartTransaction';
   sendCommand(req, res);
 });
 
-router.post('/:id/remote-stop', (req, res) => {
+// Route: POST /remote-commands/:id/stop-transaction
+// Description: Remote stop a transaction
+router.post('/:id/stop-transaction', (req, res) => {
   req.body.command = 'RemoteStopTransaction';
   sendCommand(req, res);
 });
 
-router.post('/:id/unlock', (req, res) => {
+// Route: POST /remote-commands/:id/unlock-connector
+// Description: Unlock a connector
+router.post('/:id/unlock-connector', (req, res) => {
   req.body.command = 'UnlockConnector';
   sendCommand(req, res);
 });
 
+// Route: POST /remote-commands/:id/reset
+// Description: Reset a charger (Soft or Hard)
 router.post('/:id/reset', (req, res) => {
   req.body.command = 'Reset';
   req.body.payload = { type: req.body.type || 'Soft' }; // Hard or Soft reset

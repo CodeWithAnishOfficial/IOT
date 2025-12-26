@@ -9,6 +9,8 @@ const redis = RedisService.getInstance();
 
 router.use(authMiddleware);
 
+// Route: GET /profile/me
+// Description: Get current user profile details
 router.get('/me', async (req: Request, res: Response) => {
   try {
     // @ts-ignore
@@ -31,6 +33,8 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
+// Route: PUT /profile/me
+// Description: Update current user profile details
 router.put('/me', async (req: Request, res: Response) => {
   try {
     // @ts-ignore
@@ -54,6 +58,8 @@ router.put('/me', async (req: Request, res: Response) => {
   }
 });
 
+// Route: GET /profile/sessions
+// Description: Get charging history for the current user
 router.get('/sessions', async (req: Request, res: Response) => {
   try {
     // @ts-ignore
@@ -70,6 +76,8 @@ router.get('/sessions', async (req: Request, res: Response) => {
   }
 });
 
+// Route: POST /profile/sessions/:id/invoice
+// Description: Generate and email invoice for a specific charging session
 router.post('/sessions/:id/invoice', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

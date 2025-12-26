@@ -5,6 +5,8 @@ const router = Router();
 const logger = new Logger('SearchController');
 const redis = RedisService.getInstance();
 
+// Route: GET /search/nearby
+// Description: Find charging stations within a given radius
 router.get('/nearby', async (req: Request, res: Response) => {
   try {
     const { lat, lng, radius = 5000 } = req.query; // Radius in meters
@@ -52,6 +54,20 @@ router.get('/nearby', async (req: Request, res: Response) => {
     logger.error('Error searching stations', error);
     res.status(500).json({ error: true, message: error.message });
   }
+});
+
+// Route: GET /search/station/:id
+// Description: Get details of a specific charging station
+router.get('/station/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const station = await ChargingStation.findOne({ charger_id: id });
+        if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
+        res.json({ error: false, data: station });
+    } catch (error: any) {
+        logger.error('Error fetching station details', error);
+        res.status(500).json({ error: true, message: error.message });
+    }
 });
 
 export default router;

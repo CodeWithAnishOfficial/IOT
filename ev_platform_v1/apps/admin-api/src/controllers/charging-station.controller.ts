@@ -22,6 +22,7 @@ export class ChargingStationController {
         location, 
         connectors, 
         site_id,
+        tariff_id,
         // Device Info
         vendor,
         model,
@@ -63,11 +64,12 @@ export class ChargingStationController {
         name,
         location,
         site_id, 
+        tariff_id,
         connectors: finalConnectors,
         status: 'offline',
         // New Fields
         vendor,
-        model,
+        modelName: model,
         serial_number,
         ocpp_username: charger_id,
         ocpp_password: finalPassword
@@ -107,12 +109,31 @@ export class ChargingStationController {
       const { id } = req.params;
       const updates = req.body;
       
+      if (updates.model) {
+        updates.modelName = updates.model;
+        delete updates.model;
+      }
+
       const station = await ChargingStation.findOneAndUpdate({ charger_id: id }, updates, { new: true });
       if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
 
       res.json({ error: false, message: 'Station updated', data: station });
     } catch (error: any) {
       logger.error('Error updating station', error);
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  static async deleteStation(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const station = await ChargingStation.findOneAndDelete({ charger_id: id });
+      
+      if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
+
+      res.json({ error: false, message: 'Station deleted successfully' });
+    } catch (error: any) {
+      logger.error('Error deleting station', error);
       res.status(500).json({ error: true, message: error.message });
     }
   }

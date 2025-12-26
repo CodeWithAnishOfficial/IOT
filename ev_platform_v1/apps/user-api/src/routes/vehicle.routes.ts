@@ -6,8 +6,16 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post('/', VehicleController.addVehicle);
-router.get('/', VehicleController.getVehicles);
-router.delete('/:id', VehicleController.deleteVehicle);
+// Route: POST /vehicles/add
+// Description: Add a new vehicle to user's profile
+router.post('/add', VehicleController.addVehicle);
+
+// Route: GET /vehicles/list
+// Description: List all vehicles belonging to the user
+router.get('/list', VehicleController.getVehicles);
+
+// Route: DELETE /vehicles/delete/:id
+// Description: Remove a vehicle from user's profile
+router.delete('/delete/:id', VehicleController.deleteVehicle);
 
 export default router;
