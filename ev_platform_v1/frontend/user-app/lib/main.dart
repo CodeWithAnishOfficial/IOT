@@ -148,16 +148,58 @@ class QuanEV extends StatelessWidget {
               SnackbarCloseObserver(),
             ],
             getPages: [
-              GetPage(name: '/', page: () => const SplashScreen()),
-              GetPage(name: '/login', page: () => const LoginView()),
-              GetPage(name: '/register', page: () => const RegisterView()),
-              GetPage(name: '/home', page: () => const HomeView()),
-              GetPage(name: '/noInternet', page: () => const NoInternetScreen()),
-              GetPage(name: '/profile', page: () => const ProfileView()),
-              GetPage(name: '/wallet', page: () => const WalletView()),
-              GetPage(name: '/my-vehicles', page: () => const VehiclesView()),
-              GetPage(name: '/charging-sessions', page: () => const SessionView()),
-              GetPage(name: '/support', page: () => const SupportView()),
+              GetPage(
+                name: '/', 
+                page: () => const SplashScreen(),
+                transition: Transition.fadeIn,
+              ),
+              GetPage(
+                name: '/login', 
+                page: () => const LoginView(),
+                transition: Transition.fadeIn,
+                transitionDuration: const Duration(milliseconds: 500),
+              ),
+              GetPage(
+                name: '/register', 
+                page: () => const RegisterView(),
+                transition: Transition.rightToLeft,
+              ),
+              GetPage(
+                name: '/home', 
+                page: () => const HomeView(),
+                transition: Transition.fadeIn,
+                transitionDuration: const Duration(milliseconds: 500),
+              ),
+              GetPage(
+                name: '/noInternet', 
+                page: () => const NoInternetScreen(),
+                transition: Transition.fadeIn,
+              ),
+              GetPage(
+                name: '/profile', 
+                page: () => const ProfileView(),
+                transition: Transition.rightToLeft,
+              ),
+              GetPage(
+                name: '/wallet', 
+                page: () => const WalletView(),
+                transition: Transition.rightToLeft,
+              ),
+              GetPage(
+                name: '/my-vehicles', 
+                page: () => const VehiclesView(),
+                transition: Transition.rightToLeft,
+              ),
+              GetPage(
+                name: '/charging-sessions', 
+                page: () => const SessionView(),
+                transition: Transition.rightToLeft,
+              ),
+              GetPage(
+                name: '/support', 
+                page: () => const SupportView(),
+                transition: Transition.rightToLeft,
+              ),
             ],
           ),
         ));

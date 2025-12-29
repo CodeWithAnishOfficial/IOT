@@ -12,7 +12,7 @@ export async function handleBootNotification(connection: OCPPConnection, payload
 
   return {
     currentTime: new Date().toISOString(),
-    interval: 300, // 5 minutes heartbeat interval
+    interval: parseInt(process.env.HEARTBEAT_INTERVAL || '60'), // Get from env or default to 60
     status: 'Accepted'
   };
 }

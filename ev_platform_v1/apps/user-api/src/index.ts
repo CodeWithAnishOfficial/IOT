@@ -13,9 +13,15 @@ import sseRoutes from './routes/sse.routes';
 import reservationRoutes from './routes/reservation.routes';
 import vehicleRoutes from './routes/vehicle.routes';
 import supportRoutes from './routes/support.routes';
+import chargingRoutes from './routes/charging.routes';
 import { BillingService } from './services/billing.service';
 import { SseService } from './services/sse.service';
 import client from 'prom-client';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import jwt from 'jsonwebtoken';
+import { IncomingMessage } from 'http';
+import url from 'url';
 
 dotenv.config();
 
@@ -23,6 +29,7 @@ const logger = new Logger('User-API');
 const app = express();
 const PORT = process.env.USER_API_PORT ? parseInt(process.env.USER_API_PORT) : 3001;
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ev_platform';
+const JWT_SECRET = process.env.JWT_SECRET || 'ev-platform-secret-key';
 
 // Prometheus Metrics
 const collectDefaultMetrics = client.collectDefaultMetrics;
@@ -40,6 +47,7 @@ app.use('/events', sseRoutes);
 app.use('/reservations', reservationRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/support', supportRoutes);
+app.use('/charging', chargingRoutes);
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
@@ -73,11 +81,57 @@ const start = async () => {
         SseService.broadcast('station_status', msg);
     });
 
+    // Session Started
+    await rabbit.consume('session_started', async (msg) => {
+        if (msg.userId) {
+             SseService.sendToUser(msg.userId, 'session_started', msg);
+        }
+    });
+
+    // Charging Progress
+    await rabbit.consume('charging_progress', async (msg) => {
+        if (msg.userId) {
+             SseService.sendToUser(msg.userId, 'charging_progress', msg);
+        }
+    });
+
     logger.info('Started consuming events');
 
-    app.listen(PORT, () => {
-      logger.info(`User API running on port ${PORT}`);
+    // Create HTTP Server
+    const httpServer = createServer(app);
+
+    // Setup WebSocket Server
+    const wss = new WebSocketServer({ server: httpServer });
+
+    wss.on('connection', (ws, req: IncomingMessage) => {
+      const parameters = url.parse(req.url || '', true);
+      const token = parameters.query.token as string;
+
+      if (!token) {
+        ws.close(1008, 'Token required');
+        return;
+      }
+
+      try {
+        const decoded: any = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.email_id; // Assuming email_id is used as ID in token
+        
+        logger.info(`WebSocket connected for user: ${userId}`);
+        SseService.addWsClient(ws, userId);
+
+        // Send initial ping or welcome
+        ws.send(JSON.stringify({ event: 'connected', message: 'WebSocket connection established' }));
+
+      } catch (err) {
+        logger.error('WebSocket authentication failed', err);
+        ws.close(1008, 'Authentication failed');
+      }
     });
+
+    httpServer.listen(PORT, () => {
+      logger.info(`User API running on port ${PORT} (HTTP + WS)`);
+    });
+
   } catch (error) {
     logger.error('Failed to start User API', error);
     process.exit(1);
@@ -85,4 +139,3 @@ const start = async () => {
 };
 
 start();
-

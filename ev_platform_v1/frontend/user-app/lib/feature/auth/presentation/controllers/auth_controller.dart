@@ -46,7 +46,7 @@ class AuthController extends GetxController {
 
       _handleAuthResponse(response);
     } catch (e) {
-      Get.snackbar('Login Failed', _extractErrorMessage(e));
+      Get.snackbar('Login Failed', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -86,7 +86,7 @@ class AuthController extends GetxController {
         Get.snackbar('Error', response['message'] ?? 'Failed to send OTP');
       }
     } catch (e) {
-      Get.snackbar('Error', _extractErrorMessage(e));
+      Get.snackbar('Error', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -120,7 +120,7 @@ class AuthController extends GetxController {
       final response = await _apiProvider.post('/auth/verify-otp', body);
       _handleAuthResponse(response);
     } catch (e) {
-      Get.snackbar('Verification Failed', _extractErrorMessage(e));
+      Get.snackbar('Verification Failed', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -153,18 +153,6 @@ class AuthController extends GetxController {
     } else {
       Get.snackbar('Error', response['message'] ?? 'Authentication failed');
     }
-  }
-
-  String _extractErrorMessage(dynamic e) {
-    // Try to extract clean message from exception string
-    // e.toString() might be "Exception: Error: 400 {"error":true,"message":"User already exists..."}"
-    final str = e.toString();
-    if (str.contains('"message":"')) {
-      final start = str.indexOf('"message":"') + 11;
-      final end = str.indexOf('"', start);
-      if (end != -1) return str.substring(start, end);
-    }
-    return str.replaceAll('Exception:', '').trim();
   }
 
   void resetState() {

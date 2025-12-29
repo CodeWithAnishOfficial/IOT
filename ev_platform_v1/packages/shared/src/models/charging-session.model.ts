@@ -12,7 +12,7 @@ export interface IChargingSession extends Document {
   meter_stop?: number;
   total_energy: number; // In Wh or kWh
   cost: number;
-  status: 'active' | 'completed' | 'error';
+  status: 'pending' | 'active' | 'stopping' | 'completed' | 'error' | 'failed' | 'stopped';
   auth_tag?: string;
 }
 
@@ -28,7 +28,7 @@ const ChargingSessionSchema: Schema = new Schema({
   meter_stop: { type: Number },
   total_energy: { type: Number, default: 0 },
   cost: { type: Number, default: 0 },
-  status: { type: String, enum: ['active', 'completed', 'error'], default: 'active' },
+  status: { type: String, enum: ['pending', 'active', 'stopping', 'completed', 'error', 'failed', 'stopped'], default: 'pending' },
   auth_tag: { type: String }
 });
 

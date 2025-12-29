@@ -72,7 +72,7 @@ class WalletController extends GetxController {
       await Future.delayed(const Duration(seconds: 2));
       // fetchWalletData(); // Would update if backend updated
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add money: $e');
+      Get.snackbar('Error', 'Failed to add money: ${e.toString()}');
     }
   }
 }

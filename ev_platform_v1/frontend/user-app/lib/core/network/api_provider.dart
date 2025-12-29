@@ -5,13 +5,24 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
 
+class ApiException implements Exception {
+  final String message;
+  final int statusCode;
+  final dynamic data;
+
+  ApiException(this.message, this.statusCode, [this.data]);
+
+  @override
+  String toString() => message;
+}
+
 class ApiProvider {
   // Use 10.0.2.2 for Android emulator, localhost for iOS simulator
   static String get baseUrl {
     if (Platform.isAndroid) {
-      return 'http://192.168.1.7:3000';
+      return 'http://192.168.1.9:3000';
     }
-    return 'http://192.168.1.7:3000';
+    return 'http://192.168.1.9:3000';
   }
 
   final SessionController _sessionController = Get.find<SessionController>();
@@ -22,7 +33,14 @@ class ApiProvider {
           .get(Uri.parse('$baseUrl$endpoint'), headers: _getHeaders())
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
+    } on SocketException {
+      throw Exception('Connection refused: Server is unreachable');
+    } on TimeoutException {
+      throw Exception('Connection timed out');
     } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        throw Exception('Connection refused: Server is unreachable');
+      }
       throw Exception('Network error: $e');
     }
   }
@@ -59,7 +77,14 @@ class ApiProvider {
           )
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
+    } on SocketException {
+      throw Exception('Connection refused: Server is unreachable');
+    } on TimeoutException {
+      throw Exception('Connection timed out');
     } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        throw Exception('Connection refused: Server is unreachable');
+      }
       throw Exception('Network error: $e');
     }
   }
@@ -74,7 +99,14 @@ class ApiProvider {
           )
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
+    } on SocketException {
+      throw Exception('Connection refused: Server is unreachable');
+    } on TimeoutException {
+      throw Exception('Connection timed out');
     } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        throw Exception('Connection refused: Server is unreachable');
+      }
       throw Exception('Network error: $e');
     }
   }
@@ -85,7 +117,14 @@ class ApiProvider {
           .delete(Uri.parse('$baseUrl$endpoint'), headers: _getHeaders())
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
+    } on SocketException {
+      throw Exception('Connection refused: Server is unreachable');
+    } on TimeoutException {
+      throw Exception('Connection timed out');
     } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        throw Exception('Connection refused: Server is unreachable');
+      }
       throw Exception('Network error: $e');
     }
   }
@@ -104,12 +143,46 @@ class ApiProvider {
   dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return json.decode(response.body);
-    } else if (response.statusCode == 401) {
+    } 
+    
+    // Handle Unauthorized
+    if (response.statusCode == 401) {
       _sessionController.clearSession();
       Get.offAllNamed('/login');
-      throw Exception('Unauthorized');
-    } else {
-      throw Exception('Error: ${response.statusCode} ${response.body}');
+      throw ApiException('Unauthorized session. Please login again.', 401);
     }
+    
+    // Handle Server Errors (500+)
+    if (response.statusCode >= 500) {
+      String errorMessage = 'Internal Server Error';
+      try {
+        final body = json.decode(response.body);
+        if (body['message'] != null) {
+          errorMessage = body['message'];
+        }
+      } catch (_) {
+         // Fallback to status text
+      }
+      throw ApiException(errorMessage, response.statusCode, response.body);
+    }
+
+    // Handle Client Errors (400-499)
+    String errorMessage = 'Request Failed: ${response.statusCode}';
+    try {
+      final body = json.decode(response.body);
+      if (body['message'] != null) {
+        errorMessage = body['message'];
+      } else if (body['error'] != null && body['error'] is String) {
+        errorMessage = body['error'];
+      }
+    } catch (_) {
+      if (response.body.isNotEmpty) {
+         errorMessage = response.body.length > 100 
+             ? response.body.substring(0, 100) 
+             : response.body;
+      }
+    }
+    
+    throw ApiException(errorMessage, response.statusCode, response.body);
   }
 }

@@ -5,6 +5,7 @@ const logger = new Logger('BootNotificationHandler');
 
 export async function handleBootNotification(connection: OCPPConnection, payload: any) {
   logger.info(`BootNotification from ${connection.id}`, payload);
+  logger.info(`ENV CHECK: HEARTBEAT_INTERVAL is "${process.env.HEARTBEAT_INTERVAL}"`);
 
   const { chargePointVendor, chargePointModel, chargePointSerialNumber, firmwareVersion } = payload;
   
@@ -25,6 +26,6 @@ export async function handleBootNotification(connection: OCPPConnection, payload
   return {
     status: 'Accepted',
     currentTime: new Date().toISOString(),
-    interval: 300
+    interval: parseInt(process.env.HEARTBEAT_INTERVAL || '60') // Get from env or default to 60
   };
 }

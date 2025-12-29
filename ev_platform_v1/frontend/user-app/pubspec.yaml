@@ -46,6 +46,8 @@ dependencies:
   google_maps_flutter: ^2.5.0
   geolocator: ^10.1.0
   url_launcher: ^6.3.0
+  mobile_scanner: ^5.2.3
+  razorpay_flutter: ^1.4.0
 
 dev_dependencies:
   flutter_test:

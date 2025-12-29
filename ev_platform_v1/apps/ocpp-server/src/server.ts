@@ -112,16 +112,31 @@ export class OCPPServer {
           }
 
           // Handle Async Connection
+          // We must handle messages immediately to avoid missing them while async auth happens
+          const messageQueue: string[] = [];
+          let authenticatedConnection: any = null;
+          let isAuthenticating = true;
+
+          ws.on('message', (message: string) => {
+             if (isAuthenticating) {
+                 messageQueue.push(message);
+             } else if (authenticatedConnection) {
+                 this.processMessage(authenticatedConnection, message);
+             }
+          });
+
           this.connectionManager.handleConnection(ws, req).then(connection => {
+            isAuthenticating = false;
             if (connection) {
-              ws.on('message', (message: string) => {
-                try {
-                  const parsed = JSON.parse(message.toString());
-                  MessageRouter.handleMessage(connection, parsed);
-                } catch (error) {
-                  this.logger.error('Error parsing message', error);
-                }
-              });
+              authenticatedConnection = connection;
+              // Process queued messages
+              while (messageQueue.length > 0) {
+                  const msg = messageQueue.shift();
+                  if (msg) this.processMessage(connection, msg);
+              }
+            } else {
+                // Connection rejected
+                ws.close();
             }
           }).catch(err => {
               this.logger.error('Error handling connection', err);
@@ -142,6 +157,23 @@ export class OCPPServer {
         }
       }
     });
+  }
+
+  private processMessage(connection: any, message: string) {
+      try {
+        const msgString = message.toString();
+        try {
+            const parsed = JSON.parse(msgString);
+            this.logger.info(`[${connection.id}] >>`, parsed);
+            MessageRouter.handleMessage(connection, parsed);
+        } catch (err) {
+            this.logger.info(`[${connection.id}] >> ${msgString}`);
+            throw err;
+        }
+      } catch (error) {
+        this.logger.error('Error parsing message', error);
+        // We might want to send a ProtocolError (CallError) if parsing fails, but we don't have a requestId
+      }
   }
 
   public stop(): void {

@@ -8,15 +8,45 @@ const logger = new Logger('MessageRouter');
 export class MessageRouter {
   static async handleMessage(connection: OCPPConnection, message: any) {
     if (!Array.isArray(message)) {
-      logger.error(`Invalid message format from ${connection.id}`);
+      logger.error(`Invalid message format from ${connection.id}: Not an array`);
+      // Cannot send error because we don't have requestId
       return;
+    }
+
+    if (message.length < 3) {
+       logger.error(`Invalid message format from ${connection.id}: Length ${message.length}`);
+       return;
     }
 
     const [messageType, requestId, action, payload] = message;
 
+    if (typeof messageType !== 'number') {
+         logger.error(`Invalid MessageType from ${connection.id}`);
+         return;
+    }
+
+    if (typeof requestId !== 'string') {
+         logger.error(`Invalid RequestId from ${connection.id}`);
+         return;
+    }
+
     if (messageType !== 2) {
       // We currently only handle requests (Type 2) from Charge Points
+      // Type 3 (Response) and 4 (Error) are handled by callbacks if we sent a request (not implemented in this simplified router yet)
+      if (messageType === 3) {
+          logger.info(`Received Response for Request ${requestId} from ${connection.id}`);
+          // TODO: Match with pending requests
+      } else if (messageType === 4) {
+          logger.warn(`Received Error for Request ${requestId} from ${connection.id}`);
+      }
       return;
+    }
+    
+    // Validate Action
+    if (typeof action !== 'string') {
+        logger.error(`Invalid Action from ${connection.id}`);
+        connection.sendError(requestId, 'ProtocolError', 'Action must be a string');
+        return;
     }
 
     // Delegate to version-specific router

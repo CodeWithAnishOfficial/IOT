@@ -45,6 +45,7 @@ services:
       - "3001:3001"
     environment:
       - USER_API_PORT=3001
+      - JWT_SECRET=ev-platform-secret-key
       - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
       - REDIS_URL=redis://redis:6379
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672

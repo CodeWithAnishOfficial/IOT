@@ -7,7 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import bcrypt from 'bcryptjs';
 
 const logger = new Logger('AuthController');
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'ev-platform-secret-key';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);

@@ -9,6 +9,7 @@ export class OCPPConnection {
   public ws: WebSocket;
   public lastHeartbeat: Date;
   public isAlive: boolean;
+  private logger: Logger;
 
   constructor(id: string, version: string, ip: string, ws: WebSocket) {
     this.id = id;
@@ -17,10 +18,12 @@ export class OCPPConnection {
     this.ws = ws;
     this.lastHeartbeat = new Date();
     this.isAlive = true;
+    this.logger = new Logger(`OCPPConnection-${id}`);
   }
 
   send(message: any[]) {
     if (this.ws.readyState === WebSocket.OPEN) {
+      this.logger.info(`[${this.id}] <<`, message);
       this.ws.send(JSON.stringify(message));
     }
   }

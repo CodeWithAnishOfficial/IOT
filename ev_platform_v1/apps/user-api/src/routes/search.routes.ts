@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { ChargingStation, Logger, RedisService } from '@ev-platform-v1/shared';
+import { ChargingStation, Logger, RedisService, Site } from '@ev-platform-v1/shared';
 
 const router = Router();
 const logger = new Logger('SearchController');
@@ -9,9 +9,9 @@ const redis = RedisService.getInstance();
 // Description: Find charging stations within a given radius
 router.get('/nearby', async (req: Request, res: Response) => {
   try {
-    const { lat, lng, radius = 5000 } = req.query; // Radius in meters
+    const { lat: queryLat, lng: queryLng, radius = 5000 } = req.query; // Radius in meters
     
-    if (!lat || !lng) {
+    if (!queryLat || !queryLng) {
       return res.status(400).json({ error: true, message: 'Lat and Lng required' });
     }
 
@@ -22,23 +22,38 @@ router.get('/nearby', async (req: Request, res: Response) => {
     // Actually, let's just query all and filter in memory for this MVP since dataset is small.
     
     // Check Cache
-    const CACHE_KEY = 'stations:online';
+    const CACHE_KEY = 'stations:all:populated';
     let stations = await redis.get(CACHE_KEY);
 
     if (!stations) {
-        stations = await ChargingStation.find({ status: 'online' }); // Only show online stations
+        stations = await ChargingStation.find({}).populate('site_id'); // Show all stations and populate site
         await redis.set(CACHE_KEY, stations, 60); // Cache for 60 seconds
     }
     
     // Simple distance calculation
     const nearby = stations.filter((station: any) => {
-      if (!station.location || !station.location.lat || !station.location.lng) return false;
+      let lat = station.location?.lat;
+      let lng = station.location?.lng;
+
+      // Fallback to site location if station location is missing
+      if ((!lat || !lng) && station.site_id && station.site_id.location) {
+          lat = station.site_id.location.lat;
+          lng = station.site_id.location.lng;
+          
+          // Patch the location into the station object for the frontend
+          if (!station.location) station.location = {};
+          station.location.lat = lat;
+          station.location.lng = lng;
+          if (station.site_id.address) station.location.address = station.site_id.address;
+      }
+
+      if (!lat || !lng) return false;
       
       const R = 6371e3; // metres
-      const φ1 = parseFloat(lat as string) * Math.PI/180;
-      const φ2 = station.location.lat * Math.PI/180;
-      const Δφ = (station.location.lat - parseFloat(lat as string)) * Math.PI/180;
-      const Δλ = (station.location.lng - parseFloat(lng as string)) * Math.PI/180;
+      const φ1 = parseFloat(queryLat as string) * Math.PI/180;
+      const φ2 = lat * Math.PI/180;
+      const Δφ = (lat - parseFloat(queryLat as string)) * Math.PI/180;
+      const Δλ = (lng - parseFloat(queryLng as string)) * Math.PI/180;
 
       const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
               Math.cos(φ1) * Math.cos(φ2) *

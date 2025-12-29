@@ -45,7 +45,7 @@ const ChargingStationSchema: Schema = new Schema({
   status: { type: String, enum: ['online', 'offline', 'charging', 'faulted'], default: 'offline' },
   max_power_kw: { type: Number, default: 22.0 }, // Default 22kW station
   tariff_id: { type: String }, // Optional tariff reference
-  site_id: { type: String }, // Optional site reference
+  site_id: { type: Schema.Types.ObjectId, ref: 'Site' }, // Optional site reference
   
   // Device Details
   vendor: { type: String },
