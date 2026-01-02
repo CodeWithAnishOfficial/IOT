@@ -62,16 +62,16 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.3.10
 
-flutter_icons:
+flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/app_icon.png"
+  image_path: "assets/favicon/web-app-manifest-512x512.png"
 
 flutter_native_splash:
-  color: "#FFFFFF"
+  color: "#111111"
   image: "assets/images/logo.png"
   branding: "assets/images/logo.png"
-  color_dark: "#121212"
+  color_dark: "#111111"
   image_dark: "assets/images/logo.png"
   branding_dark: "assets/images/logo.png"
 
@@ -88,6 +88,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/map_styles/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -10,13 +10,15 @@ class ThemeController extends GetxController {
   static const String PRIMARY_COLOR_KEY = 'primary_color';
 
   // Observable variables
-  final Rx<ThemeMode> themeMode = ThemeMode.light.obs;
-  final Rx<MaterialColor> primaryColor = Colors.green.obs;
+  final Rx<ThemeMode> themeMode = ThemeMode.dark.obs;
+  final Rx<Color> primaryColor = const Color(0xFFCCFF00).obs;
 
   // Available theme colors
-  final List<MaterialColor> availableColors = [
+  final List<Color> availableColors = [
+    const Color(0xFFCCFF00), // Neon Lime
     Colors.green,
     Colors.blue,
+
     Colors.purple,
     Colors.orange,
     Colors.red,
@@ -44,10 +46,10 @@ class ThemeController extends GetxController {
     // Load primary color first so theme is updated before applying theme mode
     final savedColorValue = prefs!.getInt(PRIMARY_COLOR_KEY);
     if (savedColorValue != null) {
-      // Find the color in available colors or default to green
+      // Find the color in available colors or default to Neon Lime
       final savedColor = availableColors.firstWhere(
         (color) => color.value == savedColorValue,
-        orElse: () => Colors.green,
+        orElse: () => const Color(0xFFCCFF00),
       );
       primaryColor.value = savedColor;
 
@@ -71,9 +73,11 @@ class ThemeController extends GetxController {
     }
 
     // Apply the theme
-    Get.changeTheme(themeMode.value == ThemeMode.dark
-        ? AppTheme.darkTheme
-        : AppTheme.lightTheme);
+    Get.changeTheme(
+      themeMode.value == ThemeMode.dark
+          ? AppTheme.darkTheme
+          : AppTheme.lightTheme,
+    );
     Get.changeThemeMode(themeMode.value);
   }
 
@@ -83,7 +87,8 @@ class ThemeController extends GetxController {
 
     // Apply the theme
     Get.changeTheme(
-        mode == ThemeMode.dark ? AppTheme.darkTheme : AppTheme.lightTheme);
+      mode == ThemeMode.dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+    );
     Get.changeThemeMode(mode);
 
     if (prefs == null) {
@@ -107,16 +112,18 @@ class ThemeController extends GetxController {
   }
 
   // Change primary color
-  Future<void> changePrimaryColor(MaterialColor color) async {
+  Future<void> changePrimaryColor(Color color) async {
     primaryColor.value = color;
 
     // Update the app theme with the new color
     updateAppTheme(color);
 
     // Apply the theme
-    Get.changeTheme(themeMode.value == ThemeMode.dark
-        ? AppTheme.darkTheme
-        : AppTheme.lightTheme);
+    Get.changeTheme(
+      themeMode.value == ThemeMode.dark
+          ? AppTheme.darkTheme
+          : AppTheme.lightTheme,
+    );
     Get.changeThemeMode(themeMode.value);
 
     if (prefs == null) {
@@ -128,14 +135,14 @@ class ThemeController extends GetxController {
   }
 
   // Update app theme with new primary color
-  void updateAppTheme(MaterialColor color) {
+  void updateAppTheme(Color color) {
     // Update light theme
     AppTheme.lightTheme = AppTheme.lightTheme.copyWith(
       primaryColor: color,
-      primaryColorDark: color[800],
+      // primaryColorDark: color[800], // Remove specific shade dependence
       colorScheme: ColorScheme.light(
         primary: color,
-        secondary: color.shade200,
+        // secondary: color.shade200,
         surface: Colors.white,
         background: Colors.grey[50]!,
       ),
@@ -144,12 +151,14 @@ class ThemeController extends GetxController {
     // Update dark theme
     AppTheme.darkTheme = AppTheme.darkTheme.copyWith(
       primaryColor: color,
-      primaryColorDark: color[800],
+      // primaryColorDark: color[800],
       colorScheme: ColorScheme.dark(
         primary: color,
-        secondary: color.shade200,
+        // secondary: color.shade200,
         surface: const Color(0xFF1E1E1E),
-        background: const Color(0xFF121212),
+        background: const Color(
+          0xFF111111,
+        ), // Deep Black to match Charging Page
       ),
     );
   }

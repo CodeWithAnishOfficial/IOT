@@ -11,7 +11,7 @@ class ProfileView extends GetView<ProfileController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Obx(() {
         if (controller.isLoading.value && controller.user.value == null) {
           return const Center(child: CircularProgressIndicator());
@@ -38,7 +38,7 @@ class ProfileView extends GetView<ProfileController> {
                         top: 16,
                         left: 16,
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
                           onPressed: () => Get.back(),
                         ),
                       ),
@@ -60,7 +60,7 @@ class ProfileView extends GetView<ProfileController> {
                                   width: 160,
                                   height: 160,
                                   decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.2),
+                                    color: AppTheme.primaryColor.withOpacity(0.2),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -72,7 +72,7 @@ class ProfileView extends GetView<ProfileController> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
+                                    color: AppTheme.primaryColor.withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -87,7 +87,7 @@ class ProfileView extends GetView<ProfileController> {
                                   height: 90,
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Colors.white.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
@@ -101,7 +101,7 @@ class ProfileView extends GetView<ProfileController> {
                                     children: [
                                       CircleAvatar(
                                         radius: 20,
-                                        backgroundColor: Colors.grey[300],
+                                        backgroundColor: Colors.white24,
                                         child: const Icon(Icons.person, color: Colors.white),
                                       ),
                                       const SizedBox(width: 12),
@@ -110,9 +110,9 @@ class ProfileView extends GetView<ProfileController> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Container(height: 6, width: 60, color: Colors.grey[200]),
+                                            Container(height: 6, width: 60, color: Colors.white12),
                                             const SizedBox(height: 6),
-                                            Container(height: 6, width: 40, color: Colors.grey[200]),
+                                            Container(height: 6, width: 40, color: Colors.white12),
                                           ],
                                         ),
                                       ),
@@ -139,7 +139,7 @@ class ProfileView extends GetView<ProfileController> {
                         style: GoogleFonts.poppins(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -147,7 +147,7 @@ class ProfileView extends GetView<ProfileController> {
                         phone,
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: Colors.white70,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -155,7 +155,7 @@ class ProfileView extends GetView<ProfileController> {
                         email,
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: Colors.red[700],
+                          color: Colors.redAccent,
                         ),
                       ),
                     ],
@@ -163,7 +163,7 @@ class ProfileView extends GetView<ProfileController> {
                 ),
 
                 const SizedBox(height: 24),
-                const Divider(thickness: 1, height: 1),
+                const Divider(thickness: 1, height: 1, color: Colors.white12),
 
                 // 3. Simple List Items
                 _buildSimpleListItem(
@@ -172,7 +172,7 @@ class ProfileView extends GetView<ProfileController> {
                 ),
                 const Padding(
                   padding: EdgeInsets.only(left: 24),
-                  child: Divider(height: 1),
+                  child: Divider(height: 1, color: Colors.white12),
                 ),
                 _buildSimpleListItem(
                   title: "Favourite Locations",
@@ -180,7 +180,7 @@ class ProfileView extends GetView<ProfileController> {
                 ),
                 
                 const SizedBox(height: 16),
-                const Divider(thickness: 1, height: 1),
+                const Divider(thickness: 1, height: 1, color: Colors.white12),
                 const SizedBox(height: 16),
 
                 // 4. Safety & Privacy Section
@@ -202,7 +202,7 @@ class ProfileView extends GetView<ProfileController> {
                   ),
                 ),
 
-                const Divider(thickness: 1, height: 1),
+                const Divider(thickness: 1, height: 1, color: Colors.white12),
                 const SizedBox(height: 16),
 
                 // 5. Ride Settings
@@ -220,7 +220,7 @@ class ProfileView extends GetView<ProfileController> {
                     onPressed: controller.logout,
                     child: Text(
                       "Logout",
-                      style: GoogleFonts.poppins(color: Colors.red),
+                      style: GoogleFonts.poppins(color: Colors.redAccent),
                     ),
                   ),
                 ),
@@ -240,10 +240,10 @@ class ProfileView extends GetView<ProfileController> {
         title,
         style: GoogleFonts.poppins(
           fontSize: 16,
-          color: Colors.black87,
+          color: Colors.white,
         ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white24),
       onTap: onTap,
     );
   }
@@ -260,13 +260,13 @@ class ProfileView extends GetView<ProfileController> {
                 title,
                 style: GoogleFonts.poppins(
                   fontSize: 16,
-                  color: Colors.black87,
+                  color: Colors.white,
                 ),
               ),
             ),
             const Padding(
               padding: EdgeInsets.only(right: 24),
-              child: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              child: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white24),
             ),
           ],
         ),
@@ -285,7 +285,7 @@ class ProfileView extends GetView<ProfileController> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 28, color: Colors.black87),
+          Icon(icon, size: 28, color: Colors.white),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -296,7 +296,7 @@ class ProfileView extends GetView<ProfileController> {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -304,7 +304,7 @@ class ProfileView extends GetView<ProfileController> {
                   subtitle,
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: Colors.white54,
                   ),
                 ),
               ],

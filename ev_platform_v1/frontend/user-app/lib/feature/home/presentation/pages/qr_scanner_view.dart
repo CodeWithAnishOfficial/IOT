@@ -23,12 +23,13 @@ class _QrScannerViewState extends State<QrScannerView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text("Scan QR Code", style: TextStyle(color: Colors.black)),
+        title: const Text("Scan QR Code", style: TextStyle(color: Colors.white)),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: Icon(
@@ -65,8 +66,15 @@ class _QrScannerViewState extends State<QrScannerView> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.green, width: 3),
+                border: Border.all(color: Colors.greenAccent, width: 3),
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.greenAccent.withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  )
+                ]
               ),
             ),
           ),
@@ -80,7 +88,7 @@ class _QrScannerViewState extends State<QrScannerView> {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
-                  backgroundColor: Colors.black45,
+                  backgroundColor: Colors.black54,
                 ),
               ),
             ),

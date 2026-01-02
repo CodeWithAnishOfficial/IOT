@@ -143,15 +143,15 @@ class ApiProvider {
   dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return json.decode(response.body);
-    } 
-    
+    }
+
     // Handle Unauthorized
     if (response.statusCode == 401) {
       _sessionController.clearSession();
       Get.offAllNamed('/login');
       throw ApiException('Unauthorized session. Please login again.', 401);
     }
-    
+
     // Handle Server Errors (500+)
     if (response.statusCode >= 500) {
       String errorMessage = 'Internal Server Error';
@@ -161,7 +161,7 @@ class ApiProvider {
           errorMessage = body['message'];
         }
       } catch (_) {
-         // Fallback to status text
+        // Fallback to status text
       }
       throw ApiException(errorMessage, response.statusCode, response.body);
     }
@@ -176,13 +176,18 @@ class ApiProvider {
         errorMessage = body['error'];
       }
     } catch (_) {
-      if (response.body.isNotEmpty) {
-         errorMessage = response.body.length > 100 
-             ? response.body.substring(0, 100) 
-             : response.body;
+      // If parsing fails (likely HTML), try to extract title if HTML
+      if (response.body.trim().toLowerCase().startsWith('<!doctype html') ||
+          response.body.trim().toLowerCase().startsWith('<html')) {
+        errorMessage =
+            'Server returned HTML (likely 404/500 page). URL: ${response.request?.url}';
+      } else if (response.body.isNotEmpty) {
+        errorMessage = response.body.length > 100
+            ? response.body.substring(0, 100)
+            : response.body;
       }
     }
-    
+
     throw ApiException(errorMessage, response.statusCode, response.body);
   }
 }

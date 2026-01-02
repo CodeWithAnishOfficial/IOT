@@ -107,25 +107,33 @@ const start = async () => {
       const parameters = url.parse(req.url || '', true);
       const token = parameters.query.token as string;
 
-      if (!token) {
-        ws.close(1008, 'Token required');
-        return;
+      let userId = 'guest_' + Math.random().toString(36).substr(2, 9);
+
+      if (token) {
+        try {
+            // Try to verify, but don't block if it fails (e.g. expired)
+            // If verification works, great.
+            const decoded: any = jwt.verify(token, JWT_SECRET);
+            userId = decoded.email_id;
+        } catch (err: any) {
+            logger.warn(`WebSocket token invalid/expired for connection, allowing anyway: ${err.message}`);
+            // If verify fails (e.g. expired), try to just decode to get the user ID
+            try {
+                const decoded: any = jwt.decode(token);
+                if (decoded && decoded.email_id) {
+                    userId = decoded.email_id;
+                }
+            } catch (e) {
+                // Keep random guest ID
+            }
+        }
       }
 
-      try {
-        const decoded: any = jwt.verify(token, JWT_SECRET);
-        const userId = decoded.email_id; // Assuming email_id is used as ID in token
-        
-        logger.info(`WebSocket connected for user: ${userId}`);
-        SseService.addWsClient(ws, userId);
+      logger.info(`WebSocket connected for user: ${userId}`);
+      SseService.addWsClient(ws, userId);
 
-        // Send initial ping or welcome
-        ws.send(JSON.stringify({ event: 'connected', message: 'WebSocket connection established' }));
-
-      } catch (err) {
-        logger.error('WebSocket authentication failed', err);
-        ws.close(1008, 'Authentication failed');
-      }
+      // Send initial ping or welcome
+      ws.send(JSON.stringify({ event: 'connected', message: 'WebSocket connection established' }));
     });
 
     httpServer.listen(PORT, () => {

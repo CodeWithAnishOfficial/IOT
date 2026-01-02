@@ -43,7 +43,7 @@ class LoginView extends GetView<AuthController> {
                   'Sign in to manage your EV charging',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
+                    color: Colors.white70,
                   ),
                 ),
                 const SizedBox(height: 48),
@@ -61,24 +61,25 @@ class LoginView extends GetView<AuthController> {
                           children: [
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.grey[100],
+                                color: Colors.white.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.1)),
                               ),
                               child: TabBar(
                                 indicatorSize: TabBarIndicatorSize.tab,
                                 indicator: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppTheme.primaryColor,
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 4,
+                                      color: AppTheme.primaryColor.withOpacity(0.3),
+                                      blurRadius: 12,
                                       offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
-                                labelColor: AppTheme.primaryColor,
-                                unselectedLabelColor: Colors.grey[600],
+                                labelColor: Colors.black, // Text on Lime
+                                unselectedLabelColor: Colors.white70,
                                 dividerColor: Colors.transparent,
                                 padding: const EdgeInsets.all(4),
                                 tabs: const [
@@ -212,7 +213,7 @@ class LoginView extends GetView<AuthController> {
                 prefixIcon: Icon(Icons.email_outlined),
               ),
               enabled: false, 
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white54),
             ),
             const SizedBox(height: 20),
             TextField(

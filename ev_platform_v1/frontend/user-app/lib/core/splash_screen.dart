@@ -121,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
     final double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -174,7 +174,7 @@ class _SplashScreenState extends State<SplashScreen>
                           style: GoogleFonts.poppins(
                             fontSize: screenWidth * 0.035,
                             fontWeight: FontWeight.w400,
-                            color: Colors.grey[600],
+                            color: Colors.white70,
                             letterSpacing: 1,
                           ),
                         ),
@@ -191,7 +191,7 @@ class _SplashScreenState extends State<SplashScreen>
             SizedBox(
               width: screenWidth * 0.5,
               child: const LinearProgressIndicator(
-                backgroundColor: Color(0xFFE0E0E0),
+                backgroundColor: Colors.white24,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   AppTheme.primaryColor,
                 ),

@@ -2,116 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors (from Admin Web)
-  static const Color primaryColor = Color(0xFF4680FF);
-  static const Color primaryDark = Color(0xFF2F63FF); // 900 equivalent approx
-  static const Color secondaryColor = Color(0xFF5B6B79);
+  // Brand Colors (Updated to Charging Page Theme)
+  static const Color primaryColor = Color(0xFFCCFF00); // Neon Lime
+  static const Color primaryDark = Color(0xFFA6D600);
+  static const Color secondaryColor = Color(0xFFD4E157); // Secondary Lime
   static const Color successColor = Color(0xFF2CA87F);
-  
-  static const Color scaffoldLight = Color(0xFFF8F9FA); 
-  static const Color scaffoldDark = Color(0xFF131920); 
 
-  // Light Theme
-  static ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
-    fontFamily: GoogleFonts.inter().fontFamily,
-    primaryColor: primaryColor,
-    primaryColorDark: primaryDark,
-    colorScheme: ColorScheme.light(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      surface: Colors.white,
-      background: scaffoldLight,
-      error: const Color(0xFFDC2626),
-    ),
-    scaffoldBackgroundColor: scaffoldLight,
-    appBarTheme: const AppBarTheme(
-      color: Colors.white,
-      iconTheme: IconThemeData(color: Colors.black87),
-      titleTextStyle: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
-      ),
-      elevation: 0,
-      surfaceTintColor: Colors.transparent,
-    ),
-    textTheme: TextTheme(
-      displayLarge: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
-      displayMedium: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
-      displaySmall: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
-      headlineMedium: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.black87),
-      headlineSmall: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
-      titleLarge: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
-      bodyLarge: GoogleFonts.inter(fontSize: 14, color: Colors.black87),
-      bodyMedium: GoogleFonts.inter(fontSize: 14, color: Colors.black54), // adjusted size
-    ),
-    extensions: <ThemeExtension<dynamic>>[
-      ShimmerColors(
-        baseColor: Colors.grey[200]!,
-        highlightColor: Colors.grey[100]!,
-      ),
-    ],
-    cardTheme: CardThemeData(
-      color: Colors.white,
-      elevation: 0, // flatter design
-      margin: EdgeInsets.zero,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-    ),
-    dividerColor: Colors.grey[200],
-    iconTheme: const IconThemeData(color: Colors.black54),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: primaryColor),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  );
+  static const Color scaffoldLight = Color(0xFFF8F9FA);
+  static const Color scaffoldDark = Color(0xFF111111); // Deep Black
 
-  // Dark Theme
+  // Dark Theme (Main Theme)
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
-    fontFamily: GoogleFonts.inter().fontFamily,
+    fontFamily: GoogleFonts.poppins().fontFamily,
     primaryColor: primaryColor,
     primaryColorDark: primaryDark,
     colorScheme: ColorScheme.dark(
       primary: primaryColor,
       secondary: secondaryColor,
-      surface: const Color(0xFF1E2A38), // slightly lighter than background
-      background: scaffoldDark,
+      surface: const Color(0xFF1E1E1E), // Slightly lighter than background
+      background: Colors.transparent, // Allow global background to show
       error: const Color(0xFFE76767),
     ),
-    scaffoldBackgroundColor: scaffoldDark,
+    scaffoldBackgroundColor:
+        Colors.transparent, // Allow global background to show
     appBarTheme: const AppBarTheme(
-      color: Color(0xFF1E2A38),
+      color: Colors.transparent, // Transparent to show bg if any
       iconTheme: IconThemeData(color: Colors.white),
       titleTextStyle: TextStyle(
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: FontWeight.w600,
         color: Colors.white,
       ),
@@ -119,61 +38,93 @@ class AppTheme {
       surfaceTintColor: Colors.transparent,
     ),
     textTheme: TextTheme(
-      displayLarge: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-      displayMedium: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-      displaySmall: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-      headlineMedium: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
-      headlineSmall: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white70),
-      titleLarge: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white70),
-      bodyLarge: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
-      bodyMedium: GoogleFonts.inter(fontSize: 14, color: Colors.white54),
+      displayLarge: GoogleFonts.poppins(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+      displayMedium: GoogleFonts.poppins(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+      displaySmall: GoogleFonts.poppins(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+      headlineMedium: GoogleFonts.poppins(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+      headlineSmall: GoogleFonts.poppins(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Colors.white70,
+      ),
+      titleLarge: GoogleFonts.poppins(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.white70,
+      ),
+      bodyLarge: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
+      bodyMedium: GoogleFonts.poppins(fontSize: 14, color: Colors.white54),
     ),
     extensions: <ThemeExtension<dynamic>>[
       ShimmerColors(
-        baseColor: const Color(0xFF1E2A38),
-        highlightColor: const Color(0xFF2C3E50),
+        baseColor: const Color(0xFF1E1E1E),
+        highlightColor: const Color(0xFF2C2C2C),
       ),
     ],
     cardTheme: CardThemeData(
-      color: const Color(0xFF1E2A38),
+      color: Colors.white.withOpacity(0.05), // Glassmorphism feel
       elevation: 0,
       margin: EdgeInsets.zero,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.white.withOpacity(0.05)),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
     ),
     dividerColor: Colors.white.withOpacity(0.1),
-    iconTheme: const IconThemeData(color: Colors.white70),
+    iconTheme: const IconThemeData(color: Colors.white),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: Colors.black, // Black text on Lime
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        textStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF1E2A38),
+      fillColor: Colors.white.withOpacity(0.05),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: primaryColor),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      labelStyle: const TextStyle(color: Colors.white54),
+      hintStyle: const TextStyle(color: Colors.white30),
     ),
   );
+
+  // Light Theme (Pointing to Dark Theme to force Dark Mode)
+  static ThemeData lightTheme = darkTheme;
 }
 
 // Custom shimmer colors extension
@@ -181,10 +132,7 @@ class ShimmerColors extends ThemeExtension<ShimmerColors> {
   final Color baseColor;
   final Color highlightColor;
 
-  const ShimmerColors({
-    required this.baseColor,
-    required this.highlightColor,
-  });
+  const ShimmerColors({required this.baseColor, required this.highlightColor});
 
   @override
   ThemeExtension<ShimmerColors> copyWith({
@@ -199,7 +147,9 @@ class ShimmerColors extends ThemeExtension<ShimmerColors> {
 
   @override
   ThemeExtension<ShimmerColors> lerp(
-      ThemeExtension<ShimmerColors>? other, double t) {
+    ThemeExtension<ShimmerColors>? other,
+    double t,
+  ) {
     if (other is! ShimmerColors) {
       return this;
     }

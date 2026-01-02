@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:user_app/feature/auth/presentation/controllers/auth_controller.dart';
 
+import 'package:user_app/utils/theme/themes.dart';
+
 class RegisterView extends GetView<AuthController> {
   const RegisterView({super.key});
 
@@ -20,7 +22,7 @@ class RegisterView extends GetView<AuthController> {
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.person_add, size: 80, color: Colors.blue),
+                const Icon(Icons.person_add, size: 80, color: AppTheme.primaryColor),
                 const SizedBox(height: 24),
                 const Text(
                   'Create an Account',

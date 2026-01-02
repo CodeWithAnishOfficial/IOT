@@ -8,6 +8,7 @@ class VehiclesView extends GetView<VehiclesController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('My Vehicles')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddVehicleDialog(context),
@@ -18,7 +19,12 @@ class VehiclesView extends GetView<VehiclesController> {
           return const Center(child: CircularProgressIndicator());
         }
         if (controller.vehicles.isEmpty) {
-          return const Center(child: Text('No vehicles added yet.'));
+          return const Center(
+            child: Text(
+              'No vehicles added yet.',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
         }
         return ListView.builder(
           itemCount: controller.vehicles.length,
@@ -34,13 +40,20 @@ class VehiclesView extends GetView<VehiclesController> {
                 ),
                 title: Text(
                   '${vehicle.make} ${vehicle.modelName} (${vehicle.year})',
+                  style: const TextStyle(color: Colors.white),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Type: ${vehicle.connectorType}'),
+                    Text(
+                      'Type: ${vehicle.connectorType}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
                     if (vehicle.plateNo != null)
-                      Text('Plate: ${vehicle.plateNo}'),
+                      Text(
+                        'Plate: ${vehicle.plateNo}',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                   ],
                 ),
                 trailing: IconButton(
@@ -64,35 +77,60 @@ class VehiclesView extends GetView<VehiclesController> {
 
     Get.defaultDialog(
       title: 'Add Vehicle',
+      titleStyle: const TextStyle(color: Colors.white),
+      backgroundColor: const Color(0xFF1E1E1E),
       content: Column(
         children: [
           TextField(
             controller: makeController,
-            decoration: const InputDecoration(labelText: 'Make'),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              labelText: 'Make',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
           ),
+          const SizedBox(height: 8),
           TextField(
             controller: modelController,
-            decoration: const InputDecoration(labelText: 'Model'),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              labelText: 'Model',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
           ),
+          const SizedBox(height: 8),
           TextField(
             controller: yearController,
-            decoration: const InputDecoration(labelText: 'Year'),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              labelText: 'Year',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
             keyboardType: TextInputType.number,
           ),
+          const SizedBox(height: 8),
           TextField(
             controller: plateController,
-            decoration: const InputDecoration(labelText: 'Plate No (Optional)'),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              labelText: 'Plate No (Optional)',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
           ),
           const SizedBox(height: 16),
           Obx(
             () => DropdownButton<String>(
               value: connectorType.value,
-              items: [
-                'Type2',
-                'CCS2',
-                'Chademo',
-                'GB/T',
-              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              dropdownColor: const Color(0xFF1E1E1E),
+              style: const TextStyle(color: Colors.white),
+              items:
+                  [
+                    'Type2',
+                    'CCS2',
+                    'Chademo',
+                    'GB/T',
+                  ].map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
               onChanged: (val) => connectorType.value = val!,
               isExpanded: true,
             ),
@@ -101,11 +139,18 @@ class VehiclesView extends GetView<VehiclesController> {
       ),
       textConfirm: 'Add',
       textCancel: 'Cancel',
+      confirmTextColor: Colors.black,
+      cancelTextColor: Colors.white,
+      buttonColor: Theme.of(context).primaryColor,
       onConfirm: () {
         if (makeController.text.isEmpty ||
             modelController.text.isEmpty ||
             yearController.text.isEmpty) {
-          Get.snackbar('Error', 'Please fill required fields');
+          Get.snackbar(
+            'Error',
+            'Please fill required fields',
+            colorText: Colors.white,
+          );
           return;
         }
         controller.addVehicle({
@@ -116,6 +161,7 @@ class VehiclesView extends GetView<VehiclesController> {
           'connector_type': connectorType.value,
           'is_default': false,
         });
+        Get.back(); // Close dialog on success? usually controller handles logic but here it's inline
       },
     );
   }
@@ -123,10 +169,15 @@ class VehiclesView extends GetView<VehiclesController> {
   void _confirmDelete(BuildContext context, String id) {
     Get.defaultDialog(
       title: 'Delete Vehicle',
+      titleStyle: const TextStyle(color: Colors.white),
       middleText: 'Are you sure you want to delete this vehicle?',
+      middleTextStyle: const TextStyle(color: Colors.white70),
+      backgroundColor: const Color(0xFF1E1E1E),
       textConfirm: 'Delete',
       textCancel: 'Cancel',
       confirmTextColor: Colors.white,
+      cancelTextColor: Colors.white,
+      buttonColor: Colors.red,
       onConfirm: () {
         Get.back(); // Close dialog
         controller.deleteVehicle(id);

@@ -150,7 +150,7 @@ class WebSocketService {
 
   Stream get stream {
     if (_streamController == null || _streamController!.isClosed) {
-      connect();
+      _streamController = StreamController<dynamic>.broadcast();
     }
     return _streamController!.stream;
   }
@@ -163,11 +163,9 @@ class WebSocketService {
       } catch (e) {
         debugPrint('Error sending message to WebSocket: $e');
         _isConnected = false;
-        connect();
       }
     } else {
       debugPrint('Cannot send message, WebSocket not connected');
-      connect();
     }
   }
 

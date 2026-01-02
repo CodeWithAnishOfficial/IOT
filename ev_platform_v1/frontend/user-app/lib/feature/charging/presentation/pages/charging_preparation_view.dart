@@ -2,29 +2,21 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:user_app/feature/charging/presentation/controllers/charging_controller.dart';
-import 'package:user_app/utils/theme/themes.dart';
+import 'package:user_app/feature/home/presentation/controllers/home_controller.dart';
+import 'package:user_app/feature/home/presentation/widgets/start_charging_sheet.dart';
 
-class ChargingView extends StatelessWidget {
+class ChargingPreparationView extends StatelessWidget {
   final String connectorId;
-  final double initialAmount;
-  final String sessionId;
+  final HomeController homeController;
 
-  const ChargingView({
+  const ChargingPreparationView({
     super.key,
     required this.connectorId,
-    required this.initialAmount,
-    required this.sessionId,
+    required this.homeController,
   });
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(ChargingController(
-      connectorId: connectorId,
-      initialAmount: initialAmount,
-      sessionId: sessionId,
-    ));
-
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: Stack(
@@ -36,7 +28,7 @@ class ChargingView extends StatelessWidget {
                 fit: BoxFit.cover,
               ),
             ),
-            
+
             // 1. Top Header
             Positioned(
               top: MediaQuery.of(context).padding.top,
@@ -52,12 +44,12 @@ class ChargingView extends StatelessWidget {
                         CircleAvatar(
                           backgroundColor: Colors.white.withOpacity(0.1),
                           child: IconButton(
-                            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                            onPressed: () => Get.back(), // Minimize/Back
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Get.back(),
                           ),
                         ),
                         Text(
-                          "Charge",
+                          "Start Session",
                           style: GoogleFonts.poppins(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -67,15 +59,6 @@ class ChargingView extends StatelessWidget {
                         const SizedBox(width: 40), // Balance
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Obx(() => Text(
-                      controller.durationString.value,
-                      style: GoogleFonts.sourceCodePro(
-                        fontSize: 16,
-                        color: Colors.grey[400],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    )),
                   ],
                 ),
               ),
@@ -156,19 +139,19 @@ class ChargingView extends StatelessWidget {
                                   Expanded(
                                     child: _buildStatTile(
                                       icon: Icons.electrical_services,
-                                      value: "CCS2",
+                                      value: connectorId,
                                       label: "Connector",
                                       alignLeft: true,
                                     ),
                                   ),
                                   // Top Right: Charged
                                   Expanded(
-                                    child: Obx(() => _buildStatTile(
+                                    child: _buildStatTile(
                                       icon: Icons.battery_charging_full,
-                                      value: "${controller.energyDelivered.value.toStringAsFixed(2)} kW",
+                                      value: "0.00 kW",
                                       label: "Charged",
                                       alignLeft: false,
-                                    )),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -181,19 +164,19 @@ class ChargingView extends StatelessWidget {
                                   Expanded(
                                     child: _buildStatTile(
                                       icon: Icons.price_change,
-                                      value: "${controller.ratePerKwh}\$/kWh",
+                                      value: "0.7\$/kWh",
                                       label: "Rate",
                                       alignLeft: true,
                                     ),
                                   ),
                                   // Bottom Right: Cost
                                   Expanded(
-                                    child: Obx(() => _buildStatTile(
+                                    child: _buildStatTile(
                                       icon: Icons.attach_money,
-                                      value: "${controller.currentCost.value.toStringAsFixed(2)}\$",
+                                      value: "0.00\$",
                                       label: "Cost",
                                       alignLeft: false,
-                                    )),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -203,7 +186,16 @@ class ChargingView extends StatelessWidget {
 
                         // The Center Button
                         GestureDetector(
-                          onTap: controller.stopCharging,
+                          onTap: () {
+                             Get.bottomSheet(
+                              StartChargingSheet(
+                                controller: homeController, 
+                                connectorId: connectorId
+                              ),
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                            );
+                          },
                           child: Container(
                             width: 100,
                             height: 100,
@@ -219,14 +211,14 @@ class ChargingView extends StatelessWidget {
                               ],
                             ),
                             child: Center(
-                              child: Obx(() => Text(
-                                controller.status.value == "Completed" ? "DONE" : "STOP",
+                              child: Text(
+                                "START",
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
                                 ),
-                              )),
+                              ),
                             ),
                           ),
                         ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -15,6 +16,7 @@ import 'package:user_app/feature/home/presentation/pages/search_location_view.da
 import 'package:user_app/feature/home/presentation/pages/qr_scanner_view.dart';
 import 'package:user_app/feature/home/presentation/widgets/start_charging_sheet.dart';
 import 'package:user_app/feature/charging/presentation/pages/active_session_view.dart';
+import 'package:user_app/feature/charging/presentation/pages/charging_preparation_view.dart';
 import 'package:user_app/core/Networks/websocket_service.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
 
@@ -28,6 +30,12 @@ class HomeController extends GetxController {
   final recentSearches = <Map<String, String>>[].obs;
   static const String _recentSearchesKey = 'recent_searches';
 
+  // Location Caching
+  static const String _lastLatKey = 'last_known_lat';
+  static const String _lastLngKey = 'last_known_lng';
+  final initialCameraPosition = Rxn<CameraPosition>();
+  LatLng? _lastFetchLocation;
+
   // Trip Planning
   final sourceController = TextEditingController();
   final destinationController = TextEditingController();
@@ -39,10 +47,12 @@ class HomeController extends GetxController {
   // Map
   final Completer<GoogleMapController> _mapControllerCompleter = Completer();
   GoogleMapController? _googleMapController;
-  
+  final isMapReady = false.obs;
+  String? _darkMapStyle;
+
   final markers = <Marker>{}.obs;
   final polylines = <Polyline>{}.obs;
-  // Hold the selected search location marker separately or as part of state
+  // Hold the selected nearby Charger location marker separately or as part of state
   Marker? _selectedLocationMarker;
 
   // Cache marker icons to improve performance
@@ -62,7 +72,7 @@ class HomeController extends GetxController {
   // UI Controllers
   final PageController pageController = PageController(viewportFraction: 0.85);
   final ScrollController stationScrollController = ScrollController();
-  
+
   // Sheet Animation Control
   final _sheetAnimationController = StreamController<double>.broadcast();
   Stream<double> get sheetAnimationStream => _sheetAnimationController.stream;
@@ -73,12 +83,12 @@ class HomeController extends GetxController {
   final isSearching = false.obs;
   final searchError = ''.obs;
   Timer? _debounce;
-  
+
   WebSocketService? _wsService;
 
   // Selected station for details view
   final selectedStation = Rxn<ChargingStation>();
-  
+
   // Selected Connector IDs (Multiple Selection)
   final selectedConnectorIds = <String>{}.obs;
 
@@ -86,23 +96,23 @@ class HomeController extends GetxController {
   // Temp vars for pending session start
   String? _pendingConnectorId;
   double? _pendingAmount;
-  
+
   void selectConnector(String id) {
-     // Single Selection Mode:
-     // Clear others when selecting a new one.
-     if (selectedConnectorIds.contains(id)) {
-       selectedConnectorIds.remove(id); // Toggle off
-     } else {
-       selectedConnectorIds.clear(); // Ensure only one is selected
-       selectedConnectorIds.add(id);
-     }
+    // Single Selection Mode:
+    // Clear others when selecting a new one.
+    if (selectedConnectorIds.contains(id)) {
+      selectedConnectorIds.remove(id); // Toggle off
+    } else {
+      selectedConnectorIds.clear(); // Ensure only one is selected
+      selectedConnectorIds.add(id);
+    }
   }
 
   void initiateCharging() {
     if (selectedConnectorIds.isEmpty) {
       Get.snackbar(
-        "Select Connector", 
-        "Please select a connector to start charging.", 
+        "Select Connector",
+        "Please select a connector to start charging.",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.black87,
         colorText: Colors.white,
@@ -112,20 +122,16 @@ class HomeController extends GetxController {
     }
 
     final connectorId = selectedConnectorIds.first;
-    
-    Get.bottomSheet(
-      StartChargingSheet(
-        controller: this,
-        connectorId: connectorId,
-      ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-    );
+
+    Get.to(() => ChargingPreparationView(
+      connectorId: connectorId,
+      homeController: this,
+    ));
   }
 
   Future<void> startChargingSession(String connectorId, double amount) async {
     Get.back(); // Close sheet
-    
+
     _pendingConnectorId = connectorId;
     _pendingAmount = amount;
 
@@ -134,37 +140,52 @@ class HomeController extends GetxController {
       const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
     );
-    
+
     try {
       // 1. Initiate Payment Order
+      print("Initiating payment for amount: $amount");
       final response = await _apiProvider.post('/charging/initiate-payment', {
         'amount': amount,
       });
 
       Get.back(); // Close loading dialog
+      
+      print("Initiate Payment Response: $response");
 
       if (response['error'] == false) {
-         final orderId = response['data']['id'];
-         final apiKey = "rzp_test_D9PcSutYWQ2e71"; // Replace with env var or constant
+        final orderId = response['data']['id'];
+        print("Razorpay Order ID: $orderId");
+        
+        final apiKey =
+            "rzp_test_D9PcSutYWQ2e71"; // Replace with env var or constant
+            
+        if (orderId == null) {
+           throw Exception("Order ID is null from backend");
+        }
 
-         var options = {
-            'key': apiKey,
-            'amount': (amount * 100).toInt(),
-            'name': 'EV Charging',
-            'description': 'Charge Session',
-            'order_id': orderId,
-            'prefill': {
-              'contact': '9876543210', // Get from user profile if available
-              'email': 'user@example.com' // Get from user profile if available
-            }
-         };
+        var options = {
+          'key': apiKey,
+          'amount': (amount * 100).toInt(),
+          'currency': 'INR',
+          'name': 'EV Charging',
+          'description': 'Charge Session',
+          'order_id': orderId,
+          'retry': {'enabled': true, 'max_count': 1},
+          'send_sms_hash': true,
+          'prefill': {
+            'contact': '9876543210', // Get from user profile if available
+            'email': 'user@example.com', // Get from user profile if available
+          },
+        };
+        
+        print("Opening Razorpay with options: $options");
 
-         _razorpay.open(options);
-
+        _razorpay.open(options);
       } else {
-         throw Exception(response['message'] ?? "Failed to create payment order");
+        throw Exception(
+          response['message'] ?? "Failed to create payment order",
+        );
       }
-      
     } catch (e) {
       Get.back(); // Close loading if open
       _handleError(e);
@@ -186,33 +207,37 @@ class HomeController extends GetxController {
         'connector_id': _pendingConnectorId,
         'amount': _pendingAmount,
         'payment_details': {
-           'orderId': response.orderId,
-           'paymentId': response.paymentId,
-           'signature': response.signature
-        }
+          'orderId': response.orderId,
+          'paymentId': response.paymentId,
+          'signature': response.signature,
+        },
       });
-      
+
       Get.back(); // Close loading
 
       if (res['data'] != null || res['status'] == 'success') {
-         final sessionId = res['data']?['sessionId'] ?? res['sessionId'] ?? "MOCK_SESSION_${DateTime.now().millisecondsSinceEpoch}";
-         
-         Get.snackbar(
-           "Success", 
-           "Charging session started successfully!",
-           backgroundColor: Colors.green,
-           colorText: Colors.white,
-         );
-         
-         Get.to(() => ChargingView(
-           connectorId: _pendingConnectorId!,
-           initialAmount: _pendingAmount!,
-           sessionId: sessionId,
-         ));
-      } else {
-         throw Exception(res['message'] ?? "Failed to start session");
-      }
+        final sessionId =
+            res['data']?['sessionId'] ??
+            res['sessionId'] ??
+            "MOCK_SESSION_${DateTime.now().millisecondsSinceEpoch}";
 
+        Get.snackbar(
+          "Success",
+          "Charging session started successfully!",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        Get.off(
+          () => ChargingView(
+            connectorId: _pendingConnectorId!,
+            initialAmount: _pendingAmount!,
+            sessionId: sessionId,
+          ),
+        );
+      } else {
+        throw Exception(res['message'] ?? "Failed to start session");
+      }
     } catch (e) {
       Get.back();
       _handleError(e);
@@ -223,8 +248,9 @@ class HomeController extends GetxController {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
+    print("Razorpay Error: Code=${response.code}, Message=${response.message}");
     Get.snackbar(
-      "Payment Failed", 
+      "Payment Failed",
       "Error: ${response.code} - ${response.message}",
       backgroundColor: Colors.red,
       colorText: Colors.white,
@@ -238,30 +264,81 @@ class HomeController extends GetxController {
   }
 
   void _handleError(dynamic e) {
-      print("Error: $e");
-      final errorMsg = e.toString();
+    print("Error: $e");
+    final errorMsg = e.toString();
 
-      // Handle specific errors gracefully
-      if (errorMsg.contains("Insufficient wallet balance")) {
-         Get.snackbar("Insufficient Balance", "Please top up or use online payment.");
-      } else if (errorMsg.contains("busy") || errorMsg.contains("in use")) {
-         Get.snackbar("Connector Busy", "This connector is currently in use.");
-      } else {
-         Get.snackbar("Error", errorMsg, backgroundColor: Colors.red, colorText: Colors.white);
-      }
+    // Handle specific errors gracefully
+    if (errorMsg.contains("Insufficient wallet balance")) {
+      Get.snackbar(
+        "Insufficient Balance",
+        "Please top up or use online payment.",
+      );
+    } else if (errorMsg.contains("busy") || errorMsg.contains("in use")) {
+      Get.snackbar("Connector Busy", "This connector is currently in use.");
+    } else {
+      Get.snackbar(
+        "Error",
+        errorMsg,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
+  Future<void> _loadLastKnownLocation() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final double? lat = prefs.getDouble(_lastLatKey);
+      final double? lng = prefs.getDouble(_lastLngKey);
+
+      if (lat != null && lng != null) {
+        initialCameraPosition.value = CameraPosition(
+          target: LatLng(lat, lng),
+          zoom: 15,
+        );
+        // Optimistically fetch stations for this location without blocking UI
+        fetchNearbyStations(lat: lat, lng: lng, silent: true);
+      } else {
+         initialCameraPosition.value = const CameraPosition(
+          target: LatLng(28.6139, 77.2090),
+          zoom: 12,
+        );
+      }
+    } catch (e) {
+      print("Error loading last known location: $e");
+    }
+  }
+
+  Future<void> _saveLastLocation(double lat, double lng) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_lastLatKey, lat);
+      await prefs.setDouble(_lastLngKey, lng);
+    } catch (e) {
+      print("Error saving location: $e");
+    }
+  }
 
   @override
   void onInit() {
     super.onInit();
     
+    // Pre-load map style
+    rootBundle.loadString('assets/map_styles/dark_map_style.json').then((style) {
+      _darkMapStyle = style;
+    }).catchError((error) {
+      print("Error loading map style: $error");
+    });
+    
+    // Load last known location immediately
+    _loadLastKnownLocation();
+
     // Initialize Razorpay
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    
+
     _initializeMarkerIcons();
 
     // Connect to WebSocket for Live Map Updates
@@ -305,7 +382,7 @@ class HomeController extends GetxController {
     } catch (e) {
       print("Error creating custom markers: $e");
     }
-    
+
     // Refresh markers once icons are ready (or failed, using defaults)
     _updateMarkers();
   }
@@ -322,7 +399,12 @@ class HomeController extends GetxController {
     // Draw Pin Shape (Teardrop)
     final Path path = Path();
     path.moveTo(size / 2, size);
-    path.quadraticBezierTo(size / 2, size * 0.75, size / 2 - radius, size * 0.45);
+    path.quadraticBezierTo(
+      size / 2,
+      size * 0.75,
+      size / 2 - radius,
+      size * 0.45,
+    );
     path.arcToPoint(
       Offset(size / 2 + radius, size * 0.45),
       radius: const Radius.circular(radius),
@@ -333,7 +415,7 @@ class HomeController extends GetxController {
 
     // Shadow
     canvas.drawShadow(path, Colors.black, 4.0, true);
-    
+
     // Fill
     canvas.drawPath(path, paint);
 
@@ -383,10 +465,9 @@ class HomeController extends GetxController {
         recentSearches.value = recentSearches.sublist(0, 5);
       }
 
-      // Save to prefs
       await prefs.setString(_recentSearchesKey, json.encode(recentSearches));
     } catch (e) {
-      print('Error saving recent search: $e');
+      print('Error saving recent nearby Charger: $e');
     }
   }
 
@@ -409,63 +490,76 @@ class HomeController extends GetxController {
       final sessionController = Get.find<SessionController>();
       final token = sessionController.token.value;
       if (token.isEmpty) return;
-      
+
       // Using User API Port 3001
       // Replace with your actual IP if testing on real device
       final wsUrl = "ws://192.168.1.9:3001?token=$token";
       _wsService = WebSocketService(wsUrl);
-      
+
       _wsService?.stream.listen((data) {
-         try {
-           final decoded = jsonDecode(data.toString());
-           final event = decoded['event'];
-           final payload = decoded['data'];
-           
-           if (event == 'station_status') {
-              _handleStationStatusUpdate(payload);
-           }
-         } catch(e) { print("WS Error: $e"); }
+        try {
+          final decoded = jsonDecode(data.toString());
+          final event = decoded['event'];
+          final payload = decoded['data'];
+
+          if (event == 'station_status') {
+            _handleStationStatusUpdate(payload);
+          }
+        } catch (e) {
+          print("WS Error: $e");
+        }
+      }, onError: (error) {
+        print("WS Connection Error (Stream): $error");
+        // Check for Auth Error (simple heuristic)
+        if (error.toString().contains("401") || error.toString().toLowerCase().contains("authorized")) {
+           Get.find<SessionController>().clearSession();
+           Get.offAllNamed('/login');
+        }
       });
-      
+
       _wsService?.connect();
-    } catch (e) { print("WS Connection Error: $e"); }
+    } catch (e) {
+      print("WS Connection Error: $e");
+    }
   }
 
   void _handleStationStatusUpdate(dynamic payload) {
-      final chargerId = payload['chargerId'];
-      final status = payload['status'];
-      final connectorId = payload['connectorId'];
-      
-      final index = stations.indexWhere((s) => s.chargerId == chargerId);
-      if (index != -1) {
-          var station = stations[index];
-          
-          if (connectorId == 0) {
-             // Main Station Status Update
-             station = station.copyWith(status: status);
-          } else {
-             // Connector Update
-             final connectors = List<Connector>.from(station.connectors);
-             final cIndex = connectors.indexWhere((c) => c.connectorId == connectorId);
-             if (cIndex != -1) {
-                connectors[cIndex] = connectors[cIndex].copyWith(status: status);
-                
-                // If all connectors are occupied/faulted, update station status?
-                // For simplicity, if any connector updates, we might want to refresh UI.
-                // The backend handles station status logic (connectorId=0) separately usually, 
-                // but let's just update the connector list here.
-                station = station.copyWith(connectors: connectors);
-             }
-          }
-          
-          stations[index] = station;
-          _updateMarkers();
-          
-          // If this station is currently selected, update the selection too
-          if (selectedStation.value?.chargerId == chargerId) {
-             selectedStation.value = station;
-          }
+    final chargerId = payload['chargerId'];
+    final status = payload['status'];
+    final connectorId = payload['connectorId'];
+
+    final index = stations.indexWhere((s) => s.chargerId == chargerId);
+    if (index != -1) {
+      var station = stations[index];
+
+      if (connectorId == 0) {
+        // Main Station Status Update
+        station = station.copyWith(status: status);
+      } else {
+        // Connector Update
+        final connectors = List<Connector>.from(station.connectors);
+        final cIndex = connectors.indexWhere(
+          (c) => c.connectorId == connectorId,
+        );
+        if (cIndex != -1) {
+          connectors[cIndex] = connectors[cIndex].copyWith(status: status);
+
+          // If all connectors are occupied/faulted, update station status?
+          // For simplicity, if any connector updates, we might want to refresh UI.
+          // The backend handles station status logic (connectorId=0) separately usually,
+          // but let's just update the connector list here.
+          station = station.copyWith(connectors: connectors);
+        }
       }
+
+      stations[index] = station;
+      _updateMarkers();
+
+      // If this station is currently selected, update the selection too
+      if (selectedStation.value?.chargerId == chargerId) {
+        selectedStation.value = station;
+      }
+    }
   }
 
   // Wrapper to handle debounce
@@ -491,7 +585,10 @@ class HomeController extends GetxController {
         // Logic to find station or connector can be added here
       }
     } else {
-      Get.snackbar("Permission Denied", "Camera permission is required to scan QR codes.");
+      Get.snackbar(
+        "Permission Denied",
+        "Camera permission is required to scan QR codes.",
+      );
     }
   }
 
@@ -512,14 +609,14 @@ class HomeController extends GetxController {
 
     // Don't clear destination if we are just editing source in trip mode
     if (!focusSource && mode == 'trip') {
-        destinationController.clear();
+      destinationController.clear();
     }
-    
-    // In explore mode, we want a clean slate for the search
+
+    // In explore mode, we want a clean slate for the nearby Charger
     if (mode == 'explore') {
-       destinationController.clear();
+      destinationController.clear();
     }
-    
+
     searchResults.clear();
     activeField.value = focusSource ? 'source' : 'destination';
 
@@ -535,12 +632,12 @@ class HomeController extends GetxController {
     searchResults.clear();
     _selectedLocationMarker = null;
     selectedStation.value = null; // Clear selected station
-    
+
     // Clear trip state
     sourceLatLng.value = null;
     destinationLatLng.value = null;
     polylines.clear();
-    
+
     _updateMarkers(); // Immediate visual update
     recenterMap();
   }
@@ -571,86 +668,93 @@ class HomeController extends GetxController {
     final address = await getAddressFromCoordinates(lat, lng);
     currentAddress.value = address;
   }
-  
+
   Future<void> updatePickerAddress(LatLng position) async {
-      isPickerLoading.value = true;
-      pickerAddress.value = "Fetching address...";
-      final address = await getAddressFromCoordinates(position.latitude, position.longitude);
-      pickerAddress.value = address;
-      isPickerLoading.value = false;
+    isPickerLoading.value = true;
+    pickerAddress.value = "Fetching address...";
+    final address = await getAddressFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+    pickerAddress.value = address;
+    isPickerLoading.value = false;
   }
 
   Future<void> confirmPickerLocation(LatLng position, String address) async {
-      // Logic to handle selection from picker
-      Get.back(); // Close picker
-      
-      // Determine if we are in Explore Mode or Trip Mode
-      if (searchMode.value == 'explore') {
-         // In Explore Mode, we want to go all the way back to HomeView
-         // Close SearchLocationView as well if it's open
-         if (Get.currentRoute == '/SearchLocationView' || Get.previousRoute == '/SearchLocationView') {
-             Get.back(); 
-         }
-         
-         // Force UI update to ensure we are back at HomeView
-         await Future.delayed(const Duration(milliseconds: 100));
+    // Logic to handle selection from picker
+    Get.back(); // Close picker
 
-         // Clear previous markers
-         _selectedLocationMarker = null;
-
-         // Set new marker
-         _selectedLocationMarker = Marker(
-             markerId: const MarkerId('selected_location'),
-             position: position,
-             icon: _iconRed ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-             infoWindow: InfoWindow(title: "Selected Location", snippet: address),
-         );
-         
-         currentAddress.value = address; // Update header text
-         
-         // Clear old stations
-         stations.clear();
-         
-         // Clear trip state if switching back to explore
-         sourceLatLng.value = null;
-         destinationLatLng.value = null;
-         polylines.clear();
-         
-         _updateMarkers();
-
-         // Wait for navigation and map rebuild to stabilize
-         await Future.delayed(const Duration(milliseconds: 500));
-
-         _safeAnimateCamera(CameraUpdate.newLatLngZoom(position, 15));
-         fetchNearbyStations(lat: position.latitude, lng: position.longitude);
-      } else {
-          // Trip Mode - We usually want to return to SearchLocationView to see the filled field
-          // unless both fields are full, then we plan trip.
-          
-          if (activeField.value == 'source') {
-             sourceController.text = address;
-             sourceLatLng.value = position;
-          } else {
-             destinationController.text = address;
-             destinationLatLng.value = position;
-          }
-          
-          searchResults.clear();
-          
-          // Check if both set
-          if (sourceLatLng.value != null && destinationLatLng.value != null) {
-              // If both ready, go to Home to show route
-              // We need to close SearchLocationView first
-               if (Get.currentRoute == '/SearchLocationView' || Get.previousRoute == '/SearchLocationView') {
-                  Get.back(); 
-               }
-              _planTrip();
-          } else {
-              // Stay on Search View (already there after closing picker)
-              // Just center map preview? But SearchLocationView doesn't have a map.
-              // We just updated the text controller.
-          }
+    // Determine if we are in Explore Mode or Trip Mode
+    if (searchMode.value == 'explore') {
+      // In Explore Mode, we want to go all the way back to HomeView
+      // Close SearchLocationView as well if it's open
+      if (Get.currentRoute == '/SearchLocationView' ||
+          Get.previousRoute == '/SearchLocationView') {
+        Get.back();
       }
+
+      // Force UI update to ensure we are back at HomeView
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Clear previous markers
+      _selectedLocationMarker = null;
+
+      // Set new marker
+      _selectedLocationMarker = Marker(
+        markerId: const MarkerId('selected_location'),
+        position: position,
+        icon:
+            _iconRed ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(title: "Selected Location", snippet: address),
+      );
+
+      currentAddress.value = address; // Update header text
+
+      // Clear old stations
+      stations.clear();
+
+      // Clear trip state if switching back to explore
+      sourceLatLng.value = null;
+      destinationLatLng.value = null;
+      polylines.clear();
+
+      _updateMarkers();
+
+      // Wait for navigation and map rebuild to stabilize
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      _safeAnimateCamera(CameraUpdate.newLatLngZoom(position, 15));
+      fetchNearbyStations(lat: position.latitude, lng: position.longitude);
+    } else {
+      // Trip Mode - We usually want to return to SearchLocationView to see the filled field
+      // unless both fields are full, then we plan trip.
+
+      if (activeField.value == 'source') {
+        sourceController.text = address;
+        sourceLatLng.value = position;
+      } else {
+        destinationController.text = address;
+        destinationLatLng.value = position;
+      }
+
+      searchResults.clear();
+
+      // Check if both set
+      if (sourceLatLng.value != null && destinationLatLng.value != null) {
+        // If both ready, go to Home to show route
+        // We need to close SearchLocationView first
+        if (Get.currentRoute == '/SearchLocationView' ||
+            Get.previousRoute == '/SearchLocationView') {
+          Get.back();
+        }
+        _planTrip();
+      } else {
+        // Stay on nearby Charger View (already there after closing picker)
+        // Just center map preview? But SearchLocationView doesn't have a map.
+        // We just updated the text controller.
+      }
+    }
   }
 
   Future<void> recenterMap() async {
@@ -704,7 +808,7 @@ class HomeController extends GetxController {
       // Encode query to handle spaces and special characters
       final encodedQuery = Uri.encodeComponent(query);
 
-      // Removed country:in restriction to allow broader search
+      // Removed country:in restriction to allow broader nearby Charger
       final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$encodedQuery&key=$apiKey',
       );
@@ -747,19 +851,15 @@ class HomeController extends GetxController {
   }
 
   Future<void> _safeAnimateCamera(CameraUpdate update) async {
-    // If the controller was disposed, do nothing.
-    if (_googleMapController == null && !_mapControllerCompleter.isCompleted) {
-       return;
-    }
-
     try {
-      final controller = _googleMapController ?? await _mapControllerCompleter.future;
+      final controller =
+          _googleMapController ?? await _mapControllerCompleter.future;
       await controller.animateCamera(update);
     } catch (e) {
       // Catch all errors, specifically "disposed" ones, and silently fail
-      if (e.toString().contains('disposed') || 
+      if (e.toString().contains('disposed') ||
           (e is StateError && e.message.contains('disposed'))) {
-         return;
+        return;
       }
       print("Error animating camera: $e");
     }
@@ -768,7 +868,7 @@ class HomeController extends GetxController {
   Future<void> useCurrentLocation() async {
     // Hide keyboard
     FocusManager.instance.primaryFocus?.unfocus();
-    
+
     // Check permission
     var status = await Permission.location.request();
     if (!status.isGranted) {
@@ -781,60 +881,61 @@ class HomeController extends GetxController {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       LatLng latLng = LatLng(position.latitude, position.longitude);
-      
+
       // Get address if not already fetched
       String address = "Current Location";
-      if (currentAddress.value != "Locating..." && currentAddress.value != "Unknown Location") {
-          address = currentAddress.value;
+      if (currentAddress.value != "Locating..." &&
+          currentAddress.value != "Unknown Location") {
+        address = currentAddress.value;
       } else {
-          // Trigger reverse geocoding in background
-          _getAddressFromLatLng(position.latitude, position.longitude);
+        // Trigger reverse geocoding in background
+        _getAddressFromLatLng(position.latitude, position.longitude);
       }
 
       if (searchMode.value == 'explore') {
-         Get.back();
-         
-         // Clear previous markers/state
-         _selectedLocationMarker = null;
-         
-         // FORCE Update address from geocoding to ensure accuracy
-         currentAddress.value = address; 
-         if (address == "Current Location") {
-             // If geocoding failed/pending, try to reverse geocode now
-             _getAddressFromLatLng(latLng.latitude, latLng.longitude);
-         }
-         
-         // Clear old stations to avoid confusion
-         stations.clear();
+        Get.back();
 
-         _updateMarkers();
+        // Clear previous markers/state
+        _selectedLocationMarker = null;
 
-         // Wait for navigation and map rebuild to stabilize
-         await Future.delayed(const Duration(milliseconds: 500));
+        // FORCE Update address from geocoding to ensure accuracy
+        currentAddress.value = address;
+        if (address == "Current Location") {
+          // If geocoding failed/pending, try to reverse geocode now
+          _getAddressFromLatLng(latLng.latitude, latLng.longitude);
+        }
 
-         _safeAnimateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
-         fetchNearbyStations(lat: latLng.latitude, lng: latLng.longitude);
+        // Clear old stations to avoid confusion
+        stations.clear();
+
+        _updateMarkers();
+
+        // Wait for navigation and map rebuild to stabilize
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        _safeAnimateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
+        fetchNearbyStations(lat: latLng.latitude, lng: latLng.longitude);
       } else {
-          // Trip Mode
-          if (activeField.value == 'source') {
-             sourceController.text = "Current Location";
-             sourceLatLng.value = latLng;
-          } else {
-             destinationController.text = "Current Location";
-             destinationLatLng.value = latLng;
-          }
-          
-          // Clear results
-          searchResults.clear();
-          
-          // Check if both set
-          if (sourceLatLng.value != null && destinationLatLng.value != null) {
-              _planTrip();
-          } else {
-              _safeAnimateCamera(CameraUpdate.newLatLng(latLng));
-          }
+        // Trip Mode
+        if (activeField.value == 'source') {
+          sourceController.text = "Current Location";
+          sourceLatLng.value = latLng;
+        } else {
+          destinationController.text = "Current Location";
+          destinationLatLng.value = latLng;
+        }
+
+        // Clear results
+        searchResults.clear();
+
+        // Check if both set
+        if (sourceLatLng.value != null && destinationLatLng.value != null) {
+          _planTrip();
+        } else {
+          _safeAnimateCamera(CameraUpdate.newLatLng(latLng));
+        }
       }
     } catch (e) {
       Get.snackbar("Error", "Could not get current location");
@@ -875,23 +976,25 @@ class HomeController extends GetxController {
         if (searchMode.value == 'explore') {
           Get.back();
           isLoading.value = true;
-          
+
           // Clear trip state
           sourceLatLng.value = null;
           destinationLatLng.value = null;
           polylines.clear();
-          
+
           currentAddress.value = description;
-          
+
           // Clear old stations to avoid confusion
           stations.clear();
 
           // Set Red Marker
           _selectedLocationMarker = Marker(
-             markerId: const MarkerId('selected_location'),
-             position: latLng,
-             icon: _iconRed ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-             infoWindow: InfoWindow(title: description),
+            markerId: const MarkerId('selected_location'),
+            position: latLng,
+            icon:
+                _iconRed ??
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: InfoWindow(title: description),
           );
           _updateMarkers();
 
@@ -899,7 +1002,7 @@ class HomeController extends GetxController {
           await Future.delayed(const Duration(milliseconds: 500));
 
           _safeAnimateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
-          
+
           fetchNearbyStations(lat: lat, lng: lng);
           isLoading.value = false;
           return;
@@ -926,7 +1029,7 @@ class HomeController extends GetxController {
 
   Future<void> _planTrip() async {
     Get.back(); // Return to map
-    
+
     // Wait for keyboard to close and navigation transition to finish
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -944,9 +1047,7 @@ class HomeController extends GetxController {
     try {
       // Handle case where source and destination are the same
       if (sourceLatLng.value == destinationLatLng.value) {
-        _safeAnimateCamera(
-          CameraUpdate.newLatLngZoom(sourceLatLng.value!, 15),
-        );
+        _safeAnimateCamera(CameraUpdate.newLatLngZoom(sourceLatLng.value!, 15));
       } else {
         LatLngBounds bounds = _boundsFromLatLngList([
           sourceLatLng.value!,
@@ -1029,7 +1130,30 @@ class HomeController extends GetxController {
 
   void onMapCreated(GoogleMapController controller) {
     _googleMapController = controller;
-    
+
+    // Apply pre-loaded style or load it now if missed
+    if (_darkMapStyle != null) {
+      _googleMapController?.setMapStyle(_darkMapStyle);
+      // Small delay to allow native map to render the style
+      Future.delayed(const Duration(milliseconds: 300), () {
+        isMapReady.value = true;
+      });
+    } else {
+      rootBundle
+          .loadString('assets/map_styles/dark_map_style.json')
+          .then((style) {
+            _darkMapStyle = style;
+            _googleMapController?.setMapStyle(style);
+            Future.delayed(const Duration(milliseconds: 300), () {
+              isMapReady.value = true;
+            });
+          })
+          .catchError((error) {
+            print("Error setting map style: $error");
+            isMapReady.value = true; // Show map anyway on error
+          });
+    }
+
     if (!_mapControllerCompleter.isCompleted) {
       _mapControllerCompleter.complete(controller);
     }
@@ -1050,43 +1174,67 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> fetchNearbyStations({double? lat, double? lng}) async {
+  Future<void> fetchNearbyStations({double? lat, double? lng, bool silent = false}) async {
     // Default to New Delhi if no location provided
     final double latitude = lat ?? 28.6139;
     final double longitude = lng ?? 77.2090;
 
+    // Check distance optimization
+    if (_lastFetchLocation != null) {
+      final distance = Geolocator.distanceBetween(
+        _lastFetchLocation!.latitude,
+        _lastFetchLocation!.longitude,
+        latitude,
+        longitude,
+      );
+
+      // If moved less than 500 meters and we have stations, force silent refresh
+      if (distance < 500 && stations.isNotEmpty) {
+        silent = true;
+      }
+    }
+
     try {
-      isLoading.value = true;
+      if (!silent) isLoading.value = true;
+
+      // Update last known location
+      _lastFetchLocation = LatLng(latitude, longitude);
+      _saveLastLocation(latitude, longitude);
 
       final response = await _apiProvider.get(
-        '/search/nearby?lat=$latitude&lng=$longitude&radius=500000',
+        '/search/nearby?lat=$latitude&lng=$longitude&radius=100000',
       );
 
       if (response['data'] != null) {
         final List<dynamic> data = response['data'];
-        stations.value = data.map((e) => ChargingStation.fromJson(e)).toList();
+        // Use compute to parse JSON in background isolate
+        stations.value = await compute(_parseStations, data);
         _updateMarkers();
       }
     } catch (e) {
       print('Error fetching stations: $e');
-      
+
       String message = 'Unable to connect to server';
-      if (e.toString().contains('Connection refused') || e.toString().contains('SocketException')) {
+      if (e.toString().contains('Connection refused') ||
+          e.toString().contains('SocketException')) {
         message = 'Server unreachable';
       } else if (e.toString().contains('timed out')) {
         message = 'Connection timed out';
       }
 
-      Get.snackbar(
-        'Offline Mode',
-        '$message. Showing mock data.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
-        isDismissible: true,
-      );
+      // Only show snackbar if not silent
+      if (!silent) {
+        Get.snackbar(
+          'Offline Mode',
+          '$message. Showing mock data.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.withOpacity(0.9),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+          margin: const EdgeInsets.all(16),
+          isDismissible: true,
+        );
+      }
 
       _loadMockData(latitude, longitude);
     } finally {
@@ -1109,7 +1257,10 @@ class HomeController extends GetxController {
         maxPowerKw: 150.0,
         distance: 2.5,
         facilities: ["Cafe", "Restroom", "Shopping"],
-        images: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
+        images: [
+          "https://example.com/image1.jpg",
+          "https://example.com/image2.jpg",
+        ],
         vendor: "Tata Power",
         connectors: [
           Connector(
@@ -1143,6 +1294,12 @@ class HomeController extends GetxController {
           Connector(
             connectorId: 1,
             status: "Faulted",
+            type: "CCS2",
+            maxPowerKw: 50.0,
+          ),
+          Connector(
+            connectorId: 2,
+            status: "Available",
             type: "CCS2",
             maxPowerKw: 50.0,
           ),
@@ -1188,18 +1345,21 @@ class HomeController extends GetxController {
 
   Future<void> startNavigation(ChargingStation station) async {
     if (station.location == null) return;
-    
+
     // 1. Get current location if not available
     if (currentLocation.value == null) {
       await _initializeLocation();
     }
-    
+
     if (currentLocation.value == null) {
-       Get.snackbar("Error", "Current location not available");
-       return;
+      Get.snackbar("Error", "Current location not available");
+      return;
     }
 
-    final start = LatLng(currentLocation.value!.latitude, currentLocation.value!.longitude);
+    final start = LatLng(
+      currentLocation.value!.latitude,
+      currentLocation.value!.longitude,
+    );
     final end = LatLng(station.location!.lat, station.location!.lng);
 
     // Update state to ensure markers are shown
@@ -1211,34 +1371,38 @@ class HomeController extends GetxController {
 
     try {
       // 2. Fetch Polyline (Mocking for now or use Directions API)
-      List<LatLng> polylineCoordinates = await _getPolylineCoordinates(start, end);
-      
+      List<LatLng> polylineCoordinates = await _getPolylineCoordinates(
+        start,
+        end,
+      );
+
       // 3. Update Polylines State
       polylines.clear();
-      polylines.add(Polyline(
-        polylineId: const PolylineId("route"),
-        points: polylineCoordinates,
-        color: Colors.blueAccent, // Brighter blue
-        width: 6, // Slightly thicker
-        zIndex: 1,
-        jointType: JointType.round,
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-        geodesic: true,
-      ));
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId("route"),
+          points: polylineCoordinates,
+          color: Colors.blueAccent, // Brighter blue
+          width: 6, // Slightly thicker
+          zIndex: 1,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          geodesic: true,
+        ),
+      );
       polylines.refresh();
-      
+
       // 4. Update Markers (Already handles station markers)
       // We might want to highlight the destination marker
-      
+
       // 5. Animate Camera to fit bounds
       LatLngBounds bounds = _boundsFromLatLngList(polylineCoordinates);
       _safeAnimateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
-      
+
       // 6. Collapse sheet to show map
       currentSheetHeight.value = 0.28;
       _sheetAnimationController.add(0.28);
-      
     } catch (e) {
       print("Navigation error: $e");
       Get.snackbar("Error", "Failed to start navigation");
@@ -1250,7 +1414,7 @@ class HomeController extends GetxController {
   Future<List<LatLng>> _getPolylineCoordinates(LatLng start, LatLng end) async {
     // REAL IMPLEMENTATION using Google Directions API
     // Ensure you have enabled 'Directions API' in Google Cloud Console
-    
+
     const apiKey = "AIzaSyDdBinCjuyocru7Lgi6YT3FZ1P6_xi0tco";
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=$apiKey',
@@ -1258,32 +1422,36 @@ class HomeController extends GetxController {
 
     try {
       final response = await _apiProvider.getDirect(url);
-      
+
       if (response['status'] == 'OK') {
         final routes = response['routes'] as List;
         if (routes.isNotEmpty) {
-           final legs = routes[0]['legs'] as List;
-           if (legs.isNotEmpty) {
-             final steps = legs[0]['steps'] as List;
-             List<LatLng> detailedPoints = [];
-             
-             // Decode polyline for each step for higher resolution
-             for (var step in steps) {
-               final points = _decodePolyline(step['polyline']['points']);
-               detailedPoints.addAll(points);
-             }
-             
-             return detailedPoints;
-           } else {
-             // Fallback to overview if no legs/steps found
-             final points = _decodePolyline(routes[0]['overview_polyline']['points']);
-             return points;
-           }
+          final legs = routes[0]['legs'] as List;
+          if (legs.isNotEmpty) {
+            final steps = legs[0]['steps'] as List;
+            List<LatLng> detailedPoints = [];
+
+            // Decode polyline for each step for higher resolution
+            for (var step in steps) {
+              final points = _decodePolyline(step['polyline']['points']);
+              detailedPoints.addAll(points);
+            }
+
+            return detailedPoints;
+          } else {
+            // Fallback to overview if no legs/steps found
+            final points = _decodePolyline(
+              routes[0]['overview_polyline']['points'],
+            );
+            return points;
+          }
         } else {
-           throw Exception("No routes found");
+          throw Exception("No routes found");
         }
       } else {
-        throw Exception("Directions API Error: ${response['status']} - ${response['error_message'] ?? ''}");
+        throw Exception(
+          "Directions API Error: ${response['status']} - ${response['error_message'] ?? ''}",
+        );
       }
     } catch (e) {
       print("Error fetching directions: $e");
@@ -1325,11 +1493,11 @@ class HomeController extends GetxController {
 
   void selectStation(ChargingStation station) {
     selectedStation.value = station;
-    
+
     // Animate camera slightly South (-lat) so the station appears higher on screen (above the sheet)
     // Adjusted offset to -0.005 to center station in the top sliver of screen
     animateToStation(station, offsetLat: -0.005);
-    
+
     // Animate sheet up to show details (fully expanded)
     // Small delay to allow UI to rebuild with new content before animating
     Future.delayed(const Duration(milliseconds: 50), () {
@@ -1342,12 +1510,12 @@ class HomeController extends GetxController {
     // Capture station before clearing to re-center view
     final station = selectedStation.value;
     selectedStation.value = null;
-    
+
     // Animate back to center (offset 0)
     if (station != null) {
       animateToStation(station);
     }
-    
+
     // Animate sheet back down
     // Small delay to ensure controller is stable after content switch
     Future.delayed(const Duration(milliseconds: 50), () {
@@ -1355,13 +1523,16 @@ class HomeController extends GetxController {
       _sheetAnimationController.add(0.28);
     });
   }
-  
+
   void animateToStation(ChargingStation station, {double offsetLat = 0.0}) {
     if (station.location != null) {
       _safeAnimateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
-            target: LatLng(station.location!.lat + offsetLat, station.location!.lng),
+            target: LatLng(
+              station.location!.lat + offsetLat,
+              station.location!.lng,
+            ),
             zoom: 16,
           ),
         ),
@@ -1369,13 +1540,25 @@ class HomeController extends GetxController {
     }
   }
 
+  Timer? _markerUpdateDebounce;
+
   void _updateMarkers() {
+    // Debounce/Throttle to prevent rapid updates from flooding the map (fixes Flogger logs/GC thrashing)
+    // Increased to 300ms to limit updates to ~3fps, allowing map renderer to catch up.
+    if (_markerUpdateDebounce?.isActive ?? false) return;
+
+    _markerUpdateDebounce = Timer(const Duration(milliseconds: 300), () {
+      _performMarkerUpdate();
+    });
+  }
+
+  void _performMarkerUpdate() {
     // Create a local set to minimize observable notifications
     final newMarkers = <Marker>{};
 
     // Re-add selected location marker if it exists
     if (_selectedLocationMarker != null) {
-      // Force a unique ID for the selected location if needed, 
+      // Force a unique ID for the selected location if needed,
       // but keeping it constant allows standard updates.
       // We make sure to add it to the set.
       newMarkers.add(_selectedLocationMarker!);
@@ -1387,7 +1570,9 @@ class HomeController extends GetxController {
         Marker(
           markerId: const MarkerId('source'),
           position: sourceLatLng.value!,
-          icon: _iconBlue ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon:
+              _iconBlue ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           infoWindow: const InfoWindow(title: "Start"),
           zIndex: 10,
         ),
@@ -1397,20 +1582,32 @@ class HomeController extends GetxController {
         Marker(
           markerId: const MarkerId('destination'),
           position: destinationLatLng.value!,
-          icon: _iconRed ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          icon:
+              _iconRed ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           infoWindow: const InfoWindow(title: "Destination"),
           zIndex: 10,
         ),
       );
     }
 
-    for (var station in stations) {
+    // Limit to 500 markers to prevent map freeze when radius is large (100km)
+    // This assumes markers are somewhat ordered by distance or relevance from backend
+    final stationsToRender = stations.length > 500 ? stations.take(500) : stations;
+
+    for (var station in stationsToRender) {
       if (station.location == null) continue;
 
       final isOnline = station.status.toLowerCase() == 'online';
-      final icon = isOnline 
-          ? (_iconGreen ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen))
-          : (_iconOrange ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange));
+      final icon = isOnline
+          ? (_iconGreen ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen,
+                ))
+          : (_iconOrange ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueOrange,
+                ));
 
       newMarkers.add(
         Marker(
@@ -1426,6 +1623,13 @@ class HomeController extends GetxController {
       );
     }
 
+    // Only update if marker count changed or significant event to avoid GC thrashing
+    // (Equality check on Sets can be expensive, so we just rely on debounce)
     markers.value = newMarkers;
   }
+}
+
+// Top-level function for background isolate
+List<ChargingStation> _parseStations(List<dynamic> data) {
+  return data.map((e) => ChargingStation.fromJson(e)).toList();
 }

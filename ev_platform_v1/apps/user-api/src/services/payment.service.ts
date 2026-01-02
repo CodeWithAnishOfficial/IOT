@@ -8,15 +8,15 @@ export class PaymentService {
 
   constructor() {
     this.razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID || 'test_key',
-      key_secret: process.env.RAZORPAY_KEY_SECRET || 'test_secret',
+      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_D9PcSutYWQ2e71',
+      key_secret: process.env.RAZORPAY_KEY_SECRET || 'ePodSzbZwF5MLu7obBB2vhlC',
     });
   }
 
   async createOrder(amount: number, receipt: string) {
     try {
       const options = {
-        amount: amount * 100, // Amount in paisa
+        amount: Math.round(amount * 100), // Amount in paisa
         currency: 'INR',
         receipt,
       };
@@ -30,7 +30,7 @@ export class PaymentService {
 
   async verifyPayment(orderId: string, paymentId: string, signature: string) {
     const crypto = require('crypto');
-    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'test_secret');
+    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'ePodSzbZwF5MLu7obBB2vhlC');
     hmac.update(orderId + '|' + paymentId);
     const generatedSignature = hmac.digest('hex');
 

@@ -37,6 +37,9 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDdBinCjuyocru7Lgi6YT3FZ1P6_xi0tco"/>
+        <meta-data
+            android:name="com.razorpay.ApiKey"
+            android:value="rzp_test_D9PcSutYWQ2e71"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

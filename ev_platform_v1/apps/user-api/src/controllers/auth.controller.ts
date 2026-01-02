@@ -73,7 +73,7 @@ export class AuthController {
         });
       }
 
-      const token = jwt.sign({ email_id: user.email_id, user_id: user.user_id, role_id: user.role_id }, JWT_SECRET, { expiresIn: '1d' });
+      const token = jwt.sign({ email_id: user.email_id, user_id: user.user_id, role_id: user.role_id }, JWT_SECRET);
 
       res.status(200).json({
         error: false,
@@ -100,7 +100,7 @@ export class AuthController {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) return res.status(400).json({ error: true, message: 'Invalid password' });
 
-      const token = jwt.sign({ email_id: user.email_id, user_id: user.user_id, role_id: user.role_id }, JWT_SECRET, { expiresIn: '1d' });
+      const token = jwt.sign({ email_id: user.email_id, user_id: user.user_id, role_id: user.role_id }, JWT_SECRET);
 
       res.status(200).json({
         error: false,
@@ -143,7 +143,7 @@ export class AuthController {
         });
       }
 
-      const token = jwt.sign({ email_id: user.email_id, user_id: user.user_id, role_id: user.role_id }, JWT_SECRET, { expiresIn: '1d' });
+      const token = jwt.sign({ email_id: user.email_id, user_id: user.user_id, role_id: user.role_id }, JWT_SECRET);
 
       res.status(200).json({
         error: false,

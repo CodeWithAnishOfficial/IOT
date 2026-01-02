@@ -9,6 +9,7 @@ class SessionView extends GetView<SessionHistoryController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Charging History')),
       body: Column(
         children: [
@@ -17,12 +18,15 @@ class SessionView extends GetView<SessionHistoryController> {
             if (controller.currentStatus.value.isNotEmpty) {
               return Container(
                 width: double.infinity,
-                color: Colors.greenAccent,
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
                 padding: const EdgeInsets.all(8),
                 child: Text(
                   controller.currentStatus.value,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
                 ),
               );
             }
@@ -35,7 +39,12 @@ class SessionView extends GetView<SessionHistoryController> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (controller.sessions.isEmpty) {
-                return const Center(child: Text('No charging sessions found.'));
+                return const Center(
+                  child: Text(
+                    'No charging sessions found.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                );
               }
               return ListView.builder(
                 itemCount: controller.sessions.length,
@@ -51,34 +60,45 @@ class SessionView extends GetView<SessionHistoryController> {
                     child: ListTile(
                       leading: Icon(
                         Icons.battery_charging_full,
-                        color: isActive ? Colors.green : Colors.grey,
+                        color: isActive ? Theme.of(context).primaryColor : Colors.grey,
                       ),
                       title: Text(
                         DateFormat(
                           'dd MMM yyyy, HH:mm',
                         ).format(session.startTime),
+                        style: const TextStyle(color: Colors.white),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Station: ${session.chargerId} (Conn: ${session.connectorId})',
+                            style: const TextStyle(color: Colors.white70),
                           ),
                           Text(
                             'Energy: ${session.totalEnergy.toStringAsFixed(2)} kWh',
+                            style: const TextStyle(color: Colors.white70),
                           ),
-                          Text('Cost: ₹${session.cost.toStringAsFixed(2)}'),
+                          Text(
+                            'Cost: ₹${session.cost.toStringAsFixed(2)}',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
                           Text(
                             'Status: ${session.status.toUpperCase()}',
                             style: TextStyle(
-                              color: isActive ? Colors.green : Colors.black,
+                              color: isActive
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.white70,
                             ),
                           ),
                         ],
                       ),
                       trailing: !isActive
                           ? IconButton(
-                              icon: const Icon(Icons.receipt_long),
+                              icon: const Icon(
+                                Icons.receipt_long,
+                                color: Colors.white,
+                              ),
                               tooltip: 'Email Invoice',
                               onPressed: () =>
                                   controller.requestInvoice(session.sessionId),

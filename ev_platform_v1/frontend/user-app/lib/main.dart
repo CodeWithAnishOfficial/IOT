@@ -30,13 +30,14 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Require Hybrid Composition for Google Maps on Android to prevent crashes/glitches
-  final GoogleMapsFlutterPlatform mapsImplementation = GoogleMapsFlutterPlatform.instance;
+  final GoogleMapsFlutterPlatform mapsImplementation =
+      GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
     mapsImplementation.useAndroidViewSurface = true;
   }
-  
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -82,33 +83,33 @@ void main() async {
 
   // Controllers
   try {
-      Get.put(SessionController(), permanent: true);
+    Get.put(SessionController(), permanent: true);
   } catch (e) {
-      debugPrint('Error putting SessionController: $e');
+    debugPrint('Error putting SessionController: $e');
   }
 
   try {
-      Get.put(ConnectivityController());
+    Get.put(ConnectivityController());
   } catch (e) {
-      debugPrint('Error putting ConnectivityController: $e');
+    debugPrint('Error putting ConnectivityController: $e');
   }
 
   try {
-      Get.put(AuthController());
+    Get.put(AuthController());
   } catch (e) {
-      debugPrint('Error putting AuthController: $e');
+    debugPrint('Error putting AuthController: $e');
   }
-      
+
   try {
-      // Lazy put others
-      Get.lazyPut(() => HomeController(), fenix: true);
-      Get.lazyPut(() => VehiclesController(), fenix: true);
-      Get.lazyPut(() => WalletController(), fenix: true);
-      Get.lazyPut(() => ProfileController(), fenix: true);
-      Get.lazyPut(() => SessionHistoryController(), fenix: true);
-      Get.lazyPut(() => SupportController(), fenix: true);
+    // Lazy put others
+    Get.lazyPut(() => HomeController(), fenix: true);
+    Get.lazyPut(() => VehiclesController(), fenix: true);
+    Get.lazyPut(() => WalletController(), fenix: true);
+    Get.lazyPut(() => ProfileController(), fenix: true);
+    Get.lazyPut(() => SessionHistoryController(), fenix: true);
+    Get.lazyPut(() => SupportController(), fenix: true);
   } catch (e) {
-      debugPrint('Error lazy putting controllers: $e');
+    debugPrint('Error lazy putting controllers: $e');
   }
 
   runApp(const QuanEV());
@@ -133,75 +134,99 @@ class QuanEV extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-     final themeController = Get.find<ThemeController>();
-     
-     return Obx(() => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
-          child: GetMaterialApp(
-            title: 'QuanEV',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeController.themeMode.value,
-            initialRoute: '/',
-            navigatorObservers: [
-              SnackbarCloseObserver(),
-            ],
-            getPages: [
-              GetPage(
-                name: '/', 
-                page: () => const SplashScreen(),
-                transition: Transition.fadeIn,
-              ),
-              GetPage(
-                name: '/login', 
-                page: () => const LoginView(),
-                transition: Transition.fadeIn,
-                transitionDuration: const Duration(milliseconds: 500),
-              ),
-              GetPage(
-                name: '/register', 
-                page: () => const RegisterView(),
-                transition: Transition.rightToLeft,
-              ),
-              GetPage(
-                name: '/home', 
-                page: () => const HomeView(),
-                transition: Transition.fadeIn,
-                transitionDuration: const Duration(milliseconds: 500),
-              ),
-              GetPage(
-                name: '/noInternet', 
-                page: () => const NoInternetScreen(),
-                transition: Transition.fadeIn,
-              ),
-              GetPage(
-                name: '/profile', 
-                page: () => const ProfileView(),
-                transition: Transition.rightToLeft,
-              ),
-              GetPage(
-                name: '/wallet', 
-                page: () => const WalletView(),
-                transition: Transition.rightToLeft,
-              ),
-              GetPage(
-                name: '/my-vehicles', 
-                page: () => const VehiclesView(),
-                transition: Transition.rightToLeft,
-              ),
-              GetPage(
-                name: '/charging-sessions', 
-                page: () => const SessionView(),
-                transition: Transition.rightToLeft,
-              ),
-              GetPage(
-                name: '/support', 
-                page: () => const SupportView(),
-                transition: Transition.rightToLeft,
-              ),
-            ],
-          ),
-        ));
+    final themeController = Get.find<ThemeController>();
+
+    return Obx(
+      () => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+        child: GetMaterialApp(
+          title: 'QuanEV',
+          debugShowCheckedModeBanner: false,
+          // Global Background Builder
+          builder: (context, child) {
+            return Stack(
+              children: [
+                // 1. Global Background Image
+                Positioned.fill(
+                  child: Image.asset(
+                    "assets/images/ChargingPage_bg.png",
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                // 2. Global Dark Overlay (to ensure readability if needed)
+                Positioned.fill(
+                  child: Container(
+                    color: const Color(0xFF111111).withOpacity(
+                      0.85,
+                    ), // High opacity to mimic deep black theme but keep texture
+                  ),
+                ),
+                // 3. App Content
+                if (child != null) child,
+              ],
+            );
+          },
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeController.themeMode.value,
+          initialRoute: '/',
+          navigatorObservers: [SnackbarCloseObserver()],
+          getPages: [
+            GetPage(
+              name: '/',
+              page: () => const SplashScreen(),
+              transition: Transition.fadeIn,
+            ),
+            GetPage(
+              name: '/login',
+              page: () => const LoginView(),
+              transition: Transition.fadeIn,
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+            GetPage(
+              name: '/register',
+              page: () => const RegisterView(),
+              transition: Transition.rightToLeft,
+            ),
+            GetPage(
+              name: '/home',
+              page: () => const HomeView(),
+              transition: Transition.fadeIn,
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+            GetPage(
+              name: '/noInternet',
+              page: () => const NoInternetScreen(),
+              transition: Transition.fadeIn,
+            ),
+            GetPage(
+              name: '/profile',
+              page: () => const ProfileView(),
+              transition: Transition.rightToLeft,
+            ),
+            GetPage(
+              name: '/wallet',
+              page: () => const WalletView(),
+              transition: Transition.rightToLeft,
+            ),
+            GetPage(
+              name: '/my-vehicles',
+              page: () => const VehiclesView(),
+              transition: Transition.rightToLeft,
+            ),
+            GetPage(
+              name: '/charging-sessions',
+              page: () => const SessionView(),
+              transition: Transition.rightToLeft,
+            ),
+            GetPage(
+              name: '/support',
+              page: () => const SupportView(),
+              transition: Transition.rightToLeft,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

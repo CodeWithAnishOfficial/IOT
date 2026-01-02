@@ -9,6 +9,7 @@ class WalletView extends GetView<WalletController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Wallet')),
       body: Obx(() {
         if (controller.isLoading.value && controller.balance.value == 0) {
@@ -20,7 +21,15 @@ class WalletView extends GetView<WalletController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Card(
-                color: Colors.blueAccent,
+                // Use a gradient or the primary theme color for the wallet card
+                color: Colors.blueAccent.withOpacity(0.8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Row(
@@ -29,21 +38,42 @@ class WalletView extends GetView<WalletController> {
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Available Balance', style: TextStyle(color: Colors.white, fontSize: 16)),
+                          Text(
+                            'Available Balance',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                           SizedBox(height: 8),
-                          Text('₹', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text(
+                            '₹',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                       Text(
                         controller.balance.value.toStringAsFixed(2),
-                        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              const Text('Add Money', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Add Money',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -51,10 +81,13 @@ class WalletView extends GetView<WalletController> {
                     child: TextField(
                       controller: controller.amountController,
                       keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
                         prefixText: '₹ ',
+                        prefixStyle: TextStyle(color: Colors.white70),
                         border: OutlineInputBorder(),
                         labelText: 'Amount',
+                        labelStyle: TextStyle(color: Colors.white70),
                       ),
                     ),
                   ),
@@ -62,14 +95,24 @@ class WalletView extends GetView<WalletController> {
                   ElevatedButton(
                     onPressed: controller.addMoney,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                     ),
                     child: const Text('Add'),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              const Text('Recent Transactions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Recent Transactions',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.builder(
@@ -83,8 +126,16 @@ class WalletView extends GetView<WalletController> {
                           isCredit ? Icons.arrow_downward : Icons.arrow_upward,
                           color: isCredit ? Colors.green : Colors.red,
                         ),
-                        title: Text(transaction.source.toUpperCase()),
-                        subtitle: Text(DateFormat('dd MMM yyyy, hh:mm a').format(transaction.createdAt)),
+                        title: Text(
+                          transaction.source.toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        subtitle: Text(
+                          DateFormat(
+                            'dd MMM yyyy, hh:mm a',
+                          ).format(transaction.createdAt),
+                          style: const TextStyle(color: Colors.white70),
+                        ),
                         trailing: Text(
                           '${isCredit ? '+' : '-'}₹${transaction.amount.toStringAsFixed(2)}',
                           style: TextStyle(

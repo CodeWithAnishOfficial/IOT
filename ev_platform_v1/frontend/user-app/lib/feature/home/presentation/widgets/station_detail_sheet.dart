@@ -23,11 +23,11 @@ class StationDetailSheet extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Colors.black, // Solid Black
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: Colors.black26,
             blurRadius: 20,
             offset: Offset(0, -5),
           ),
@@ -55,17 +55,17 @@ class StationDetailSheet extends StatelessWidget {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                  return Container(
-                                   color: Colors.grey[100],
+                                   color: Colors.grey[900],
                                    child: Center(
-                                     child: Icon(Icons.ev_station_rounded, size: 80, color: Colors.grey[300]),
+                                     child: Icon(Icons.ev_station_rounded, size: 80, color: Colors.grey[800]),
                                    ),
                                  );
                               },
                             )
                           : Container(
-                              color: Colors.grey[100],
+                              color: Colors.grey[900],
                               child: Center(
-                                child: Icon(Icons.ev_station_rounded, size: 80, color: Colors.grey[300]),
+                                child: Icon(Icons.ev_station_rounded, size: 80, color: Colors.grey[800]),
                               ),
                             ),
                     ],
@@ -79,7 +79,7 @@ class StationDetailSheet extends StatelessWidget {
                     width: 40,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: Colors.grey[600],
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -104,14 +104,14 @@ class StationDetailSheet extends StatelessWidget {
                                   style: theme.textTheme.headlineSmall?.copyWith(
                                     fontWeight: FontWeight.w800,
                                     height: 1.1,
-                                    color: Colors.black87,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   station.location?.address ?? "Address not available",
                                   style: TextStyle(
-                                    color: Colors.grey[600],
+                                    color: Colors.grey[400],
                                     fontSize: 14,
                                     height: 1.3,
                                   ),
@@ -186,25 +186,26 @@ class StationDetailSheet extends StatelessWidget {
                       ),
                       
                       const SizedBox(height: 32),
-                      Divider(thickness: 0.5, color: Colors.grey.shade200),
+                      Divider(thickness: 0.5, color: Colors.grey.shade800),
                       const SizedBox(height: 20),
 
                       // 4. Connectors Section
                       Row(
                         children: [
-                          Icon(Icons.ev_station, size: 20, color: Colors.grey[700]),
+                          Icon(Icons.ev_station, size: 20, color: Colors.grey[400]),
                           const SizedBox(width: 8),
                           Text(
                             "Connectors (${station.connectors.length})",
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                           const Spacer(),
                            Text(
                             "${station.connectors.where((c) => c.status.toLowerCase() == 'available').length} Available",
                             style: TextStyle(
-                              color: Colors.green[700],
+                              color: Colors.green[400],
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -227,18 +228,20 @@ class StationDetailSheet extends StatelessWidget {
                         }).toList(),
                       )),
 
+
                       const SizedBox(height: 24),
 
                       // 5. Amenities Section
                       if (station.facilities.isNotEmpty) ...[
                         Row(
                           children: [
-                            Icon(Icons.stars_rounded, size: 20, color: Colors.grey[700]),
+                            Icon(Icons.stars_rounded, size: 20, color: Colors.grey[400]),
                             const SizedBox(width: 8),
                             Text(
                               "Amenities",
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -267,7 +270,7 @@ class StationDetailSheet extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.white.withOpacity(0.1),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -277,7 +280,7 @@ class StationDetailSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.close, color: Colors.black87, size: 22),
+                child: const Icon(Icons.close, color: Colors.white, size: 22),
               ),
             ),
           ),
@@ -290,10 +293,10 @@ class StationDetailSheet extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.black, // Solid Black
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(0.2),
                     blurRadius: 10,
                     offset: const Offset(0, -4),
                   ),
@@ -307,7 +310,7 @@ class StationDetailSheet extends StatelessWidget {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Colors.black, // Text on Lime
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -342,19 +345,20 @@ class StationDetailSheet extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Colors.white24),
           borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withOpacity(0.05),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 22, color: Colors.black87),
+            Icon(icon, size: 22, color: Colors.white),
             const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Colors.white70,
               ),
             ),
           ],
@@ -372,16 +376,16 @@ class StationDetailSheet extends StatelessWidget {
 
     if (statusLower == 'available') {
       statusText = "Available";
-      statusColor = Colors.green[700]!;
-      bgColor = Colors.green.withOpacity(0.1);
+      statusColor = AppTheme.primaryColor;
+      bgColor = AppTheme.primaryColor.withOpacity(0.1);
     } else if (statusLower == 'faulted' || statusLower == 'unavailable' || statusLower == 'offline') {
-      statusText = "Faulted"; // Or "Unavailable" if preferred
-      statusColor = Colors.red[700]!;
-      bgColor = Colors.red.withOpacity(0.1);
+      statusText = "Faulted";
+      statusColor = Colors.redAccent;
+      bgColor = Colors.redAccent.withOpacity(0.1);
     } else {
       statusText = "In Use";
-      statusColor = Colors.orange[800]!;
-      bgColor = Colors.orange.withOpacity(0.1);
+      statusColor = Colors.orangeAccent;
+      bgColor = Colors.orangeAccent.withOpacity(0.1);
     }
 
     return GestureDetector(
@@ -391,12 +395,20 @@ class StationDetailSheet extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withOpacity(0.05) : Colors.grey[50],
+          color: isSelected ? AppTheme.primaryColor.withOpacity(0.05) : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? Colors.green : Colors.grey.shade200,
+            color: isSelected ? AppTheme.primaryColor : Colors.white12,
             width: isSelected ? 2 : 1,
           ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: AppTheme.primaryColor.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )
+          ]
         ),
         child: Row(
           children: [
@@ -404,13 +416,13 @@ class StationDetailSheet extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white10,
                 shape: BoxShape.circle,
-                border: isSelected ? Border.all(color: Colors.green.withOpacity(0.3)) : null,
+                border: isSelected ? Border.all(color: AppTheme.primaryColor.withOpacity(0.3)) : null,
               ),
               child: Icon(
                 Icons.electrical_services_rounded, 
-                color: isSelected ? Colors.green : Colors.blue[700], 
+                color: isSelected ? AppTheme.primaryColor : Colors.white70, 
                 size: 24
               ),
             ),
@@ -426,12 +438,12 @@ class StationDetailSheet extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.black87,
+                      color: Colors.white, // Fixed visibility (was black87)
                     ),
                   ),
                   Text(
                     "${connector.maxPowerKw.toInt()} kW • Fast",
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    style: TextStyle(color: Colors.grey[400], fontSize: 13), // Fixed visibility
                   ),
                 ],
               ),
@@ -491,20 +503,20 @@ class StationDetailSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.1), // Dark bg instead of white
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.grey[700]),
+          Icon(icon, size: 16, color: Colors.white70), // Light icon
           const SizedBox(width: 6),
           Text(
             name,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
-              color: Colors.grey[800],
+              color: Colors.white, // Light text
               fontWeight: FontWeight.w500,
             ),
           ),

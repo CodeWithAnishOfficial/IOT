@@ -16,7 +16,7 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   final HomeController controller = Get.find<HomeController>();
-  
+
   @override
   Widget build(BuildContext context) {
     // Key to control the scaffold drawer
@@ -30,24 +30,45 @@ class _HomeViewState extends State<HomeView> {
       body: Stack(
         children: [
           // 1. Full Screen Map
-          Obx(
-            () => GoogleMap(
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(28.6139, 77.2090), // Default New Delhi
-                zoom: 12,
-              ),
-              onMapCreated: controller.onMapCreated,
-              markers: controller.markers.toSet(),
-              polylines: controller.polylines.toSet(),
-              myLocationEnabled: controller.isLocationGranted.value,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              padding: const EdgeInsets.only(
-                bottom: 220,
-              ), // Push Google logo up above sheet
-            ),
-          ),
+          Obx(() {
+            return Stack(
+              children: [
+                // Actual Map (Always present if position known)
+                if (controller.initialCameraPosition.value != null)
+                  GoogleMap(
+                    key: const ValueKey("google_map"), // Preserve State
+                    initialCameraPosition: controller.initialCameraPosition.value!,
+                    onMapCreated: controller.onMapCreated,
+                    markers: controller.markers.toSet(),
+                    polylines: controller.polylines.toSet(),
+                    myLocationEnabled: controller.isLocationGranted.value,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    padding: const EdgeInsets.only(
+                      bottom: 220,
+                    ),
+                  ),
+                  
+                // Loading Overlay (Fades out when map is ready)
+                IgnorePointer(
+                  ignoring: controller.isMapReady.value,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 400),
+                    opacity: controller.isMapReady.value ? 0.0 : 1.0,
+                    child: Container(
+                      color: const Color(0xFF121212),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
 
           // 2. Top Navigation Bar (Ola Style)
           Positioned(
@@ -57,11 +78,14 @@ class _HomeViewState extends State<HomeView> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(
+                  context,
+                ).cardTheme.color, // Use theme card color
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withOpacity(0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -72,7 +96,10 @@ class _HomeViewState extends State<HomeView> {
                   // Hamburger Menu
                   InkWell(
                     onTap: () => scaffoldKey.currentState?.openDrawer(),
-                    child: const Icon(Icons.menu, color: Colors.black87),
+                    child: const Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                    ), // White icon
                   ),
                   const SizedBox(width: 16),
 
@@ -80,9 +107,15 @@ class _HomeViewState extends State<HomeView> {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor, // Neon Lime
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.5),
+                          blurRadius: 6,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -96,7 +129,7 @@ class _HomeViewState extends State<HomeView> {
                           controller.currentAddress.value,
                           style: const TextStyle(
                             fontSize: 15,
-                            color: Colors.black87,
+                            color: Colors.white, // White text
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,
@@ -109,7 +142,10 @@ class _HomeViewState extends State<HomeView> {
                   // QR Scanner Icon
                   InkWell(
                     onTap: () => controller.scanQrCode(),
-                    child: const Icon(Icons.qr_code_scanner, color: Colors.black54),
+                    child: const Icon(
+                      Icons.qr_code_scanner,
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),
@@ -117,20 +153,22 @@ class _HomeViewState extends State<HomeView> {
           ),
 
           // 3. Clear Polyline Button (Below Header)
-          Obx(() => controller.polylines.isNotEmpty
-              ? Positioned(
-                  top: MediaQuery.of(context).padding.top + 90,
-                  right: 16,
-                  child: FloatingActionButton.small(
-                    heroTag: "clearPolyline",
-                    onPressed: () => controller.clearSearch(),
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.red,
-                    elevation: 4,
-                    child: const Icon(Icons.close_rounded),
-                  ),
-                )
-              : const SizedBox.shrink()),
+          Obx(
+            () => controller.polylines.isNotEmpty
+                ? Positioned(
+                    top: MediaQuery.of(context).padding.top + 90,
+                    right: 16,
+                    child: FloatingActionButton.small(
+                      heroTag: "clearPolyline",
+                      onPressed: () => controller.clearSearch(),
+                      backgroundColor: Colors.red.withOpacity(0.8),
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      child: const Icon(Icons.close_rounded),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
 
           // 4. Current Location & Plan Trip Buttons
           Positioned(
@@ -145,9 +183,13 @@ class _HomeViewState extends State<HomeView> {
                   child: FloatingActionButton(
                     heroTag: "planTrip",
                     onPressed: () => controller.openSearch(mode: 'trip'),
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                    backgroundColor: Theme.of(context).cardTheme.color,
+                    foregroundColor: Colors.white,
                     elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                    ),
                     child: const Icon(Icons.directions),
                   ),
                 ),
@@ -155,9 +197,13 @@ class _HomeViewState extends State<HomeView> {
                 FloatingActionButton(
                   heroTag: "myLocation",
                   onPressed: () => controller.recenterMap(),
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).cardTheme.color,
                   foregroundColor: AppTheme.primaryColor,
                   elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
                   child: const Icon(Icons.my_location),
                 ),
               ],
@@ -178,7 +224,7 @@ class _HomeViewState extends State<HomeView> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardTheme.color,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(color: Colors.black12, blurRadius: 4),
@@ -190,10 +236,16 @@ class _HomeViewState extends State<HomeView> {
                             SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.primaryColor,
+                              ),
                             ),
                             SizedBox(width: 8),
-                            Text("Searching area..."),
+                            Text(
+                              "Searching area...",
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ],
                         ),
                       ),
@@ -204,35 +256,15 @@ class _HomeViewState extends State<HomeView> {
 
           // 5. Draggable Bottom Sheet (Ola Style)
           HomeBottomSheet(controller: controller),
-
         ],
       ),
-    );
-  }
-
-  Widget _buildRecentItem({required String title, required IconData icon}) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Colors.grey[600], size: 20),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 14, color: Colors.black87),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(
-        Icons.arrow_forward_ios,
-        size: 14,
-        color: Colors.grey,
-      ),
-      onTap: () {},
     );
   }
 }
 
 class HomeBottomSheet extends StatefulWidget {
   final HomeController controller;
-  
+
   const HomeBottomSheet({super.key, required this.controller});
 
   @override
@@ -248,9 +280,11 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
     super.initState();
     // Initialize the controller - tied to this specific widget instance
     _sheetController = DraggableScrollableController();
-    
+
     // Listen to animation requests
-    _sheetSubscription = widget.controller.sheetAnimationStream.listen((height) {
+    _sheetSubscription = widget.controller.sheetAnimationStream.listen((
+      height,
+    ) {
       if (_sheetController.isAttached) {
         _sheetController.animateTo(
           height,
@@ -272,52 +306,28 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       controller: _sheetController,
-      initialChildSize: 0.28,
-      minChildSize: 0.28,
+      initialChildSize: 0.20,
+      minChildSize: 0.20,
       maxChildSize: 0.85,
       builder: (context, scrollController) {
         return Obx(() {
-           if (widget.controller.selectedStation.value != null) {
-             return StationDetailSheet(
-               station: widget.controller.selectedStation.value!,
-               scrollController: scrollController,
-               controller: widget.controller,
-             );
-           }
-        
-           return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
+          if (widget.controller.selectedStation.value != null) {
+            return StationDetailSheet(
+              station: widget.controller.selectedStation.value!,
+              scrollController: scrollController,
+              controller: widget.controller,
+            );
+          }
+
+          return Container(
+            color: Colors.transparent,
             child: ListView(
               controller: scrollController,
               padding: EdgeInsets.zero,
               children: [
                 const SizedBox(height: 20),
 
-                // 1. Nearby Chargers Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: const Text(
-                    "Nearby Chargers",
-                    style: TextStyle(
-                      fontSize: 16, // Reduced
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
+                // 1. Nearby Chargers Section (Cards Only)
                 SizedBox(
                   height: 145, // Minimized height
                   child: Obx(() {
@@ -325,7 +335,7 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                       return Center(
                         child: Text(
                           "No chargers found nearby",
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: Colors.grey[400]),
                         ),
                       );
                     }
@@ -337,8 +347,9 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                           final int index = (offset / 312).round();
                           if (index >= 0 &&
                               index < widget.controller.stations.length) {
-                            widget.controller
-                                .animateToStation(widget.controller.stations[index]);
+                            widget.controller.animateToStation(
+                              widget.controller.stations[index],
+                            );
                           }
                         }
                         return true;
@@ -348,25 +359,29 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         scrollDirection: Axis.horizontal,
                         itemCount: widget.controller.stations.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, index) =>
                             const SizedBox(width: 12),
                         itemBuilder: (context, index) {
                           final station = widget.controller.stations[index];
-                          final isOnline = station.status.toLowerCase() == 'online';
-                          
+                          final isOnline =
+                              station.status.toLowerCase() == 'online';
+
                           return GestureDetector(
-                            onTap: () => widget.controller.selectStation(station),
+                            onTap: () =>
+                                widget.controller.selectStation(station),
                             child: Container(
                               width: 300, // Minimalist width
-                              margin: const EdgeInsets.symmetric(vertical: 4), 
+                              margin: const EdgeInsets.symmetric(vertical: 4),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Colors.black, // Cards are black
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.grey.shade100),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color: Colors.black.withOpacity(0.3),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -385,7 +400,7 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             letterSpacing: -0.3,
-                                            color: Colors.black,
+                                            color: Colors.white,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -396,21 +411,28 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                                         width: 8,
                                         height: 8,
                                         decoration: BoxDecoration(
-                                          color: isOnline ? Colors.green : Colors.red,
+                                          color: isOnline
+                                              ? Colors.green
+                                              : Colors.red,
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: (isOnline ? Colors.green : Colors.red).withOpacity(0.4),
+                                              color:
+                                                  (isOnline
+                                                          ? Colors.green
+                                                          : Colors.red)
+                                                      .withOpacity(0.4),
                                               blurRadius: 4,
-                                            )
-                                          ]
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    station.location?.address ?? "Address not available",
+                                    station.location?.address ??
+                                        "Address not available",
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[500],
@@ -419,40 +441,48 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  
+
                                   const Spacer(),
-                                  
+
                                   // Footer: Stats + Action
                                   Row(
                                     children: [
                                       // Power
-                                      Icon(Icons.flash_on_rounded, size: 16, color: Colors.amber[700]),
+                                      Icon(
+                                        Icons.flash_on_rounded,
+                                        size: 16,
+                                        color: AppTheme.primaryColor,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        "${station.maxPowerKw?.toInt() ?? '--'} kW",
+                                        "${station.maxPowerKw.toInt()} kW",
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
+                                          color: Colors.white70,
                                         ),
                                       ),
-                                      
+
                                       const SizedBox(width: 16),
-                                      
+
                                       // Plugs
-                                      Icon(Icons.ev_station_rounded, size: 16, color: Colors.grey[600]),
+                                      Icon(
+                                        Icons.ev_station_rounded,
+                                        size: 16,
+                                        color: Colors.grey[400],
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         "${station.connectors.length}",
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
+                                          color: Colors.white70,
                                         ),
                                       ),
-                                      
+
                                       const Spacer(),
-                                      
+
                                       // Distance
                                       if (station.distance != null)
                                         Text(
@@ -463,22 +493,23 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                                             color: Colors.grey[600],
                                           ),
                                         ),
-                                        
+
                                       const SizedBox(width: 12),
-                                      
+
                                       // Nav Button
                                       InkWell(
-                                        onTap: () => widget.controller.startNavigation(station),
+                                        onTap: () => widget.controller
+                                            .startNavigation(station),
                                         child: Container(
                                           width: 36,
                                           height: 36,
                                           decoration: const BoxDecoration(
-                                            color: Colors.black,
+                                            color: AppTheme.primaryColor,
                                             shape: BoxShape.circle,
                                           ),
                                           child: const Icon(
                                             Icons.near_me_rounded,
-                                            color: Colors.white,
+                                            color: Colors.black,
                                             size: 18,
                                           ),
                                         ),
@@ -494,8 +525,6 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                     );
                   }),
                 ),
-                
-                const SizedBox(height: 100), // Bottom padding
               ],
             ),
           );
