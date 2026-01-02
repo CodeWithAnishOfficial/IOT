@@ -45,9 +45,7 @@ class _HomeViewState extends State<HomeView> {
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
-                    padding: const EdgeInsets.only(
-                      bottom: 220,
-                    ),
+                    padding: EdgeInsets.zero, // Remove padding
                   ),
                   
                 // Loading Overlay (Fades out when map is ready)
@@ -173,7 +171,7 @@ class _HomeViewState extends State<HomeView> {
           // 4. Current Location & Plan Trip Buttons
           Positioned(
             right: 20,
-            bottom: 250, // Adjusted to sit above the lower sheet
+            bottom: 140, // Moved down near cards
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -254,84 +252,50 @@ class _HomeViewState extends State<HomeView> {
                 : const SizedBox.shrink(),
           ),
 
-          // 5. Draggable Bottom Sheet (Ola Style)
-          HomeBottomSheet(controller: controller),
-        ],
-      ),
-    );
-  }
-}
+          // 5. Fixed Bottom Section (Tiny Cards or Detail Sheet)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Obx(() {
+              // 5a. Detail Sheet
+              if (controller.selectedStation.value != null) {
+                return Container(
+                  height: MediaQuery.of(context).size.height * 0.85, // Increased height
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                    child: StationDetailSheet(
+                      station: controller.selectedStation.value!,
+                      scrollController: ScrollController(),
+                      controller: controller,
+                    ),
+                  ),
+                );
+              }
 
-class HomeBottomSheet extends StatefulWidget {
-  final HomeController controller;
-
-  const HomeBottomSheet({super.key, required this.controller});
-
-  @override
-  State<HomeBottomSheet> createState() => _HomeBottomSheetState();
-}
-
-class _HomeBottomSheetState extends State<HomeBottomSheet> {
-  late DraggableScrollableController _sheetController;
-  late StreamSubscription<double> _sheetSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize the controller - tied to this specific widget instance
-    _sheetController = DraggableScrollableController();
-
-    // Listen to animation requests
-    _sheetSubscription = widget.controller.sheetAnimationStream.listen((
-      height,
-    ) {
-      if (_sheetController.isAttached) {
-        _sheetController.animateTo(
-          height,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _sheetSubscription.cancel();
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      controller: _sheetController,
-      initialChildSize: 0.20,
-      minChildSize: 0.20,
-      maxChildSize: 0.85,
-      builder: (context, scrollController) {
-        return Obx(() {
-          if (widget.controller.selectedStation.value != null) {
-            return StationDetailSheet(
-              station: widget.controller.selectedStation.value!,
-              scrollController: scrollController,
-              controller: widget.controller,
-            );
-          }
-
-          return Container(
-            color: Colors.transparent,
-            child: ListView(
-              controller: scrollController,
-              padding: EdgeInsets.zero,
-              children: [
-                const SizedBox(height: 20),
-
-                // 1. Nearby Chargers Section (Cards Only)
-                SizedBox(
-                  height: 145, // Minimized height
+              // 5b. Tiny Cards List
+              return Container(
+                height: 130, // 100 card + 30 padding
+                padding: const EdgeInsets.only(bottom: 30),
+                child: SizedBox(
+                  height: 100,
                   child: Obx(() {
-                    if (widget.controller.stations.isEmpty) {
+                    if (controller.stations.isEmpty) {
                       return Center(
                         child: Text(
                           "No chargers found nearby",
@@ -342,194 +306,141 @@ class _HomeBottomSheetState extends State<HomeBottomSheet> {
                     return NotificationListener<ScrollNotification>(
                       onNotification: (notification) {
                         if (notification is ScrollEndNotification) {
-                          // Item width (300) + Separator (12) = 312
-                          final double offset = notification.metrics.pixels;
-                          final int index = (offset / 312).round();
-                          if (index >= 0 &&
-                              index < widget.controller.stations.length) {
-                            widget.controller.animateToStation(
-                              widget.controller.stations[index],
-                            );
+                          // Calculate center index based on scroll offset
+                          // Card width (220) + Separator (12) = 232
+                          final double itemWidth = 232.0;
+                          final offset = controller.stationScrollController.offset;
+
+                          // Current index
+                          int index = (offset / itemWidth).round();
+
+                          // Bounds check
+                          if (index < 0) index = 0;
+                          if (index >= controller.stations.length) {
+                            index = controller.stations.length - 1;
+                          }
+
+                          if (controller.stations.isNotEmpty) {
+                            final station = controller.stations[index];
+                            // Animate map to this station
+                            controller.animateToStation(station, offsetLat: -0.002);
                           }
                         }
-                        return true;
+                        return false;
                       },
                       child: ListView.separated(
-                        controller: widget.controller.stationScrollController,
+                        controller: controller.stationScrollController,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         scrollDirection: Axis.horizontal,
-                        itemCount: widget.controller.stations.length,
-                        separatorBuilder: (_, index) =>
-                            const SizedBox(width: 12),
+                        itemCount: controller.stations.length,
+                        separatorBuilder: (_, index) => const SizedBox(width: 12),
                         itemBuilder: (context, index) {
-                          final station = widget.controller.stations[index];
-                          final isOnline =
-                              station.status.toLowerCase() == 'online';
+                        final station = controller.stations[index];
+                        final isOnline = station.status.toLowerCase() == 'online';
 
-                          return GestureDetector(
-                            onTap: () =>
-                                widget.controller.selectStation(station),
-                            child: Container(
-                              width: 300, // Minimalist width
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.black, // Cards are black
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Header: Name + Status Dot
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          station.name ?? "Unknown Station",
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: -0.3,
-                                            color: Colors.white,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: isOnline
-                                              ? Colors.green
-                                              : Colors.red,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  (isOnline
-                                                          ? Colors.green
-                                                          : Colors.red)
-                                                      .withOpacity(0.4),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    station.location?.address ??
-                                        "Address not available",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500],
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-
-                                  const Spacer(),
-
-                                  // Footer: Stats + Action
-                                  Row(
-                                    children: [
-                                      // Power
-                                      Icon(
-                                        Icons.flash_on_rounded,
-                                        size: 16,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        "${station.maxPowerKw.toInt()} kW",
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-
-                                      const SizedBox(width: 16),
-
-                                      // Plugs
-                                      Icon(
-                                        Icons.ev_station_rounded,
-                                        size: 16,
-                                        color: Colors.grey[400],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        "${station.connectors.length}",
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-
-                                      const Spacer(),
-
-                                      // Distance
-                                      if (station.distance != null)
-                                        Text(
-                                          "${station.distance!.toStringAsFixed(1)} km",
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-
-                                      const SizedBox(width: 12),
-
-                                      // Nav Button
-                                      InkWell(
-                                        onTap: () => widget.controller
-                                            .startNavigation(station),
-                                        child: Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: const BoxDecoration(
-                                            color: AppTheme.primaryColor,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.near_me_rounded,
-                                            color: Colors.black,
-                                            size: 18,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                        return GestureDetector(
+                          onTap: () => controller.selectStation(station),
+                          child: Container(
+                            width: 220, // Tiny width
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
-                          );
-                        },
-                      ),
-                    );
+                            decoration: BoxDecoration(
+                              color: Colors.black, // Pure Black
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.15), // Stronger border
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.6),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Name
+                                Text(
+                                  station.name ?? "Unknown",
+                                  style: const TextStyle(
+                                    fontSize: 15, // Slightly larger
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 10), // More spacing
+
+                                // Info Row: Distance & Power
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.near_me,
+                                      size: 14,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "${station.distance?.toStringAsFixed(1) ?? '--'} km",
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white70, // brighter text
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isOnline
+                                            ? Colors.green.withOpacity(0.2)
+                                            : Colors.red.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: isOnline 
+                                                ? Colors.green.withOpacity(0.5) 
+                                                : Colors.red.withOpacity(0.5),
+                                            width: 0.5
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "${station.maxPowerKw?.toInt()}kW",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              isOnline
+                                                  ? Colors.greenAccent
+                                                  : Colors.redAccent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
                   }),
                 ),
-              ],
-            ),
-          );
-        });
-      },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }
+
