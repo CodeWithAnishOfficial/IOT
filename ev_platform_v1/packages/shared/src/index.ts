@@ -12,6 +12,8 @@ export * from './models/vehicle.model';
 export * from './models/support-ticket.model';
 export * from './models/site.model';
 export * from './models/role.model';
+export * from './models/payment.model';
+export * from './models/meter-value.model';
 export * from './redis.service';
 export * from './rabbitmq.service';
 export * from './tracing';

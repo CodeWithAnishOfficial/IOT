@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:user_app/core/View/NoInternetScreen.dart';
@@ -9,6 +10,9 @@ import 'package:user_app/feature/auth/presentation/pages/login_view.dart';
 import 'package:user_app/feature/auth/presentation/pages/register_view.dart';
 import 'package:user_app/feature/home/presentation/controllers/home_controller.dart';
 import 'package:user_app/feature/home/presentation/pages/home_view.dart';
+import 'package:user_app/feature/dashboard/presentation/pages/dashboard_view.dart';
+import 'package:user_app/feature/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:user_app/feature/reservation/presentation/pages/reservation_view.dart';
 import 'package:user_app/utils/theme/themes.dart';
 import 'package:user_app/utils/theme/theme_controller.dart';
 import 'package:user_app/core/controllers/connectivity_controller.dart';
@@ -28,20 +32,26 @@ import 'package:user_app/feature/session_history/presentation/pages/session_view
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('Starting main initialization...');
 
   // Require Hybrid Composition for Google Maps on Android to prevent crashes/glitches
-  final GoogleMapsFlutterPlatform mapsImplementation =
-      GoogleMapsFlutterPlatform.instance;
-  if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    mapsImplementation.useAndroidViewSurface = true;
+  try {
+    final GoogleMapsFlutterPlatform mapsImplementation =
+        GoogleMapsFlutterPlatform.instance;
+    if (mapsImplementation is GoogleMapsFlutterAndroid) {
+      mapsImplementation.useAndroidViewSurface = true;
+    }
+  } catch (e) {
+    debugPrint('Error initializing Maps: $e');
   }
 
-  await SystemChrome.setPreferredOrientations([
+  // Don't await this to prevent startup hangs
+  SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
-  ]);
+  ]).then((_) => debugPrint('Orientation set'));
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -51,39 +61,50 @@ void main() async {
     ),
   );
 
+  // Initialize ThemeController immediately with defaults so runApp works
+  final themeController = ThemeController(prefs: null);
+  Get.put(themeController);
+
+  // Notification Service - Init instance but don't wait for internal init
+  NotificationService notificationService = NotificationService();
+  Get.put(notificationService, permanent: true);
+
+  // Start the app immediately to prevent black screen
+  runApp(const QuanEV());
+
+  // Perform heavy initialization in the background
+  _initServices(themeController, notificationService);
+}
+
+Future<void> _initServices(
+    ThemeController themeController, NotificationService notificationService) async {
   SharedPreferences? prefs;
   try {
+    debugPrint('Initializing SharedPreferences in background...');
     prefs = await SharedPreferences.getInstance();
     debugPrint('SharedPreferences initialized successfully');
   } catch (e) {
     debugPrint('Error initializing SharedPreferences: $e');
   }
 
-  // Notification Service
-  NotificationService notificationService = NotificationService();
-  Get.put(notificationService, permanent: true);
-
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    try {
-      await notificationService.init();
-      await notificationService.requestPermissions();
-    } catch (e) {
-      debugPrint('Error initializing notification service: $e');
-    }
-  });
-
-  // Theme Controller
-  final themeController = ThemeController(prefs: prefs);
-  Get.put(themeController);
-  try {
+  // Update ThemeController with loaded prefs
+  if (prefs != null) {
+    themeController.setPrefs(prefs);
     await themeController.loadThemePreferences();
-  } catch (e) {
-    themeController.changeThemeMode(ThemeMode.light);
   }
 
-  // Controllers
+  // Init Notification Service internals
   try {
-    Get.put(SessionController(), permanent: true);
+    await notificationService.init();
+    notificationService.requestPermissions();
+  } catch (e) {
+    debugPrint('Error initializing notification service: $e');
+  }
+
+  // Session Controller
+  try {
+    // Pass prefs to SessionController to avoid double initialization
+    Get.put(SessionController(sharedPreferences: prefs), permanent: true);
   } catch (e) {
     debugPrint('Error putting SessionController: $e');
   }
@@ -108,11 +129,10 @@ void main() async {
     Get.lazyPut(() => ProfileController(), fenix: true);
     Get.lazyPut(() => SessionHistoryController(), fenix: true);
     Get.lazyPut(() => SupportController(), fenix: true);
+    Get.lazyPut(() => DashboardController(), fenix: true);
   } catch (e) {
     debugPrint('Error lazy putting controllers: $e');
   }
-
-  runApp(const QuanEV());
 }
 
 class SnackbarCloseObserver extends NavigatorObserver {
@@ -146,11 +166,19 @@ class QuanEV extends StatelessWidget {
           builder: (context, child) {
             return Stack(
               children: [
+                // 0. Fallback Black Background (in case image fails)
+                Positioned.fill(
+                  child: Container(color: const Color(0xFF111111)),
+                ),
                 // 1. Global Background Image
                 Positioned.fill(
                   child: Image.asset(
                     "assets/images/ChargingPage_bg.png",
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint("Background image failed to load: $error");
+                      return const SizedBox(); // Fallback to black container
+                    },
                   ),
                 ),
                 // 2. Global Dark Overlay (to ensure readability if needed)
@@ -180,6 +208,9 @@ class QuanEV extends StatelessWidget {
             GetPage(
               name: '/login',
               page: () => const LoginView(),
+              binding: BindingsBuilder(() {
+                Get.lazyPut<AuthController>(() => AuthController());
+              }),
               transition: Transition.fadeIn,
               transitionDuration: const Duration(milliseconds: 500),
             ),
@@ -190,9 +221,14 @@ class QuanEV extends StatelessWidget {
             ),
             GetPage(
               name: '/home',
-              page: () => const HomeView(),
+              page: () => const DashboardView(),
               transition: Transition.fadeIn,
               transitionDuration: const Duration(milliseconds: 500),
+            ),
+            GetPage(
+              name: '/dashboard', // Alias
+              page: () => const DashboardView(),
+              transition: Transition.fadeIn,
             ),
             GetPage(
               name: '/noInternet',
@@ -222,6 +258,11 @@ class QuanEV extends StatelessWidget {
             GetPage(
               name: '/support',
               page: () => const SupportView(),
+              transition: Transition.rightToLeft,
+            ),
+            GetPage(
+              name: '/reservations',
+              page: () => const ReservationView(),
               transition: Transition.rightToLeft,
             ),
           ],

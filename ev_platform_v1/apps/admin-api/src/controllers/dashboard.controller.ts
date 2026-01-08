@@ -10,7 +10,7 @@ export class DashboardController {
       const totalUsers = await User.countDocuments();
       const onlineStations = await ChargingStation.countDocuments({ status: 'online' });
       const totalStations = await ChargingStation.countDocuments();
-      const activeSessions = await ChargingSession.countDocuments({ status: 'active' });
+      const activeSessions = await ChargingSession.countDocuments({ status: true });
 
       // Revenue aggregation
       const revenueStats = await WalletTransaction.aggregate([
@@ -20,7 +20,7 @@ export class DashboardController {
 
       // Energy aggregation
       const energyStats = await ChargingSession.aggregate([
-        { $group: { _id: null, totalEnergy: { $sum: '$total_energy' } } }
+        { $group: { _id: null, totalEnergy: { $sum: '$unit_consumed' } } }
       ]);
 
       res.json({
@@ -78,7 +78,7 @@ export class DashboardController {
         {
           $group: {
             _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-            energy: { $sum: "$total_energy" }
+            energy: { $sum: "$unit_consumed" }
           }
         },
         { $sort: { _id: 1 } }

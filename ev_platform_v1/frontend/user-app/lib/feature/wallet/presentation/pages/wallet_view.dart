@@ -9,148 +9,93 @@ class WalletView extends GetView<WalletController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(title: const Text('Wallet')),
+      backgroundColor: Colors.black, 
+      appBar: AppBar(
+        title: const Text('Transaction History', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Obx(() {
-        if (controller.isLoading.value && controller.balance.value == 0) {
+        if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                // Use a gradient or the primary theme color for the wallet card
-                color: Colors.blueAccent.withOpacity(0.8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
+        
+        if (controller.transactions.isEmpty) {
+             return const Center(
+                child: Text(
+                  'No transactions found', 
+                  style: TextStyle(color: Colors.white70, fontSize: 16)
+                )
+             );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: controller.transactions.length,
+          itemBuilder: (context, index) {
+            final transaction = controller.transactions[index];
+            return Card(
+              color: Colors.white10,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.white24,
+                    child: Icon(
+                      Icons.receipt_long, 
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  title: Text(
+                    transaction.method.toUpperCase(), 
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ID: ${transaction.transactionId}',
+                           style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          DateFormat('dd MMM yyyy, hh:mm a').format(transaction.date),
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Available Balance',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '₹',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
                       Text(
-                        controller.balance.value.toStringAsFixed(2),
+                        '₹${transaction.amount.toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 32,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                          transaction.status ? 'Success' : 'Failed',
+                          style: TextStyle(
+                              color: transaction.status ? Colors.green : Colors.red,
+                              fontSize: 12,
+                          ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'Add Money',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: controller.amountController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        prefixText: '₹ ',
-                        prefixStyle: TextStyle(color: Colors.white70),
-                        border: OutlineInputBorder(),
-                        labelText: 'Amount',
-                        labelStyle: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: controller.addMoney,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: const Text('Add'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Recent Transactions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: controller.transactions.length,
-                  itemBuilder: (context, index) {
-                    final transaction = controller.transactions[index];
-                    final isCredit = transaction.type == 'credit';
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(
-                          isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-                          color: isCredit ? Colors.green : Colors.red,
-                        ),
-                        title: Text(
-                          transaction.source.toUpperCase(),
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        subtitle: Text(
-                          DateFormat(
-                            'dd MMM yyyy, hh:mm a',
-                          ).format(transaction.createdAt),
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                        trailing: Text(
-                          '${isCredit ? '+' : '-'}₹${transaction.amount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color: isCredit ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       }),
     );

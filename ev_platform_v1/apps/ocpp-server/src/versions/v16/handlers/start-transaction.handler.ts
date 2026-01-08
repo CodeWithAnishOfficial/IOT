@@ -1,6 +1,5 @@
 import { OCPPConnection } from '../../../core/connection.manager';
 import { ChargingSession, Logger, RabbitMQService } from '@ev-platform-v1/shared';
-import { v4 as uuidv4 } from 'uuid';
 import { SmartChargingService } from '../../../services/smart-charging.service';
 
 const logger = new Logger('StartTransactionHandler');
@@ -10,7 +9,7 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
   logger.info(`StartTransaction from ${connection.id} connector ${connectorId}`);
 
   const transactionId = Math.floor(Date.now() / 1000); // 1.6 uses Integer
-  let sessionId = uuidv4();
+  let sessionId = 0; // Will be assigned
   let userId = idTag; // Default to idTag if no pending session found
 
   // Try to find pending session from RemoteStartTransaction
@@ -18,33 +17,50 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
   const pendingSession = await ChargingSession.findOne({
       charger_id: connection.id,
       connector_id: connectorId,
-      status: 'pending'
-  }).sort({ created_at: -1 });
+      // Status might be true/false or 'Pending' depending on how we saved it.
+      // In ChargingService we saved: status: true, charger_status: 'Pending'
+      charger_status: 'Pending'
+  }).sort({ created_date: -1 });
 
   if (pendingSession) {
       logger.info(`Found pending session ${pendingSession.session_id} for transaction`);
       pendingSession.transaction_id = transactionId; // Link OCPP transaction ID
-      pendingSession.status = 'active';
+      pendingSession.charger_status = 'Charging';
       pendingSession.start_time = new Date(timestamp);
-      pendingSession.meter_start = meterStart;
-      pendingSession.auth_tag = idTag; // Update tag just in case
+      pendingSession.start_meter_value = meterStart;
+      pendingSession.current_meter_value = meterStart;
+      pendingSession.auth_tag = idTag; 
+      pendingSession.transactionState = 'Started';
+      pendingSession.wsActive = true;
+      pendingSession.lastWsPing = new Date();
       await pendingSession.save();
       
       sessionId = pendingSession.session_id;
-      userId = pendingSession.user_id;
+      // userId = pendingSession.user_id; // Keep as is
   } else {
       logger.info(`No pending session found. Creating new ad-hoc session.`);
       // Create active session
+      // Generate numeric ID
+      sessionId = Math.floor(1000000 + Math.random() * 9000000);
+      
       await ChargingSession.create({
         session_id: sessionId,
         transaction_id: transactionId,
         charger_id: connection.id,
         connector_id: connectorId,
-        user_id: idTag, 
+        user_id: 0, // Ad-hoc, unknown user? Or idTag if numeric?
+        email_id: idTag, // Assume idTag is email or tag
         start_time: new Date(timestamp),
-        meter_start: meterStart,
-        status: 'active',
-        auth_tag: idTag
+        start_meter_value: meterStart,
+        current_meter_value: meterStart,
+        status: true,
+        charger_status: 'Charging',
+        auth_tag: idTag,
+        transactionState: 'Started',
+        wsActive: true,
+        lastWsPing: new Date(),
+        created_date: new Date(),
+        modified_date: new Date()
       });
   }
 

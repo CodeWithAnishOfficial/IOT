@@ -32,7 +32,13 @@ export class BillingService {
       // TariffService might need start time to determine TOU.
       const cost = await TariffService.calculateCost(totalEnergy, 0, startTime, chargerId);
       
-      const user = await User.findOne({ email_id: userId });
+      let user;
+      if (String(userId).includes('@')) {
+         user = await User.findOne({ email_id: userId });
+      } else {
+         user = await User.findOne({ user_id: userId });
+      }
+
       if (!user) {
         logger.error(`User ${userId} not found for billing`);
         return;

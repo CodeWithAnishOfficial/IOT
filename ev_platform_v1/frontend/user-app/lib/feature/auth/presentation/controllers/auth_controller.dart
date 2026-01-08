@@ -22,11 +22,20 @@ class AuthController extends GetxController {
 
   @override
   void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
-    nameController.dispose();
-    phoneController.dispose();
-    otpController.dispose();
+    // NOTE: We do NOT dispose TextEditingControllers here.
+    // In GetX with lazy loading (fenix: true or smart management), the controller instance
+    // might be removed from memory (onClose called) but the text controllers
+    // could be reused if the user navigates back quickly or if the view holds onto them.
+    // Flutter handles text controller disposal automatically if they are part of the state,
+    // but in a GetxController, it's safer to let the Garbage Collector handle them
+    // rather than manually disposing and risking "used after disposed" errors
+    // when the controller is recreated/reattached.
+    
+    // emailController.dispose();
+    // passwordController.dispose();
+    // nameController.dispose();
+    // phoneController.dispose();
+    // otpController.dispose();
     super.onClose();
   }
 
@@ -142,14 +151,10 @@ class AuthController extends GetxController {
         username: username,
       );
 
-      // Clear forms
-      emailController.clear();
-      passwordController.clear();
-      otpController.clear();
-      nameController.clear();
-      isOtpSent.value = false;
-
       Get.offAllNamed('/home');
+      
+      // We do not clear fields here to prevent UI glitch before navigation.
+      // LoginView calls resetState() on build, which handles necessary resets.
     } else {
       Get.snackbar('Error', response['message'] ?? 'Authentication failed');
     }

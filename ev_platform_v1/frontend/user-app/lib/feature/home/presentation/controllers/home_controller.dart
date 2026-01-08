@@ -10,15 +10,19 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart'; // Add url_launcher import
 import 'package:user_app/core/network/api_provider.dart';
+
 import 'package:user_app/feature/home/domain/models/charging_station.dart';
+import 'package:user_app/feature/home/domain/models/saved_trip.dart'; // Import SavedTrip
 import 'package:user_app/feature/home/presentation/pages/search_location_view.dart';
 import 'package:user_app/feature/home/presentation/pages/qr_scanner_view.dart';
-import 'package:user_app/feature/home/presentation/widgets/start_charging_sheet.dart';
 import 'package:user_app/feature/charging/presentation/pages/active_session_view.dart';
 import 'package:user_app/feature/charging/presentation/pages/charging_preparation_view.dart';
 import 'package:user_app/core/Networks/websocket_service.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
+import 'package:user_app/feature/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:user_app/utils/theme/themes.dart';
 
 class HomeController extends GetxController {
   final ApiProvider _apiProvider = ApiProvider();
@@ -29,6 +33,9 @@ class HomeController extends GetxController {
   // Recent Searches
   final recentSearches = <Map<String, String>>[].obs;
   static const String _recentSearchesKey = 'recent_searches';
+
+  // Razorpay Keys
+  static const String _razorpayKeyId = "rzp_test_D9PcSutYWQ2e71";
 
   // Location Caching
   static const String _lastLatKey = 'last_known_lat';
@@ -42,16 +49,33 @@ class HomeController extends GetxController {
   final sourceLatLng = Rxn<LatLng>();
   final destinationLatLng = Rxn<LatLng>();
   final activeField = 'destination'.obs; // 'source' or 'destination'
-  final searchMode = 'trip'.obs; // 'explore' or 'trip'
+  final searchMode = 'explore'.obs; // 'explore' or 'trip'
+
+  // Trip Planning State
+  final departureSoC = 90.0.obs;
+  final arrivalSoC = 0.0.obs; // Calculated
+  final tripStops = <ChargingStation>[].obs; // User added stops
+  final isItineraryMinimized = false.obs;
+  
+  final savedTrips = <SavedTrip>[].obs;
+  final currentSavedTripId = Rxn<String>(); // Track currently loaded saved trip ID
+
+  void toggleItineraryMinimize() => isItineraryMinimized.toggle();
 
   // Map
   final Completer<GoogleMapController> _mapControllerCompleter = Completer();
   GoogleMapController? _googleMapController;
+  GoogleMapController? tripMapController;
   final isMapReady = false.obs;
   String? _darkMapStyle;
 
   final markers = <Marker>{}.obs;
   final polylines = <Polyline>{}.obs;
+
+  // Trip Map State
+  final tripMarkers = <Marker>{}.obs;
+  final tripPolylines = <Polyline>{}.obs;
+
   // Hold the selected nearby Charger location marker separately or as part of state
   Marker? _selectedLocationMarker;
 
@@ -96,6 +120,49 @@ class HomeController extends GetxController {
   // Temp vars for pending session start
   String? _pendingConnectorId;
   double? _pendingAmount;
+  bool _isRequestingPermission = false;
+
+  void showStationDetails(String chargerId) async {
+    // 1. Switch to Map Tab (Index 0) if using Dashboard
+    if (Get.isRegistered<DashboardController>()) {
+      Get.find<DashboardController>().changeTabIndex(0);
+    }
+    
+    // 2. Find station in local list or fetch it
+    ChargingStation? station = stations.firstWhereOrNull((s) => s.chargerId == chargerId);
+    
+    if (station == null) {
+      // Try fetching specific station
+      try {
+        isLoading.value = true;
+        final response = await _apiProvider.get('/stations/$chargerId'); // Assuming endpoint exists
+        if (response['data'] != null) {
+             station = ChargingStation.fromJson(response['data']);
+        }
+      } catch (e) {
+        print("Error fetching station details: $e");
+      } finally {
+        isLoading.value = false;
+      }
+    }
+    
+    if (station != null) {
+       // 3. Center Map
+       if (station.location != null && _googleMapController != null) {
+          _googleMapController!.animateCamera(
+            CameraUpdate.newLatLngZoom(
+              LatLng(station.location!.lat, station.location!.lng),
+              15,
+            ),
+          );
+       }
+       
+       // 4. Select Station (triggers sheet)
+       selectStation(station);
+    } else {
+       Get.snackbar("Error", "Station not found");
+    }
+  }
 
   void selectConnector(String id) {
     // Single Selection Mode:
@@ -123,10 +190,12 @@ class HomeController extends GetxController {
 
     final connectorId = selectedConnectorIds.first;
 
-    Get.to(() => ChargingPreparationView(
-      connectorId: connectorId,
-      homeController: this,
-    ));
+    Get.to(
+      () => ChargingPreparationView(
+        connectorId: connectorId,
+        homeController: this,
+      ),
+    );
   }
 
   Future<void> startChargingSession(String connectorId, double amount) async {
@@ -149,22 +218,19 @@ class HomeController extends GetxController {
       });
 
       Get.back(); // Close loading dialog
-      
+
       print("Initiate Payment Response: $response");
 
       if (response['error'] == false) {
         final orderId = response['data']['id'];
         print("Razorpay Order ID: $orderId");
-        
-        final apiKey =
-            "rzp_test_D9PcSutYWQ2e71"; // Replace with env var or constant
-            
+
         if (orderId == null) {
-           throw Exception("Order ID is null from backend");
+          throw Exception("Order ID is null from backend");
         }
 
         var options = {
-          'key': apiKey,
+          'key': _razorpayKeyId,
           'amount': (amount * 100).toInt(),
           'currency': 'INR',
           'name': 'EV Charging',
@@ -177,7 +243,7 @@ class HomeController extends GetxController {
             'email': 'user@example.com', // Get from user profile if available
           },
         };
-        
+
         print("Opening Razorpay with options: $options");
 
         _razorpay.open(options);
@@ -196,30 +262,44 @@ class HomeController extends GetxController {
     // Payment Successful, Now Start Session
     if (_pendingConnectorId == null || _pendingAmount == null) return;
 
+    // Capture values in local variables to avoid race conditions/null checks in async closures
+    final String connectorId = _pendingConnectorId!;
+    final double amount = _pendingAmount!;
+
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
     );
 
     try {
-      final res = await _apiProvider.post('/charging/start', {
-        'station_id': selectedStation.value?.chargerId,
-        'connector_id': _pendingConnectorId,
-        'amount': _pendingAmount,
-        'payment_details': {
-          'orderId': response.orderId,
-          'paymentId': response.paymentId,
-          'signature': response.signature,
-        },
-      });
+      final res = await _apiProvider
+          .post('/charging/start', {
+            'station_id': selectedStation.value?.chargerId,
+            'connector_id': connectorId,
+            'amount': amount,
+            'payment_details': {
+              'orderId': response.orderId,
+              'paymentId': response.paymentId,
+              'signature': response.signature,
+            },
+          })
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException(
+                "Server is taking too long to respond. Please check charger status.",
+              );
+            },
+          );
 
       Get.back(); // Close loading
 
       if (res['data'] != null || res['status'] == 'success') {
         final sessionId =
-            res['data']?['sessionId'] ??
-            res['sessionId'] ??
-            "MOCK_SESSION_${DateTime.now().millisecondsSinceEpoch}";
+            (res['data']?['sessionId'] ??
+                    res['sessionId'] ??
+                    "MOCK_SESSION_${DateTime.now().millisecondsSinceEpoch}")
+                .toString();
 
         Get.snackbar(
           "Success",
@@ -230,8 +310,8 @@ class HomeController extends GetxController {
 
         Get.off(
           () => ChargingView(
-            connectorId: _pendingConnectorId!,
-            initialAmount: _pendingAmount!,
+            connectorId: connectorId,
+            initialAmount: amount,
             sessionId: sessionId,
           ),
         );
@@ -268,6 +348,16 @@ class HomeController extends GetxController {
     final errorMsg = e.toString();
 
     // Handle specific errors gracefully
+    if (e is TimeoutException) {
+      Get.snackbar(
+        "Request Timed Out",
+        "The server failed to respond in time. The charger might be offline.",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     if (errorMsg.contains("Insufficient wallet balance")) {
       Get.snackbar(
         "Insufficient Balance",
@@ -275,6 +365,14 @@ class HomeController extends GetxController {
       );
     } else if (errorMsg.contains("busy") || errorMsg.contains("in use")) {
       Get.snackbar("Connector Busy", "This connector is currently in use.");
+    } else if (errorMsg.contains("offline") ||
+        errorMsg.contains("not connected")) {
+      Get.snackbar(
+        "Charger Offline",
+        "This charger is currently not connected to the network.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } else {
       Get.snackbar(
         "Error",
@@ -299,7 +397,7 @@ class HomeController extends GetxController {
         // Optimistically fetch stations for this location without blocking UI
         fetchNearbyStations(lat: lat, lng: lng, silent: true);
       } else {
-         initialCameraPosition.value = const CameraPosition(
+        initialCameraPosition.value = const CameraPosition(
           target: LatLng(28.6139, 77.2090),
           zoom: 12,
         );
@@ -322,14 +420,26 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
-    // Pre-load map style
-    rootBundle.loadString('assets/map_styles/dark_map_style.json').then((style) {
-      _darkMapStyle = style;
-    }).catchError((error) {
-      print("Error loading map style: $error");
+
+    // Safety timeout: Ensure map loading screen doesn't get stuck forever
+    // If map callback doesn't fire within 5 seconds, hide the loader.
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!isMapReady.value) {
+        print("Map initialization timed out, forcing UI to show.");
+        isMapReady.value = true;
+      }
     });
-    
+
+    // Pre-load map style
+    rootBundle
+        .loadString('assets/map_styles/dark_map_style.json')
+        .then((style) {
+          _darkMapStyle = style;
+        })
+        .catchError((error) {
+          print("Error loading map style: $error");
+        });
+
     // Load last known location immediately
     _loadLastKnownLocation();
 
@@ -351,6 +461,9 @@ class HomeController extends GetxController {
         _updateMarkers();
       }
     });
+    
+    // Auto-update trip markers when stops change
+    ever(tripStops, (_) => _updateTripMarkers());
 
     // Initialize source with current location when available
     ever(currentAddress, (address) {
@@ -366,7 +479,8 @@ class HomeController extends GetxController {
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Initialize Location & Data after a delay to avoid permission conflicts with NotificationService
+    Future.delayed(const Duration(seconds: 2), () {
       _initializeLocation();
       loadRecentSearches();
     });
@@ -493,29 +607,33 @@ class HomeController extends GetxController {
 
       // Using User API Port 3001
       // Replace with your actual IP if testing on real device
-      final wsUrl = "ws://192.168.1.9:3001?token=$token";
+      final wsUrl = "ws://192.168.0.58:3001?token=$token";
       _wsService = WebSocketService(wsUrl);
 
-      _wsService?.stream.listen((data) {
-        try {
-          final decoded = jsonDecode(data.toString());
-          final event = decoded['event'];
-          final payload = decoded['data'];
+      _wsService?.stream.listen(
+        (data) {
+          try {
+            final decoded = jsonDecode(data.toString());
+            final event = decoded['event'];
+            final payload = decoded['data'];
 
-          if (event == 'station_status') {
-            _handleStationStatusUpdate(payload);
+            if (event == 'station_status') {
+              _handleStationStatusUpdate(payload);
+            }
+          } catch (e) {
+            print("WS Error: $e");
           }
-        } catch (e) {
-          print("WS Error: $e");
-        }
-      }, onError: (error) {
-        print("WS Connection Error (Stream): $error");
-        // Check for Auth Error (simple heuristic)
-        if (error.toString().contains("401") || error.toString().toLowerCase().contains("authorized")) {
-           Get.find<SessionController>().clearSession();
-           Get.offAllNamed('/login');
-        }
-      });
+        },
+        onError: (error) {
+          print("WS Connection Error (Stream): $error");
+          // Check for Auth Error (simple heuristic)
+          if (error.toString().contains("401") ||
+              error.toString().toLowerCase().contains("authorized")) {
+            Get.find<SessionController>().clearSession();
+            Get.offAllNamed('/login');
+          }
+        },
+      );
 
       _wsService?.connect();
     } catch (e) {
@@ -523,42 +641,71 @@ class HomeController extends GetxController {
     }
   }
 
+  Timer? _wsUpdateBatchTimer;
+  final Map<String, dynamic> _pendingStationUpdates = {};
+
   void _handleStationStatusUpdate(dynamic payload) {
-    final chargerId = payload['chargerId'];
-    final status = payload['status'];
-    final connectorId = payload['connectorId'];
+    // Add to pending batch
+    _pendingStationUpdates[payload['chargerId']] = payload;
 
-    final index = stations.indexWhere((s) => s.chargerId == chargerId);
-    if (index != -1) {
-      var station = stations[index];
+    if (_wsUpdateBatchTimer?.isActive ?? false) return;
 
-      if (connectorId == 0) {
-        // Main Station Status Update
-        station = station.copyWith(status: status);
-      } else {
-        // Connector Update
-        final connectors = List<Connector>.from(station.connectors);
-        final cIndex = connectors.indexWhere(
-          (c) => c.connectorId == connectorId,
-        );
-        if (cIndex != -1) {
-          connectors[cIndex] = connectors[cIndex].copyWith(status: status);
+    // Flush updates every 1 second to avoid UI thrashing
+    _wsUpdateBatchTimer = Timer(
+      const Duration(seconds: 1),
+      _processPendingUpdates,
+    );
+  }
 
-          // If all connectors are occupied/faulted, update station status?
-          // For simplicity, if any connector updates, we might want to refresh UI.
-          // The backend handles station status logic (connectorId=0) separately usually,
-          // but let's just update the connector list here.
-          station = station.copyWith(connectors: connectors);
+  void _processPendingUpdates() {
+    if (_pendingStationUpdates.isEmpty) return;
+
+    // Process all pending updates in one go
+    final updates = Map<String, dynamic>.from(_pendingStationUpdates);
+    _pendingStationUpdates.clear();
+
+    // Create a new list to avoid mutating the RxList repeatedly in loop
+    // (though for RxList, efficient modification is tricky, but let's try)
+    bool needsMarkerUpdate = false;
+
+    // We can iterate through stations once, or iterate updates.
+    // If updates << stations, iterate updates.
+
+    for (var entry in updates.entries) {
+      final chargerId = entry.key;
+      final payload = entry.value;
+      final status = payload['status'];
+      final connectorId = payload['connectorId'];
+
+      final index = stations.indexWhere((s) => s.chargerId == chargerId);
+      if (index != -1) {
+        var station = stations[index];
+
+        if (connectorId == 0) {
+          station = station.copyWith(status: status);
+        } else {
+          final connectors = List<Connector>.from(station.connectors);
+          final cIndex = connectors.indexWhere(
+            (c) => c.connectorId == connectorId,
+          );
+          if (cIndex != -1) {
+            connectors[cIndex] = connectors[cIndex].copyWith(status: status);
+            station = station.copyWith(connectors: connectors);
+          }
+        }
+
+        stations[index] = station;
+        needsMarkerUpdate = true;
+
+        if (selectedStation.value?.chargerId == chargerId) {
+          selectedStation.value = station;
         }
       }
+    }
 
-      stations[index] = station;
+    // Trigger marker update once if needed
+    if (needsMarkerUpdate) {
       _updateMarkers();
-
-      // If this station is currently selected, update the selection too
-      if (selectedStation.value?.chargerId == chargerId) {
-        selectedStation.value = station;
-      }
     }
   }
 
@@ -629,14 +776,20 @@ class HomeController extends GetxController {
 
   void clearSearch() {
     searchController.clear();
+    sourceController.clear();
+    destinationController.clear();
     searchResults.clear();
     _selectedLocationMarker = null;
     selectedStation.value = null; // Clear selected station
+    currentSavedTripId.value = null; // Clear saved trip ID
 
     // Clear trip state
     sourceLatLng.value = null;
     destinationLatLng.value = null;
     polylines.clear();
+    tripPolylines.clear(); // Clear trip polylines
+    tripMarkers.clear(); // Clear trip markers
+    tripStops.clear(); // Clear trip stops
 
     _updateMarkers(); // Immediate visual update
     recenterMap();
@@ -760,7 +913,15 @@ class HomeController extends GetxController {
   Future<void> recenterMap() async {
     isLoading.value = true;
     try {
-      var status = await Permission.location.request();
+      var status = await Permission.location.status;
+      if (!status.isGranted) {
+        try {
+          status = await Permission.location.request();
+        } catch (_) {
+          status = await Permission.location.status;
+        }
+      }
+
       if (status.isGranted) {
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
@@ -852,9 +1013,17 @@ class HomeController extends GetxController {
 
   Future<void> _safeAnimateCamera(CameraUpdate update) async {
     try {
-      final controller =
-          _googleMapController ?? await _mapControllerCompleter.future;
-      await controller.animateCamera(update);
+      GoogleMapController? controller;
+      if (searchMode.value == 'trip' && tripMapController != null) {
+        controller = tripMapController;
+      } else {
+        controller =
+            _googleMapController ?? await _mapControllerCompleter.future;
+      }
+
+      if (controller != null) {
+        await controller.animateCamera(update);
+      }
     } catch (e) {
       // Catch all errors, specifically "disposed" ones, and silently fail
       if (e.toString().contains('disposed') ||
@@ -870,7 +1039,15 @@ class HomeController extends GetxController {
     FocusManager.instance.primaryFocus?.unfocus();
 
     // Check permission
-    var status = await Permission.location.request();
+    var status = await Permission.location.status;
+    if (!status.isGranted) {
+      try {
+        status = await Permission.location.request();
+      } catch (_) {
+        status = await Permission.location.status;
+      }
+    }
+
     if (!status.isGranted) {
       Get.snackbar("Permission Denied", "Location permission is required.");
       return;
@@ -1027,51 +1204,463 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> _planTrip() async {
-    Get.back(); // Return to map
+  Future<void> planTripFromEmbedded() async {
+    // Similar to _planTrip but without Get.back() as we are already on the page
+    // And assuming inputs are already set in sourceLatLng and destinationLatLng
 
-    // Wait for keyboard to close and navigation transition to finish
-    await Future.delayed(const Duration(milliseconds: 300));
+    // Validate inputs
+    if (sourceLatLng.value == null &&
+        sourceController.text == "Current Location" &&
+        currentLocation.value != null) {
+      sourceLatLng.value = LatLng(
+        currentLocation.value!.latitude,
+        currentLocation.value!.longitude,
+      );
+    }
+
+    // Force "Current Location" if it was just text
+    if (sourceLatLng.value == null) {
+      // Try geocoding sourceController.text if needed, or error
+      if (sourceController.text.isNotEmpty &&
+          sourceController.text != "Current Location") {
+        // Assume user selected something or typed valid address.
+        // Realistically, onPlaceSelected should have set sourceLatLng.
+        // If manually typed, we need to geocode.
+        // For now, let's assume it's set or error.
+      }
+    }
 
     if (sourceLatLng.value == null || destinationLatLng.value == null) {
-      Get.snackbar("Error", "Source or destination is missing");
+      Get.snackbar("Error", "Please select valid locations");
       return;
     }
 
     isLoading.value = true;
 
-    // 1. Fetch Route
-    // 2. Fetch Chargers along route
-    // For now, let's just move camera to fit bounds and show markers
+    // Switch to Map View (by closing sheet or changing state)
+    // Here we can just execute the route logic and the UI (SearchLocationView)
+    // should probably react to `tripPolylines` being populated.
+    // Actually, SearchLocationView's _buildTripPlannerLayout shows map IF configured?
+    // No, it shows map as background always.
+
+    // We need to dismiss the bottom sheet part of SearchLocationView or minimize it.
+    // For now, let's just draw the route.
+
+    await _executeTripPlanning();
+
+    // Calculate approx arrival SoC (Mock logic)
+    // Distance / Efficiency
+    // E.g. 1% per 2km
+    if (tripPolylines.isNotEmpty) {
+      // Calculate distance (very rough sum of points)
+      // Or get from API response if we stored it
+      // Let's just mock it based on straight line * 1.3
+      final dist =
+          Geolocator.distanceBetween(
+            sourceLatLng.value!.latitude,
+            sourceLatLng.value!.longitude,
+            destinationLatLng.value!.latitude,
+            destinationLatLng.value!.longitude,
+          ) /
+          1000; // km
+
+      final realDist = dist * 1.4; // Road factor
+      final consumption = realDist / 3.0; // 3km per %
+
+      double arrival = departureSoC.value - consumption;
+      if (arrival < 0) arrival = 0;
+      arrivalSoC.value = arrival;
+    }
+  }
+
+  Future<void> _planTrip() async {
+    Get.back(); // Return to map
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _executeTripPlanning();
+  }
+
+  Future<void> _executeTripPlanning() async {
+    if (sourceLatLng.value == null || destinationLatLng.value == null) return;
+
+    isLoading.value = true;
 
     try {
-      // Handle case where source and destination are the same
-      if (sourceLatLng.value == destinationLatLng.value) {
-        _safeAnimateCamera(CameraUpdate.newLatLngZoom(sourceLatLng.value!, 15));
-      } else {
-        LatLngBounds bounds = _boundsFromLatLngList([
-          sourceLatLng.value!,
-          destinationLatLng.value!,
-        ]);
+      // 1. Fetch Route using Directions API
+      final routePoints = await _getPolylineCoordinates(
+        sourceLatLng.value!,
+        destinationLatLng.value!,
+      );
+
+      // 2. Animate Camera to fit bounds
+      if (routePoints.isNotEmpty) {
+        LatLngBounds bounds = _boundsFromLatLngList(routePoints);
         _safeAnimateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
       }
 
-      // Update markers to show Source and Dest immediately
-      _updateMarkers();
+      // 3. Update Markers (Source/Dest)
+      _updateTripMarkers();
 
-      // Mocking route logic for now - fetch chargers between the two points
-      // In a real scenario, we'd use the route polyline.
-      // Here we'll just fetch near the midpoint or destination for demo
-      fetchNearbyStations(
-        lat: destinationLatLng.value!.latitude,
-        lng: destinationLatLng.value!.longitude,
-      );
+      // 4. Add Polyline (Corridor Style)
+      tripPolylines.clear();
+      if (routePoints.isNotEmpty) {
+        // Outer Corridor (Wide Semi-Transparent Reddish)
+        tripPolylines.add(
+          Polyline(
+            polylineId: const PolylineId("trip_corridor"),
+            points: routePoints,
+            color: AppTheme.primaryColor.withOpacity(
+              0.2,
+            ), // Primary theme corridor
+            width: 20, // Wide
+            zIndex: 1,
+            jointType: JointType.round,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            geodesic: true,
+          ),
+        );
+
+        // Inner Route (Primary Theme Color)
+        tripPolylines.add(
+          Polyline(
+            polylineId: const PolylineId("trip_route"),
+            points: routePoints,
+            color: AppTheme.primaryColor, // Use brand color (Fluorescent)
+            width: 5,
+            zIndex: 2,
+            jointType: JointType.round,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            geodesic: true,
+          ),
+        );
+      }
+
+      // Fetch chargers along route (1km buffer)
+      await fetchRouteStations(routePoints);
     } catch (e) {
       print("Error planning trip: $e");
       Get.snackbar("Error", "Failed to plan trip");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> fetchRouteStations(List<LatLng> routePoints) async {
+    // Simplify route points if too many (simple step sampling)
+    List<Map<String, double>> pointsPayload = [];
+    int step = 1;
+    if (routePoints.length > 500) {
+      step = (routePoints.length / 500).ceil();
+    }
+
+    for (int i = 0; i < routePoints.length; i += step) {
+      pointsPayload.add({
+        'lat': routePoints[i].latitude,
+        'lng': routePoints[i].longitude,
+      });
+    }
+    // Ensure last point is included
+    if (routePoints.isNotEmpty) {
+      pointsPayload.add({
+        'lat': routePoints.last.latitude,
+        'lng': routePoints.last.longitude,
+      });
+    }
+
+    try {
+      final response = await _apiProvider.post('/search/route', {
+        'routePoints': pointsPayload,
+        'bufferDistance': 1000, // 1km buffer
+      });
+
+      if (response['data'] != null) {
+        final List<dynamic> data = response['data'];
+        stations.value = await compute(_parseStations, data);
+
+        // Update markers (both map views)
+        _updateMarkers();
+        if (searchMode.value == 'trip') {
+          _updateTripMarkers();
+        }
+      }
+    } catch (e) {
+      print("Error fetching route stations: $e");
+      // Fallback
+      fetchNearbyStations(
+        lat: destinationLatLng.value?.latitude,
+        lng: destinationLatLng.value?.longitude,
+        radius: 50000,
+        silent: true,
+      );
+    }
+  }
+
+  Future<void> fetchSavedTrips() async {
+    try {
+      final res = await _apiProvider.get('/saved-trips');
+      if (res['error'] == false) {
+        final list = (res['data'] as List).map((e) => SavedTrip.fromJson(e)).toList();
+        savedTrips.assignAll(list);
+      }
+    } catch (e) {
+      print("Fetch Saved Trips Error: $e");
+    }
+  }
+
+  Future<void> saveCurrentTrip(String name) async {
+     if (sourceLatLng.value == null || destinationLatLng.value == null) {
+       Get.snackbar("Error", "Source and Destination required");
+       return;
+     }
+     
+     final stopsData = tripStops.map((s) => TripStop(
+         chargerId: s.chargerId,
+         name: s.name,
+         address: s.location?.address,
+         location: TripLocation(
+             address: s.location?.address ?? '',
+             lat: s.location!.lat,
+             lng: s.location!.lng,
+         ),
+     )).toList();
+
+     final body = {
+        'name': name,
+        'source': {
+            'address': sourceController.text,
+            'lat': sourceLatLng.value!.latitude,
+            'lng': sourceLatLng.value!.longitude,
+        },
+        'destination': {
+            'address': destinationController.text,
+            'lat': destinationLatLng.value!.latitude,
+            'lng': destinationLatLng.value!.longitude,
+        },
+        'stops': stopsData.map((s) => s.toJson()).toList(),
+     };
+
+     try {
+         final res = await _apiProvider.post('/saved-trips', body);
+         if (res['error'] == false) {
+             Get.snackbar("Success", "Trip saved successfully!", backgroundColor: Colors.green, colorText: Colors.white);
+             fetchSavedTrips();
+         } else {
+             Get.snackbar("Error", res['message'] ?? "Failed to save trip", backgroundColor: Colors.red, colorText: Colors.white);
+         }
+     } catch (e) {
+         print("Save Trip Error: $e");
+         Get.snackbar("Error", "Failed to save trip");
+     }
+  }
+  
+  void deleteSavedTrip(String id) async {
+    try {
+      final res = await _apiProvider.delete('/saved-trips/$id');
+      if (res['error'] == false) {
+        Get.snackbar("Success", "Trip deleted successfully!", backgroundColor: Colors.green, colorText: Colors.white);
+        fetchSavedTrips(); // Refresh list
+      } else {
+        Get.snackbar("Error", res['message'] ?? "Failed to delete trip", backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } catch (e) {
+      print("Delete Trip Error: $e");
+      Get.snackbar("Error", "Failed to delete trip");
+    }
+  }
+
+  void loadSavedTrip(SavedTrip trip) {
+     currentSavedTripId.value = trip.id; // Set ID
+     sourceController.text = trip.source.address;
+     sourceLatLng.value = LatLng(trip.source.lat, trip.source.lng);
+     
+     destinationController.text = trip.destination.address;
+     destinationLatLng.value = LatLng(trip.destination.lat, trip.destination.lng);
+     
+     tripStops.clear();
+     
+     // Correct mapping for ChargingStation constructor
+     final mappedStations = trip.stops.map((s) {
+        return ChargingStation(
+           chargerId: s.chargerId ?? 'unknown',
+           name: s.name,
+           location: Location(
+               lat: s.location.lat, 
+               lng: s.location.lng, 
+               address: s.location.address
+           ),
+           status: 'Unknown',
+           maxPowerKw: 0,
+           connectors: [],
+        );
+     }).toList();
+     
+     tripStops.assignAll(mappedStations);
+     
+     // Switch to trip mode
+     searchMode.value = 'trip';
+     Get.to(
+       () => const SearchLocationView(
+         isEmbedded: true, 
+         showBackButton: true,
+         isSavedTripMode: true,
+       ),
+       arguments: {'fromSaved': true},
+     );
+     
+     // Trigger route calculation
+     _executeTripPlanning();
+  }
+
+  void _updateTripMarkers() {
+    final newMarkers = <Marker>{};
+
+    // Add all fetched stations (available chargers along route)
+    for (var station in stations) {
+      if (station.location == null) continue;
+
+      // Skip if this station is already in tripStops (to avoid Z-fighting)
+      if (tripStops.any((s) => s.chargerId == station.chargerId)) continue;
+
+      final isOnline = station.status.toLowerCase() == 'online';
+      final icon = isOnline
+          ? (_iconGreen ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen,
+                ))
+          : (_iconOrange ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueOrange,
+                ));
+
+      newMarkers.add(
+        Marker(
+          markerId: MarkerId("trip_${station.chargerId}"),
+          position: LatLng(station.location!.lat, station.location!.lng),
+          icon: icon,
+          zIndex: 5,
+          onTap: () => selectStation(station),
+        ),
+      );
+    }
+
+    if (sourceLatLng.value != null) {
+      newMarkers.add(
+        Marker(
+          markerId: const MarkerId('source'),
+          position: sourceLatLng.value!,
+          icon:
+              _iconBlue ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: "Start"),
+          zIndex: 10,
+        ),
+      );
+    }
+
+    if (destinationLatLng.value != null) {
+      newMarkers.add(
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: destinationLatLng.value!,
+          icon:
+              _iconRed ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: "Destination"),
+          zIndex: 10,
+        ),
+      );
+    }
+
+    // Add numbered markers for stops
+    _addStopMarkers(newMarkers);
+
+    tripMarkers.value = newMarkers;
+  }
+
+  Future<void> _addStopMarkers(Set<Marker> markers) async {
+    for (int i = 0; i < tripStops.length; i++) {
+      final stop = tripStops[i];
+      if (stop.location == null) continue;
+
+      final icon = await _createNumberedMarkerBitmap(i + 1);
+
+      markers.add(
+        Marker(
+          markerId: MarkerId("stop_${stop.chargerId}"),
+          position: LatLng(stop.location!.lat, stop.location!.lng),
+          icon: icon,
+          zIndex: 15,
+          infoWindow: InfoWindow(title: stop.name ?? "Stop ${i + 1}"),
+          onTap: () => selectStation(stop),
+        ),
+      );
+    }
+
+    // Update state to trigger redraw
+    tripMarkers.refresh();
+  }
+
+  Future<BitmapDescriptor> _createNumberedMarkerBitmap(int number) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    const double size = 100.0;
+
+    // Paint for the circle background
+    final Paint circlePaint = Paint()
+      ..color = Colors
+          .deepOrange // Use brand color
+      ..style = PaintingStyle.fill;
+
+    // Shadow
+    canvas.drawCircle(
+      const Offset(size / 2 + 2.0, size / 2 + 4.0),
+      size / 2,
+      Paint()
+        ..color = Colors.black38
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+    );
+
+    // Draw Circle
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, circlePaint);
+
+    // Add Border
+    final Paint borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, borderPaint);
+
+    // Text Painter
+    final TextPainter textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.text = TextSpan(
+      text: number.toString(),
+      style: const TextStyle(
+        fontSize: 50.0,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    );
+
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2),
+    );
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(
+      size.toInt(),
+      size.toInt(),
+    );
+    final ByteData? byteData = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
   }
 
   LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
@@ -1095,9 +1684,23 @@ class HomeController extends GetxController {
   }
 
   Future<void> _initializeLocation() async {
+    if (_isRequestingPermission) return;
     isLoading.value = true;
     try {
-      var status = await Permission.location.request();
+      _isRequestingPermission = true;
+      var status = await Permission.location.status;
+
+      if (!status.isGranted) {
+        try {
+          status = await Permission.location.request();
+        } catch (e) {
+          // Ignore if permission request is already running
+          print("Permission request error: $e");
+          // Re-check status in case another request finished and granted it
+          status = await Permission.location.status;
+        }
+      }
+
       if (status.isGranted) {
         isLocationGranted.value = true;
         Position position = await Geolocator.getCurrentPosition(
@@ -1125,6 +1728,8 @@ class HomeController extends GetxController {
     } catch (e) {
       print("Error getting location: $e");
       fetchNearbyStations(); // Fallback
+    } finally {
+      _isRequestingPermission = false;
     }
   }
 
@@ -1134,8 +1739,8 @@ class HomeController extends GetxController {
     // Apply pre-loaded style or load it now if missed
     if (_darkMapStyle != null) {
       _googleMapController?.setMapStyle(_darkMapStyle);
-      // Small delay to allow native map to render the style
-      Future.delayed(const Duration(milliseconds: 300), () {
+      // Increased delay to 2 seconds to ensure grid is hidden even on slow connections
+      Future.delayed(const Duration(seconds: 2), () {
         isMapReady.value = true;
       });
     } else {
@@ -1144,7 +1749,7 @@ class HomeController extends GetxController {
           .then((style) {
             _darkMapStyle = style;
             _googleMapController?.setMapStyle(style);
-            Future.delayed(const Duration(milliseconds: 300), () {
+            Future.delayed(const Duration(seconds: 2), () {
               isMapReady.value = true;
             });
           })
@@ -1174,13 +1779,26 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> fetchNearbyStations({double? lat, double? lng, bool silent = false}) async {
+  void onTripMapCreated(GoogleMapController controller) {
+    tripMapController = controller;
+    if (_darkMapStyle != null) {
+      tripMapController?.setMapStyle(_darkMapStyle);
+    }
+  }
+
+  Future<void> fetchNearbyStations({
+    double? lat,
+    double? lng,
+    double? radius,
+    bool silent = false,
+  }) async {
     // Default to New Delhi if no location provided
     final double latitude = lat ?? 28.6139;
     final double longitude = lng ?? 77.2090;
+    final double searchRadius = radius ?? 100000;
 
     // Check distance optimization
-    if (_lastFetchLocation != null) {
+    if (_lastFetchLocation != null && radius == null) {
       final distance = Geolocator.distanceBetween(
         _lastFetchLocation!.latitude,
         _lastFetchLocation!.longitude,
@@ -1197,12 +1815,14 @@ class HomeController extends GetxController {
     try {
       if (!silent) isLoading.value = true;
 
-      // Update last known location
-      _lastFetchLocation = LatLng(latitude, longitude);
-      _saveLastLocation(latitude, longitude);
+      // Update last known location (only if not a custom radius search which might be for trip planning)
+      if (radius == null) {
+        _lastFetchLocation = LatLng(latitude, longitude);
+        _saveLastLocation(latitude, longitude);
+      }
 
       final response = await _apiProvider.get(
-        '/search/nearby?lat=$latitude&lng=$longitude&radius=100000',
+        '/search/nearby?lat=$latitude&lng=$longitude&radius=$searchRadius',
       );
 
       if (response['data'] != null) {
@@ -1210,6 +1830,11 @@ class HomeController extends GetxController {
         // Use compute to parse JSON in background isolate
         stations.value = await compute(_parseStations, data);
         _updateMarkers();
+
+        // Update Trip Markers if in Trip Mode
+        if (searchMode.value == 'trip') {
+          _updateTripMarkers();
+        }
       }
     } catch (e) {
       print('Error fetching stations: $e');
@@ -1448,7 +2073,18 @@ class HomeController extends GetxController {
         } else {
           throw Exception("No routes found");
         }
+      } else if (response['status'] == 'ZERO_RESULTS') {
+        print("Directions API: No route found (ZERO_RESULTS)");
+        Get.snackbar(
+          "No Route Found",
+          "Cannot drive between these locations.",
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+        return [start, end]; // Fallback to straight line
       } else {
+        print("Directions API Error: ${response['status']}");
+        // Only throw for actual errors, not expected states
         throw Exception(
           "Directions API Error: ${response['status']} - ${response['error_message'] ?? ''}",
         );
@@ -1457,6 +2093,43 @@ class HomeController extends GetxController {
       print("Error fetching directions: $e");
       // Fallback to straight line if API fails
       return [start, end];
+    }
+  }
+
+  Future<void> launchGoogleMapsNavigation() async {
+    if (sourceLatLng.value == null || destinationLatLng.value == null) {
+      Get.snackbar("Error", "Source or destination not set");
+      return;
+    }
+
+    final source =
+        "${sourceLatLng.value!.latitude},${sourceLatLng.value!.longitude}";
+    final dest =
+        "${destinationLatLng.value!.latitude},${destinationLatLng.value!.longitude}";
+
+    // Construct Waypoints
+    // Format: lat,lng|lat,lng|...
+    String waypoints = "";
+    if (tripStops.isNotEmpty) {
+      waypoints = tripStops
+          .where((s) => s.location != null)
+          .map((s) => "${s.location!.lat},${s.location!.lng}")
+          .join("|");
+    }
+
+    // Google Maps URL Scheme
+    // api=1 ensures cross-platform compatibility
+    // waypoints param adds stops
+    // travelmode=driving
+
+    final uri = Uri.parse(
+      "https://www.google.com/maps/dir/?api=1&origin=$source&destination=$dest&waypoints=$waypoints&travelmode=driving",
+    );
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar("Error", "Could not launch Google Maps");
     }
   }
 
@@ -1556,44 +2229,20 @@ class HomeController extends GetxController {
     // Create a local set to minimize observable notifications
     final newMarkers = <Marker>{};
 
-    // Re-add selected location marker if it exists
+    // Re-add selected location marker if it exists (For Explore Mode)
     if (_selectedLocationMarker != null) {
-      // Force a unique ID for the selected location if needed,
-      // but keeping it constant allows standard updates.
-      // We make sure to add it to the set.
       newMarkers.add(_selectedLocationMarker!);
     }
 
-    // Add trip planning markers
-    if (sourceLatLng.value != null && destinationLatLng.value != null) {
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId('source'),
-          position: sourceLatLng.value!,
-          icon:
-              _iconBlue ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: "Start"),
-          zIndex: 10,
-        ),
-      );
-
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: destinationLatLng.value!,
-          icon:
-              _iconRed ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: const InfoWindow(title: "Destination"),
-          zIndex: 10,
-        ),
-      );
-    }
+    // We do NOT add source/dest markers to Main Home Map anymore,
+    // unless we want them to appear there? User wants them separated.
+    // So "trip planning markers" (source/dest) should only be in _updateTripMarkers.
 
     // Limit to 500 markers to prevent map freeze when radius is large (100km)
     // This assumes markers are somewhat ordered by distance or relevance from backend
-    final stationsToRender = stations.length > 500 ? stations.take(500) : stations;
+    final stationsToRender = stations.length > 500
+        ? stations.take(500)
+        : stations;
 
     for (var station in stationsToRender) {
       if (station.location == null) continue;
@@ -1626,6 +2275,11 @@ class HomeController extends GetxController {
     // Only update if marker count changed or significant event to avoid GC thrashing
     // (Equality check on Sets can be expensive, so we just rely on debounce)
     markers.value = newMarkers;
+
+    // Also update trip markers if we have stations, to keep them in sync
+    if (searchMode.value == 'trip') {
+      _updateTripMarkers();
+    }
   }
 }
 

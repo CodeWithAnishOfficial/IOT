@@ -14,7 +14,7 @@ router.post('/create', async (req: Request, res: Response) => {
   try {
     const { charger_id, connector_id, expiry_minutes = 15 } = req.body;
     // @ts-ignore
-    const userId = req.user.email_id;
+    const userId = req.user.user_id;
 
     // Check if station exists and connector is available (naive check)
     const station = await ChargingStation.findOne({ charger_id });
@@ -31,7 +31,7 @@ router.post('/create', async (req: Request, res: Response) => {
       reservation_id: reservationId,
       charger_id,
       connector_id,
-      user_id: userId,
+      user_id: Number(userId),
       expiry_date: expiryDate,
       status: 'Pending'
     });
@@ -55,13 +55,32 @@ router.post('/create', async (req: Request, res: Response) => {
   }
 });
 
+// Route: GET /reservations/upcoming
+// Description: Get the next upcoming reservation
+router.get('/upcoming', async (req: Request, res: Response) => {
+    try {
+        // @ts-ignore
+        const userId = req.user.user_id;
+        
+        const upcoming = await Reservation.findOne({ 
+            user_id: Number(userId),
+            expiry_date: { $gt: new Date() }, // Not expired
+            status: 'Pending' // Only pending reservations
+        }).sort({ expiry_date: 1 }); // Earliest first
+
+        res.json({ error: false, data: upcoming });
+    } catch (error: any) {
+        res.status(500).json({ error: true, message: error.message });
+    }
+});
+
 // Route: GET /reservations/list
 // Description: List all reservations for the current user
 router.get('/list', async (req: Request, res: Response) => {
     try {
         // @ts-ignore
-        const userId = req.user.email_id;
-        const reservations = await Reservation.find({ user_id: userId }).sort({ created_at: -1 });
+        const userId = req.user.user_id;
+        const reservations = await Reservation.find({ user_id: Number(userId) }).sort({ created_at: -1 });
         res.json({ error: false, data: reservations });
     } catch (error: any) {
         res.status(500).json({ error: true, message: error.message });

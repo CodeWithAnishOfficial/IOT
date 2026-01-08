@@ -96,10 +96,10 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        textStyle: GoogleFonts.poppins(
+        textStyle: const TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 16,
-        ),
+        ), // Removed GoogleFonts here to prevent potential release mode crash
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(

@@ -20,9 +20,12 @@ class ApiProvider {
   // Use 10.0.2.2 for Android emulator, localhost for iOS simulator
   static String get baseUrl {
     if (Platform.isAndroid) {
-      return 'http://192.168.1.9:3000';
+      // TODO: Change this IP to your computer's local IP address
+      // For Emulator use: 'http://10.0.2.2:3000'
+      // For Real Device use: 'http://YOUR_PC_IP:3000' (e.g. 192.168.0.58)
+      return 'http://192.168.0.58:3000';
     }
-    return 'http://192.168.1.9:3000';
+    return 'http://192.168.0.58:3000';
   }
 
   final SessionController _sessionController = Get.find<SessionController>();
@@ -33,15 +36,18 @@ class ApiProvider {
           .get(Uri.parse('$baseUrl$endpoint'), headers: _getHeaders())
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
-    } on SocketException {
-      throw Exception('Connection refused: Server is unreachable');
-    } on TimeoutException {
-      throw Exception('Connection timed out');
+    } on SocketException catch (_) {
+      // Return null or throw specific exception that UI can handle without crashing
+      // Re-throwing as a simple Exception is fine, but ensure it's caught upstream
+      throw ApiException('Connection refused: Server is unreachable', 503);
+    } on TimeoutException catch (_) {
+      throw ApiException('Connection timed out', 408);
     } catch (e) {
-      if (e.toString().contains('SocketException')) {
-        throw Exception('Connection refused: Server is unreachable');
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw ApiException('Connection refused: Server is unreachable', 503);
       }
-      throw Exception('Network error: $e');
+      throw ApiException('Network error: $e', 500);
     }
   }
 
@@ -77,15 +83,16 @@ class ApiProvider {
           )
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
-    } on SocketException {
-      throw Exception('Connection refused: Server is unreachable');
-    } on TimeoutException {
-      throw Exception('Connection timed out');
+    } on SocketException catch (_) {
+      throw ApiException('Connection refused: Server is unreachable', 503);
+    } on TimeoutException catch (_) {
+      throw ApiException('Connection timed out', 408);
     } catch (e) {
-      if (e.toString().contains('SocketException')) {
-        throw Exception('Connection refused: Server is unreachable');
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw ApiException('Connection refused: Server is unreachable', 503);
       }
-      throw Exception('Network error: $e');
+      throw ApiException('Network error: $e', 500);
     }
   }
 

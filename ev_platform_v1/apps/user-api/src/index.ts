@@ -14,6 +14,7 @@ import reservationRoutes from './routes/reservation.routes';
 import vehicleRoutes from './routes/vehicle.routes';
 import supportRoutes from './routes/support.routes';
 import chargingRoutes from './routes/charging.routes';
+import savedTripsRoutes from './routes/saved_trips.routes';
 import { BillingService } from './services/billing.service';
 import { SseService } from './services/sse.service';
 import client from 'prom-client';
@@ -48,6 +49,7 @@ app.use('/reservations', reservationRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/support', supportRoutes);
 app.use('/charging', chargingRoutes);
+app.use('/saved-trips', savedTripsRoutes);
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);

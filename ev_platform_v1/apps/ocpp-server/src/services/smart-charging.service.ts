@@ -26,7 +26,7 @@ export class SmartChargingService {
       // Get all active sessions for this charger
       const activeSessions = await ChargingSession.find({
         charger_id: chargerId,
-        status: 'active'
+        status: true
       });
 
       const activeConnectorIds = activeSessions.map(s => s.connector_id);

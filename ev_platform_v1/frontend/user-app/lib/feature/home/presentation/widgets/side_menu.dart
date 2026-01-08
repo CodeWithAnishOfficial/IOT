@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:user_app/feature/home/presentation/pages/saved_trips_view.dart';
+import 'package:user_app/feature/reservation/presentation/pages/reservation_view.dart';
 import 'package:user_app/feature/more/presentation/pages/account/presentation/controllers/profile_controller.dart';
 import 'package:user_app/routes/app_routes.dart';
 
@@ -80,57 +82,66 @@ class SideMenu extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
+                  // 1. Session History
                   _buildMenuItem(
-                    icon: Icons.electric_bolt_outlined,
-                    title: 'Electric',
-                    onTap: () => Get.back(), // Close drawer (already on home)
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.history,
-                    title: 'History',
+                    icon: Icons.history, // Or restore_rounded
+                    title: 'Charging History',
                     onTap: () => Get.toNamed(Routes.CHARGING_SESSIONS),
                   ),
+                  
+                  // 2. Transaction History
                   _buildMenuItem(
-                    icon: Icons.eco_outlined,
-                    title: 'My Vehicles',
-                    onTap: () => Get.toNamed(Routes.MY_VEHICLES),
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Wallet',
+                    icon: Icons.receipt_long_outlined, // Better icon for transactions
+                    title: 'Transaction History',
                     onTap: () => Get.toNamed(Routes.WALLET),
-                    badgeText: "VERIFY NOW", // Mimicking "KYC PENDING"
                   ),
-                  _buildMenuItem(
-                    icon: Icons.payment_outlined,
-                    title: 'Payments',
-                    onTap: () {},
+
+                  // 3. Reserved Stations
+                  Obx(
+                    () => _buildMenuItem(
+                      icon: Icons.calendar_today_outlined,
+                      title: 'Reserved Stations',
+                      onTap: () =>
+                          Get.toNamed(Routes.RESERVATIONS) ??
+                          Get.to(() => const ReservationView()),
+                      badgeText: controller
+                          .upcomingReservationText
+                          .value, // Dynamic text
+                    ),
                   ),
+
+                  // 4. Saved Trips
                   _buildMenuItem(
-                    icon: Icons.umbrella_outlined,
-                    title: 'Insurance',
-                    onTap: () {},
+                    icon: Icons.bookmark_outline,
+                    title: 'Saved trips',
+                    onTap: () => Get.to(() => const SavedTripsView()),
                   ),
+
+                  // 5. Support
                   _buildMenuItem(
-                    icon: Icons.support_agent_outlined, // Lifebuoy icon style
+                    icon: Icons.support_agent_outlined,
                     title: 'Support',
                     onTap: () => Get.toNamed(Routes.SUPPORT),
                   ),
+
+                  // 6. About
                   _buildMenuItem(
                     icon: Icons.info_outline,
                     title: 'About',
                     onTap: () {},
                   ),
 
-                  // Logout at the bottom of the list or separately? Screenshot doesn't show it but good to have
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Divider(color: Colors.white12),
                   ),
+                  
+                  // 7. Logout (Red)
                   _buildMenuItem(
                     icon: Icons.logout,
                     title: 'Logout',
                     onTap: controller.logout,
+                    isDestructive: true, // Custom flag for red color
                   ),
                 ],
               ),
@@ -163,11 +174,15 @@ class SideMenu extends StatelessWidget {
     required String title,
     required VoidCallback onTap,
     String? badgeText,
+    bool isDestructive = false,
   }) {
+    final color = isDestructive ? Colors.red : Colors.white;
+    final iconColor = isDestructive ? Colors.red : Colors.white70;
+    
     return ListTile(
       leading: SizedBox(
         width: 24,
-        child: Icon(icon, color: Colors.white70, size: 24),
+        child: Icon(icon, color: iconColor, size: 24),
       ),
       title: Row(
         children: [
@@ -176,7 +191,7 @@ class SideMenu extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w400,
-              color: Colors.white,
+              color: color,
             ),
           ),
           if (badgeText != null) ...[

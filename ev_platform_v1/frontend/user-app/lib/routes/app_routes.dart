@@ -9,4 +9,5 @@ abstract class Routes {
   static const MY_VEHICLES = '/my-vehicles';
   static const CHARGING_SESSIONS = '/charging-sessions';
   static const SUPPORT = '/support';
+  static const RESERVATIONS = '/reservations';
 }

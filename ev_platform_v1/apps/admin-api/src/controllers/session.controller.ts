@@ -16,7 +16,7 @@ export class AdminSessionController {
       const query: any = {};
       if (user_id) query.user_id = user_id;
       if (charger_id) query.charger_id = charger_id;
-      if (status) query.status = status;
+      if (status) query.status = status === 'true';
       if (start_date && end_date) {
         query.start_time = { $gte: new Date(start_date as string), $lte: new Date(end_date as string) };
       }
@@ -47,7 +47,11 @@ export class AdminSessionController {
   static async getSessionDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const session = await ChargingSession.findOne({ session_id: id });
+      const sessionId = parseInt(id);
+      if (isNaN(sessionId)) {
+          return res.status(400).json({ error: true, message: 'Invalid session ID' });
+      }
+      const session = await ChargingSession.findOne({ session_id: sessionId });
       if (!session) return res.status(404).json({ error: true, message: 'Session not found' });
       res.json({ error: false, data: session });
     } catch (error: any) {

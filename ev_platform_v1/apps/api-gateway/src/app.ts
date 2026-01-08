@@ -46,7 +46,8 @@ export class App {
     
     const userServices = [
         '/auth', '/wallet', '/profile', '/search', 
-        '/reservations', '/events', '/vehicles', '/support', '/charging'
+        '/reservations', '/events', '/vehicles', '/support', '/charging',
+        '/saved-trips'
     ];
 
     userServices.forEach(service => {

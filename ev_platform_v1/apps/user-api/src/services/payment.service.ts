@@ -7,9 +7,10 @@ export class PaymentService {
   private razorpay: Razorpay;
 
   constructor() {
+    // Explicitly using the provided test keys to ensure frontend/backend match
     this.razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_D9PcSutYWQ2e71',
-      key_secret: process.env.RAZORPAY_KEY_SECRET || 'ePodSzbZwF5MLu7obBB2vhlC',
+      key_id: 'rzp_test_D9PcSutYWQ2e71',
+      key_secret: 'ePodSzbZwF5MLu7obBB2vhlC',
     });
   }
 

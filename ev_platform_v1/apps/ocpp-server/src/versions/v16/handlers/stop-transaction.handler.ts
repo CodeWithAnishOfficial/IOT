@@ -4,7 +4,7 @@ import { ChargingSession, Logger, RabbitMQService } from '@ev-platform-v1/shared
 const logger = new Logger('StopTransactionHandler');
 
 export async function handleStopTransaction(connection: OCPPConnection, payload: any) {
-  const { transactionId, meterStop, timestamp, idTag } = payload;
+  const { transactionId, meterStop, timestamp, idTag, reason } = payload;
   logger.info(`StopTransaction from ${connection.id} transaction ${transactionId}`);
 
   let sessionData: any = null;
@@ -13,8 +13,22 @@ export async function handleStopTransaction(connection: OCPPConnection, payload:
   if (session) {
     session.stop_time = new Date(timestamp);
     session.meter_stop = meterStop;
-    session.total_energy = meterStop - session.meter_start;
-    session.status = 'completed';
+    // Calculate consumed
+    session.unit_consumed = (meterStop - (session.start_meter_value || 0)); // Assuming Wh
+    if (session.unit_consumed < 0) session.unit_consumed = 0;
+    
+    // Calculate Price (Mock logic or use Tariff)
+    const unitPrice = 8.26; // From example
+    session.unit_price = unitPrice;
+    session.price = (session.unit_consumed / 1000) * unitPrice; // Assuming Wh -> kWh
+    session.consumed_amount = session.price;
+    
+    session.charger_status = 'Completed';
+    session.transactionState = 'Completed';
+    session.stop_reason = reason || 'Local';
+    session.stopPending = false;
+    session.modified_date = new Date();
+    
     await session.save();
     sessionData = session.toObject();
   } else {
@@ -30,7 +44,7 @@ export async function handleStopTransaction(connection: OCPPConnection, payload:
           chargerId: connection.id,
           meterStop,
           timestamp,
-          totalEnergy: session ? session.total_energy : 0,
+          totalEnergy: session ? session.unit_consumed : 0,
           userId: session ? session.user_id : null,
           sessionId: session ? session.session_id : null
       });

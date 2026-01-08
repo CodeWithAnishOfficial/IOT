@@ -1,28 +1,30 @@
-class WalletTransaction {
-  final String transactionId;
+class PaymentTransaction {
+  final int paymentId;
   final double amount;
-  final String type;
-  final String source;
-  final String status;
-  final DateTime createdAt;
+  final String transactionId;
+  final String method;
+  final bool status;
+  final DateTime date;
 
-  WalletTransaction({
-    required this.transactionId,
+  PaymentTransaction({
+    required this.paymentId,
     required this.amount,
-    required this.type,
-    required this.source,
+    required this.transactionId,
+    required this.method,
     required this.status,
-    required this.createdAt,
+    required this.date,
   });
 
-  factory WalletTransaction.fromJson(Map<String, dynamic> json) {
-    return WalletTransaction(
-      transactionId: json['transaction_id'],
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      type: json['type'],
-      source: json['source'],
-      status: json['status'],
-      createdAt: DateTime.parse(json['created_at']),
+  factory PaymentTransaction.fromJson(Map<String, dynamic> json) {
+    return PaymentTransaction(
+      paymentId: json['payment_id'] ?? 0,
+      amount: (json['recharge_amount'] as num?)?.toDouble() ?? 0.0,
+      transactionId: json['transaction_id'] ?? '',
+      method: json['payment_method'] ?? 'Unknown',
+      status: json['status'] ?? false,
+      date: json['recharged_date'] != null 
+          ? DateTime.parse(json['recharged_date']) 
+          : DateTime.now(),
     );
   }
 }

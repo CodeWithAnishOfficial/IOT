@@ -84,7 +84,7 @@ router.post('/sessions/:id/invoice', async (req: Request, res: Response) => {
     // @ts-ignore
     const email = req.user.email_id;
     
-    const session = await ChargingSession.findOne({ session_id: id });
+    const session = await ChargingSession.findOne({ session_id: Number(id) });
     if (!session) return res.status(404).json({ error: true, message: 'Session not found' });
     
     const pdfBuffer = await InvoiceService.generateInvoice(session);

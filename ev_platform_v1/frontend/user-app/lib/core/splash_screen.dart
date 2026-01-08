@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
 import 'package:user_app/feature/auth/presentation/pages/login_view.dart';
-import 'package:user_app/feature/home/presentation/pages/home_view.dart';
+import 'package:user_app/feature/dashboard/presentation/pages/dashboard_view.dart';
 import 'package:user_app/utils/theme/themes.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -81,10 +81,8 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToFallback() {
     if (!_hasNavigated) {
       _hasNavigated = true;
-      Get.offAll(
-        () => const LoginView(),
-        transition: Transition.fadeIn,
-        duration: const Duration(milliseconds: 800),
+      Get.offAllNamed(
+        '/login',
       );
     }
   }
@@ -96,19 +94,15 @@ class _SplashScreenState extends State<SplashScreen>
     if (_sessionController!.isLoggedIn.value) {
       if (!_hasNavigated) {
         _hasNavigated = true;
-        Get.offAll(
-          () => const HomeView(),
-          transition: Transition.fadeIn,
-          duration: const Duration(milliseconds: 800),
+        Get.offAllNamed(
+          '/home',
         );
       }
     } else {
       if (!_hasNavigated) {
         _hasNavigated = true;
-        Get.offAll(
-          () => const LoginView(),
-          transition: Transition.fadeIn,
-          duration: const Duration(milliseconds: 800),
+        Get.offAllNamed(
+          '/login',
         );
       }
     }
@@ -121,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
     final double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF111111), // Solid dark background to prevent white screen
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -128,129 +128,140 @@ class LoginView extends GetView<AuthController> {
   }
 
   Widget _buildPasswordLogin() {
-    return Column(
-      children: [
-        TextField(
-          controller: controller.emailController,
-          decoration: const InputDecoration(
-            labelText: 'Email Address',
-            prefixIcon: Icon(Icons.email_outlined),
-            hintText: 'Enter your email',
-          ),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: controller.passwordController,
-          decoration: const InputDecoration(
-            labelText: 'Password',
-            prefixIcon: Icon(Icons.lock_outline),
-            hintText: 'Enter your password',
-          ),
-          obscureText: true,
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () {}, // TODO: Forgot Password
-            child: const Text('Forgot Password?'),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Obx(
-          () => controller.isLoading.value
-              ? const Center(child: CircularProgressIndicator())
-              : SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: controller.loginWithPassword,
-                    child: const Text('Sign In'),
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOtpLogin() {
-    return Obx(() {
-      if (!controller.isOtpSent.value) {
-        // Step 1: Send OTP
-        return Column(
-          children: [
-            TextField(
-              controller: controller.emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email Address',
-                prefixIcon: Icon(Icons.email_outlined),
-                hintText: 'Enter your email',
-              ),
-              keyboardType: TextInputType.emailAddress,
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(), // Prevent nested scrolling issues
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: controller.emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email Address',
+              prefixIcon: Icon(Icons.email_outlined),
+              hintText: 'Enter your email',
             ),
-            const SizedBox(height: 32),
-            controller.isLoading.value
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: controller.passwordController,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              prefixIcon: Icon(Icons.lock_outline),
+              hintText: 'Enter your password',
+            ),
+            obscureText: true,
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {}, // TODO: Forgot Password
+              child: const Text('Forgot Password?'),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Obx(
+            () => controller.isLoading.value
                 ? const Center(child: CircularProgressIndicator())
                 : SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () =>
-                          controller.sendOtp(forRegistration: false),
-                      child: const Text('Send Verification Code'),
+                      onPressed: controller.loginWithPassword,
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-          ],
-        );
-      } else {
-        // Step 2: Verify OTP
-        return Column(
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOtpLogin() {
+    return Obx(() {
+      return SingleChildScrollView(
+         physics: const NeverScrollableScrollPhysics(),
+         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: controller.emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email Address',
-                prefixIcon: Icon(Icons.email_outlined),
+            if (!controller.isOtpSent.value) ...[
+              TextField(
+                controller: controller.emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined),
+                  hintText: 'Enter your email',
+                ),
+                keyboardType: TextInputType.emailAddress,
               ),
-              enabled: false, 
-              style: const TextStyle(color: Colors.white54),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: controller.otpController,
-              decoration: const InputDecoration(
-                labelText: 'Verification Code',
-                prefixIcon: Icon(Icons.pin_outlined),
-                hintText: 'Enter 6-digit code',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 32),
-            controller.isLoading.value
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: controller.verifyOtp,
-                          child: const Text('Verify & Sign In'),
+              const SizedBox(height: 32),
+              controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            controller.sendOtp(forRegistration: false),
+                        child: const Text(
+                          'Send Verification Code',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      TextButton.icon(
-                        onPressed: () {
-                          controller.isOtpSent.value = false;
-                        },
-                        icon: const Icon(Icons.arrow_back, size: 16),
-                        label: const Text('Change Email'),
-                      ),
-                    ],
-                  ),
+                    ),
+            ] else ...[
+              TextField(
+                controller: controller.emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                enabled: false, 
+                style: const TextStyle(color: Colors.white54),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller.otpController,
+                decoration: const InputDecoration(
+                  labelText: 'Verification Code',
+                  prefixIcon: Icon(Icons.pin_outlined),
+                  hintText: 'Enter 6-digit code',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 32),
+              controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: controller.verifyOtp,
+                            child: const Text(
+                              'Verify & Sign In',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: () {
+                            controller.isOtpSent.value = false;
+                          },
+                          icon: const Icon(Icons.arrow_back, size: 16),
+                          label: const Text('Change Email'),
+                        ),
+                      ],
+                    ),
+            ]
           ],
-        );
-      }
+        ),
+      );
     });
   }
 }

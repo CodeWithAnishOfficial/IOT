@@ -10,6 +10,9 @@ class ProfileController extends GetxController {
 
   final user = Rxn<User>();
   final isLoading = false.obs;
+  
+  // Reservation
+  final upcomingReservationText = Rxn<String>();
 
   // Edit Profile Controllers
   final nameController = TextEditingController();
@@ -19,6 +22,26 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     fetchProfile();
+    fetchUpcomingReservation();
+  }
+
+  Future<void> fetchUpcomingReservation() async {
+    try {
+      final response = await _apiProvider.get('/reservations/upcoming');
+      if (response['data'] != null) {
+        final expiry = DateTime.parse(response['data']['expiry_date']);
+        // Format: "Today 14:00" or "Tom 10:30"
+        final now = DateTime.now();
+        final isToday = expiry.year == now.year && expiry.month == now.month && expiry.day == now.day;
+        final timeStr = "${expiry.hour.toString().padLeft(2, '0')}:${expiry.minute.toString().padLeft(2, '0')}";
+        
+        upcomingReservationText.value = isToday ? "Today $timeStr" : "${expiry.day}/${expiry.month} $timeStr";
+      } else {
+        upcomingReservationText.value = null;
+      }
+    } catch (e) {
+      print("Error fetching upcoming reservation: $e");
+    }
   }
 
   @override

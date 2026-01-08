@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User, WalletTransaction, Logger } from '@ev-platform-v1/shared';
+import { User, WalletTransaction, Logger, Payment } from '@ev-platform-v1/shared';
 import { PaymentService } from '../services/payment.service';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -85,8 +85,10 @@ export class WalletController {
   static async getTransactions(req: Request, res: Response) {
     try {
       // @ts-ignore
-      const userId = req.user?.email_id;
-      const transactions = await WalletTransaction.find({ user_id: userId }).sort({ created_at: -1 });
+      const emailId = req.user?.email_id;
+      // Fetch payments from Payment collection where email_id matches
+      // Sorting by recharged_date descending
+      const transactions = await Payment.find({ email_id: emailId }).sort({ recharged_date: -1 });
       res.json({ error: false, data: transactions });
     } catch (error: any) {
       logger.error('Error fetching transactions', error);

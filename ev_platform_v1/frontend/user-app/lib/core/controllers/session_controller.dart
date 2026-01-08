@@ -10,8 +10,13 @@ class SessionController extends GetxController {
 
   late SharedPreferences prefs;
 
-  SessionController() {
-    _initializePrefs();
+  SessionController({SharedPreferences? sharedPreferences}) {
+    if (sharedPreferences != null) {
+      prefs = sharedPreferences;
+      loadSession();
+    } else {
+      _initializePrefs();
+    }
   }
 
   Future<void> _initializePrefs() async {

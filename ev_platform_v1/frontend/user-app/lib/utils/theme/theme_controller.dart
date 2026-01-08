@@ -26,9 +26,13 @@ class ThemeController extends GetxController {
     Colors.indigo,
   ];
 
-  final SharedPreferences? prefs; // Store the SharedPreferences instance
+  SharedPreferences? prefs; // Store the SharedPreferences instance
 
   ThemeController({this.prefs}); // Accept SharedPreferences in constructor
+
+  void setPrefs(SharedPreferences newPrefs) {
+    prefs = newPrefs;
+  }
 
   @override
   void onInit() {
