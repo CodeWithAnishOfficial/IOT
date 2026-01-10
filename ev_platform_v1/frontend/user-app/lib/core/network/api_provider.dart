@@ -17,13 +17,13 @@ class ApiException implements Exception {
 }
 
 class ApiProvider {
-  // Use 192.168.0.57 for Android emulator, localhost for iOS simulator
+  // Use 192.168.0.57 for Android emulator, 64.227.181.90 for iOS simulator
   static String get baseUrl {
     if (Platform.isAndroid) {
-      // Android Emulator maps 192.168.0.57 to host localhost
+      // Android Emulator maps 192.168.0.57 to host 64.227.181.90
       return 'http://64.227.181.90:3000';
     }
-    // iOS Simulator / Web uses localhost (or Cloud IP)
+    // iOS Simulator / Web uses 64.227.181.90 (or Cloud IP)
     return 'http://64.227.181.90:3000';
   }
 
@@ -36,13 +36,19 @@ class ApiProvider {
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } on SocketException catch (_) {
-      throw ApiException('Unable to connect to server. Please check your internet.', 503);
+      throw ApiException(
+        'Unable to connect to server. Please check your internet.',
+        503,
+      );
     } on TimeoutException catch (_) {
       throw ApiException('Server is taking too long to respond.', 408);
     } catch (e) {
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
-        throw ApiException('Unable to connect to server. Please check your internet.', 503);
+        throw ApiException(
+          'Unable to connect to server. Please check your internet.',
+          503,
+        );
       }
       throw ApiException('Something went wrong. Please try again.', 500);
     }
@@ -81,13 +87,19 @@ class ApiProvider {
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } on SocketException catch (_) {
-      throw ApiException('Unable to connect to server. Please check your internet.', 503);
+      throw ApiException(
+        'Unable to connect to server. Please check your internet.',
+        503,
+      );
     } on TimeoutException catch (_) {
       throw ApiException('Server is taking too long to respond.', 408);
     } catch (e) {
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
-        throw ApiException('Unable to connect to server. Please check your internet.', 503);
+        throw ApiException(
+          'Unable to connect to server. Please check your internet.',
+          503,
+        );
       }
       throw ApiException('Something went wrong. Please try again.', 500);
     }
@@ -162,8 +174,8 @@ class ApiProvider {
       try {
         final body = json.decode(response.body);
         if (body['message'] != null) {
-          // If the server sends a specific message, it might be technical. 
-          // But usually we trust our own server messages. 
+          // If the server sends a specific message, it might be technical.
+          // But usually we trust our own server messages.
           // If the user wants "user friendly", we might mask it unless it's a known business error.
           // For now, I'll keep the server message but fallback to friendly.
           errorMessage = body['message'];
@@ -185,8 +197,8 @@ class ApiProvider {
       }
     } catch (_) {
       if (response.body.isNotEmpty) {
-         // Don't show raw HTML or code to user
-         errorMessage = 'An unexpected error occurred.'; 
+        // Don't show raw HTML or code to user
+        errorMessage = 'An unexpected error occurred.';
       }
     }
 

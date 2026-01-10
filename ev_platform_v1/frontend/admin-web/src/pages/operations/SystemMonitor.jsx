@@ -15,8 +15,8 @@ export default function SystemMonitor() {
 
   // The URL for the Grafana dashboard. 
   // In a production environment, this should be an environment variable.
-  // Assuming Grafana is running on localhost:3003 as per docker-compose.
-  const GRAFANA_URL = import.meta.env.VITE_APP_GRAFANA_URL || 'http://localhost:3003/?orgId=1'; 
+  // Assuming Grafana is running on 64.227.181.90:3003 as per docker-compose.
+  const GRAFANA_URL = import.meta.env.VITE_APP_GRAFANA_URL || 'http://64.227.181.90:3003/?orgId=1'; 
 
   const handleLoad = () => {
     setLoading(false);

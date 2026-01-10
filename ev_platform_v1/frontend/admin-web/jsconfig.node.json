@@ -5,5 +5,5 @@
     "moduleResolution": "Bundler", // Change "Node" to "Bundler"
     "allowSyntheticDefaultImports": true
   },
-  "include": ["vite.config.mjs"]
+  "include": ["./vite.config.mjs"]
 }

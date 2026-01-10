@@ -77,8 +77,8 @@ services:
       context: ../../frontend/admin-web
       dockerfile: Dockerfile
       args:
-        - VITE_APP_API_URL=${VITE_APP_API_URL:-http://localhost:3000}
-        - VITE_APP_GRAFANA_URL=${VITE_APP_GRAFANA_URL:-http://localhost:3003/?orgId=1}
+        - VITE_APP_API_URL=${VITE_APP_API_URL:-http://64.227.181.90:3000}
+        - VITE_APP_GRAFANA_URL=${VITE_APP_GRAFANA_URL:-http://64.227.181.90:3003/?orgId=1}
     ports:
       - "3004:80"
     depends_on:

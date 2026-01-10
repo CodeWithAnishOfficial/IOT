@@ -44,7 +44,7 @@ class RabbitMQService {
     url;
     constructor() {
         this.logger = new logger_1.Logger('RabbitMQService');
-        this.url = process.env.RABBITMQ_URL || 'amqp://user:password@localhost:5672';
+        this.url = process.env.RABBITMQ_URL || 'amqp://user:password@64.227.181.90:5672';
     }
     static getInstance() {
         if (!RabbitMQService.instance) {
