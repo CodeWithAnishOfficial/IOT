@@ -115,11 +115,15 @@ export default function SessionsList() {
   };
 
   const formatEnergy = (energy) => {
-    return `${(energy / 1000).toFixed(2)} kWh`; // Assuming energy is in Wh
+    const val = Number(energy);
+    if (isNaN(val)) return '-';
+    return `${(val / 1000).toFixed(2)} kWh`; // Assuming energy is in Wh
   };
 
   const formatCost = (cost) => {
-    return `₹${cost.toFixed(2)}`;
+    const val = Number(cost);
+    if (isNaN(val)) return '-';
+    return `₹${val.toFixed(2)}`;
   };
 
   const clearChargerFilter = () => {

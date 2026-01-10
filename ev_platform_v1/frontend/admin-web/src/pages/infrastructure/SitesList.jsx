@@ -182,8 +182,8 @@ export default function SitesList() {
       setMapPosition(latlng);
       setFormData((prev) => ({
           ...prev,
-          lat: latlng.lat.toFixed(6),
-          lng: latlng.lng.toFixed(6)
+          lat: latlng.lat ? Number(latlng.lat).toFixed(6) : '',
+          lng: latlng.lng ? Number(latlng.lng).toFixed(6) : ''
       }));
   };
 

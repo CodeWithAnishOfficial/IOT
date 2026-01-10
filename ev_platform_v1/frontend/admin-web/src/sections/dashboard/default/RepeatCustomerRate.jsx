@@ -40,7 +40,7 @@ export default function WeeklyAnalytics() {
         // Actually, let's map energy to the revenue dates
         const energyData = dates.map(date => {
             const entry = energy_chart.find(e => e._id === date);
-            return entry ? (entry.energy / 1000).toFixed(2) : 0; // Convert to kWh
+            return entry ? (Number(entry.energy || 0) / 1000).toFixed(2) : 0; // Convert to kWh
         });
 
         setCategories(dates.map(d => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })));

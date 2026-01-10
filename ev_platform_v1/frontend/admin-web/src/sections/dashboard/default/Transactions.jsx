@@ -60,7 +60,7 @@ export default function Transactions() {
               divider={index < sessions.length - 1}
               secondaryAction={
                 <Stack sx={{ gap: 0.5, alignItems: 'flex-end' }}>
-                  <Typography variant="subtitle1">{session.total_energy.toFixed(2)} kWh</Typography>
+                  <Typography variant="subtitle1">{Number(session.total_energy || 0).toFixed(2)} kWh</Typography>
                   <Chip 
                     label={session.status} 
                     color={getStatusColor(session.status)} 
