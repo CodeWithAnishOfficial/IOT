@@ -34,7 +34,7 @@ import {
 } from '@mui/material';
 
 // icons
-import { Edit, Trash, Add, CloseCircle, Eye, User, Sms, Call, ShieldSecurity, Wallet, ScanBarcode, Timer1 } from 'iconsax-reactjs';
+import { Edit, Trash, Add, CloseCircle, Eye, User, Sms, Call, ShieldSecurity, Wallet, ScanBarcode, Timer1, Map1 } from 'iconsax-reactjs';
 
 // project-imports
 import MainCard from 'components/MainCard';
@@ -229,6 +229,11 @@ export default function UsersList() {
                   <Tooltip title="View Sessions">
                     <IconButton color="info" onClick={() => navigate(`/users/sessions?user_id=${user.user_id}`)}>
                       <Timer1 variant="Bold" size={20}/>
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="View Saved Trips">
+                    <IconButton color="warning" onClick={() => navigate(`/saved-trips?user_id=${user.user_id}`)}>
+                      <Map1 variant="Bold" size={20}/>
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="View Details">
