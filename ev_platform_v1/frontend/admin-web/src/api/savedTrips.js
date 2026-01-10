@@ -8,11 +8,11 @@ const SavedTripService = {
       ...filters,
       _t: new Date().getTime() // Cache buster
     });
-    return axios.get(`/saved-trips?${params.toString()}`);
+    return axios.get(`/admin-saved-trips?${params.toString()}`);
   },
 
   getSavedTripDetails: (id) => {
-    return axios.get(`/saved-trips/${id}?_t=${new Date().getTime()}`);
+    return axios.get(`/admin-saved-trips/${id}?_t=${new Date().getTime()}`);
   }
 };
 

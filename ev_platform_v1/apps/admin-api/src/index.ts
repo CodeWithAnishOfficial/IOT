@@ -46,7 +46,7 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/support', supportRoutes);
 app.use('/sessions', sessionRoutes);
 app.use('/auth', authRoutes);
-app.use('/saved-trips', savedTripRoutes);
+app.use('/admin-saved-trips', savedTripRoutes);
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
