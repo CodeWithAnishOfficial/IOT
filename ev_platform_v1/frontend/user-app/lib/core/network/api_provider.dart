@@ -21,10 +21,10 @@ class ApiProvider {
   static String get baseUrl {
     if (Platform.isAndroid) {
       // Android Emulator maps 192.168.0.57 to host localhost
-      return 'http://192.168.0.57:3000';
+      return 'http://64.227.181.90:3000';
     }
-    // iOS Simulator / Web uses localhost
-    return 'http://192.168.0.57:3000';
+    // iOS Simulator / Web uses localhost (or Cloud IP)
+    return 'http://64.227.181.90:3000';
   }
 
   final SessionController _sessionController = Get.find<SessionController>();
