@@ -12,7 +12,10 @@
     "declaration": true,
     "sourceMap": true,
     "composite": true,
-    "incremental": true
+    "incremental": true,
+    "paths": {
+      "@ev-platform-v1/shared": ["packages/shared/src"]
+    }
   },
   "exclude": ["node_modules", "dist"]
 }
