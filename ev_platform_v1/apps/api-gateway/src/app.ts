@@ -66,7 +66,8 @@ export class App {
     
     // Explicitly proxy admin services if accessed without /admin prefix
     const adminServices = [
-      '/chargers', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard', '/users'
+      '/chargers', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard', '/users',
+      '/admin-saved-trips'
     ];
 
     adminServices.forEach(service => {
