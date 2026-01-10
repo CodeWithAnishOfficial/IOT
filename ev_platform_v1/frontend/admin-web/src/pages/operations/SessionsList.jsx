@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
@@ -49,6 +49,7 @@ export default function SessionsList() {
   const [userIdFilter, setUserIdFilter] = useState('');
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     // Parse query params
@@ -70,6 +71,7 @@ export default function SessionsList() {
   }, [statusFilter, chargerIdFilter, userIdFilter]);
 
   const fetchSessions = async () => {
+    const currentReqId = ++reqIdRef.current;
     try {
       setLoading(true);
       const filters = {};
@@ -84,13 +86,20 @@ export default function SessionsList() {
       }
       
       const response = await SessionService.getAllSessions(1, 50, filters); // Fetching 50 for now
-      if (!response.data.error) {
-        setSessions(response.data.data);
+      
+      if (currentReqId === reqIdRef.current) {
+        if (!response.data.error) {
+          setSessions(response.data.data);
+        }
       }
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      if (currentReqId === reqIdRef.current) {
+        console.error('Error fetching sessions:', error);
+      }
     } finally {
-      setLoading(false);
+      if (currentReqId === reqIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -247,7 +256,7 @@ export default function SessionsList() {
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" color="textPrimary">{session.user_id}</Typography>
+                  <Typography variant="body2" color="textPrimary">{session.email_id || session.user_id}</Typography>
                   <Typography variant="caption" color="textSecondary">{session.charger_id} (Conn: {session.connector_id})</Typography>
                 </TableCell>
                 <TableCell>
@@ -357,8 +366,9 @@ export default function SessionsList() {
                              <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
                                 <Profile size={20} color="#666" />
                                 <Box>
-                                    <Typography variant="caption" color="textSecondary">User ID</Typography>
-                                    <Typography variant="body1">{selectedSession.user_id}</Typography>
+                                    <Typography variant="caption" color="textSecondary">User</Typography>
+                                    <Typography variant="body1">{selectedSession.email_id || selectedSession.user_id}</Typography>
+                                    {selectedSession.email_id && <Typography variant="caption" color="textSecondary">ID: {selectedSession.user_id}</Typography>}
                                 </Box>
                             </Stack>
                              <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
