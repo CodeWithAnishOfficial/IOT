@@ -9,6 +9,7 @@ const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')))
 
 // render - Pages
 const UsersList = Loadable(lazy(() => import('pages/users/UsersList')));
+const SavedTripsList = Loadable(lazy(() => import('pages/users/SavedTripsList')));
 const RolesList = Loadable(lazy(() => import('pages/users/RolesList')));
 const SitesList = Loadable(lazy(() => import('pages/infrastructure/SitesList')));
 const ChargersList = Loadable(lazy(() => import('pages/infrastructure/ChargersList')));
@@ -57,6 +58,10 @@ const MainRoutes = {
     {
       path: 'users',
       element: <UsersList />
+    },
+    {
+      path: 'saved-trips',
+      element: <SavedTripsList />
     },
     {
       path: 'users/sessions',

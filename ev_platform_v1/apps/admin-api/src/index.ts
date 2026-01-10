@@ -15,6 +15,7 @@ import sessionRoutes from './routes/session.routes';
 import siteRoutes from './routes/site.routes';
 import roleRoutes from './routes/role.routes';
 import authRoutes from './routes/auth.routes';
+import savedTripRoutes from './routes/saved_trip.routes';
 import { SeederService } from './services/seeder.service';
 import client from 'prom-client';
 import path from 'path';
@@ -45,6 +46,7 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/support', supportRoutes);
 app.use('/sessions', sessionRoutes);
 app.use('/auth', authRoutes);
+app.use('/saved-trips', savedTripRoutes);
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
