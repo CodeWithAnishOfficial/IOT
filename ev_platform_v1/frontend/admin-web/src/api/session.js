@@ -5,13 +5,14 @@ const SessionService = {
     const params = new URLSearchParams({
       page,
       limit,
-      ...filters
+      ...filters,
+      _t: new Date().getTime() // Cache buster
     });
     return axios.get(`/sessions?${params.toString()}`);
   },
 
   getSessionDetails: (id) => {
-    return axios.get(`/sessions/${id}`);
+    return axios.get(`/sessions/${id}?_t=${new Date().getTime()}`);
   }
 };
 
