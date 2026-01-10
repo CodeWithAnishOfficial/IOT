@@ -61,6 +61,7 @@ export default function SessionsList() {
   }, [location.search]);
 
   useEffect(() => {
+    setSessions([]); // Clear sessions to avoid showing stale data while loading
     fetchSessions();
   }, [statusFilter, chargerIdFilter]);
 
@@ -200,13 +201,13 @@ export default function SessionsList() {
                 <TableCell>
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Flash size={16} color="orange"/>
-                    <Typography>{formatEnergy(session.total_energy)}</Typography>
+                    <Typography>{formatEnergy(session.total_energy || session.unit_consumed)}</Typography>
                   </Stack>
                 </TableCell>
                 <TableCell>
                    <Stack direction="row" spacing={0.5} alignItems="center">
                     <Money size={16} color="green"/>
-                    <Typography>{formatCost(session.cost)}</Typography>
+                    <Typography>{formatCost(session.cost || session.consumed_amount)}</Typography>
                   </Stack>
                 </TableCell>
                 <TableCell>{formatDate(session.start_time)}</TableCell>
@@ -271,7 +272,7 @@ export default function SessionsList() {
                                         <Money size={18} color="#666" />
                                         <Typography variant="caption" color="textSecondary">Total Cost</Typography>
                                     </Stack>
-                                    <Typography variant="h6">{formatCost(selectedSession.cost)}</Typography>
+                                    <Typography variant="h6">{formatCost(selectedSession.cost || selectedSession.consumed_amount)}</Typography>
                                 </Stack>
                             </MainCard>
                          </Grid>
@@ -282,7 +283,7 @@ export default function SessionsList() {
                                         <Flash size={18} color="#666" />
                                         <Typography variant="caption" color="textSecondary">Energy Consumed</Typography>
                                     </Stack>
-                                    <Typography variant="h6">{formatEnergy(selectedSession.total_energy)}</Typography>
+                                    <Typography variant="h6">{formatEnergy(selectedSession.total_energy || selectedSession.unit_consumed)}</Typography>
                                 </Stack>
                             </MainCard>
                          </Grid>
