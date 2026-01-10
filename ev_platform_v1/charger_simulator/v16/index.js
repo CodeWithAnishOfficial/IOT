@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 
 // Configuration
 const CHARGER_ID = 'CH001';
-const BACKEND_URL = process.env.OCPP_SERVER_URL || `ws://http://64.227.181.90:9220/Quantum/OCPP/1.6/${CHARGER_ID}`;
+const BACKEND_URL = process.env.OCPP_SERVER_URL || `ws://64.227.181.90:9220/Quantum/OCPP/1.6/${CHARGER_ID}`;
 // const AUTH_USER = 'CH001';
 // const AUTH_PASS = 'your_password'; // Uncomment and set if your charger has a password
 
