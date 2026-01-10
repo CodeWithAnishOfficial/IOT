@@ -46,6 +46,7 @@ export default function SessionsList() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [chargerIdFilter, setChargerIdFilter] = useState('');
+  const [userIdFilter, setUserIdFilter] = useState('');
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
 
@@ -53,17 +54,20 @@ export default function SessionsList() {
     // Parse query params
     const params = new URLSearchParams(location.search);
     const chargerId = params.get('charger_id');
-    if (chargerId) {
-      setChargerIdFilter(chargerId);
-    } else {
-        setChargerIdFilter('');
-    }
+    const userId = params.get('user_id');
+    
+    if (chargerId) setChargerIdFilter(chargerId);
+    else setChargerIdFilter('');
+
+    if (userId) setUserIdFilter(userId);
+    else setUserIdFilter('');
+    
   }, [location.search]);
 
   useEffect(() => {
     setSessions([]); // Clear sessions to avoid showing stale data while loading
     fetchSessions();
-  }, [statusFilter, chargerIdFilter]);
+  }, [statusFilter, chargerIdFilter, userIdFilter]);
 
   const fetchSessions = async () => {
     try {
@@ -74,6 +78,9 @@ export default function SessionsList() {
       }
       if (chargerIdFilter) {
           filters.charger_id = chargerIdFilter;
+      }
+      if (userIdFilter) {
+          filters.user_id = userIdFilter;
       }
       
       const response = await SessionService.getAllSessions(1, 50, filters); // Fetching 50 for now
@@ -129,6 +136,7 @@ export default function SessionsList() {
 
   const clearChargerFilter = () => {
     setChargerIdFilter('');
+    setUserIdFilter('');
     navigate('/sessions'); // Remove query param
   };
 
@@ -140,10 +148,18 @@ export default function SessionsList() {
     );
   }
 
+  const getTitle = () => {
+    if (chargerIdFilter) return `Sessions for Charger: ${chargerIdFilter}`;
+    if (userIdFilter) return `Sessions for User: ${userIdFilter}`;
+    return "Charging Sessions";
+  };
+
+  const activeSession = chargerIdFilter ? sessions.find(s => s.status === true || s.status === 'active') : null;
+
   return (
-    <MainCard title={chargerIdFilter ? `Sessions for Charger: ${chargerIdFilter}` : "Charging Sessions"} secondary={
+    <MainCard title={getTitle()} secondary={
       <Stack direction="row" spacing={2} alignItems="center">
-        {chargerIdFilter && (
+        {(chargerIdFilter || userIdFilter) && (
              <Button size="small" variant="outlined" color="error" onClick={clearChargerFilter}>
                 Clear Filter
              </Button>
@@ -164,6 +180,50 @@ export default function SessionsList() {
         </FormControl>
       </Stack>
     }>
+      {activeSession && (
+          <MainCard content={false} sx={{ mb: 3, bgcolor: 'primary.lighter', border: '1px solid', borderColor: 'primary.main' }}>
+              <Box sx={{ p: 2 }}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Stack direction="row" spacing={2} alignItems="center">
+                           <Box sx={{ p: 1, bgcolor: 'primary.main', borderRadius: 2, color: 'white' }}>
+                              <BatteryCharging variant="Bold" />
+                           </Box>
+                           <Stack>
+                              <Typography variant="h6">Active Session in Progress</Typography>
+                              <Typography variant="caption" color="text.secondary">Session ID: {activeSession.session_id}</Typography>
+                           </Stack>
+                      </Stack>
+                      <Button variant="contained" onClick={() => handleViewOpen(activeSession)}>
+                          View Details
+                      </Button>
+                  </Stack>
+                  <Divider sx={{ my: 2 }} />
+                   <Grid container spacing={3}>
+                      <Grid size={{ xs: 4 }}>
+                          <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">Energy Delivered</Typography>
+                              <Typography variant="h4">{formatEnergy(activeSession.total_energy || activeSession.unit_consumed)}</Typography>
+                          </Stack>
+                      </Grid>
+                      <Grid size={{ xs: 4 }}>
+                          <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">Current Cost</Typography>
+                              <Typography variant="h4">{formatCost(activeSession.cost || activeSession.consumed_amount)}</Typography>
+                          </Stack>
+                      </Grid>
+                      <Grid size={{ xs: 4 }}>
+                           <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">Duration</Typography>
+                              <Typography variant="h4">{activeSession.start_time ? 
+                                  Math.floor((new Date() - new Date(activeSession.start_time)) / 60000) + ' min' 
+                                  : '-'}</Typography>
+                          </Stack>
+                      </Grid>
+                  </Grid>
+              </Box>
+          </MainCard>
+      )}
+
       <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
         <Table sx={{ minWidth: 650 }} aria-label="sessions table">
           <TableHead>

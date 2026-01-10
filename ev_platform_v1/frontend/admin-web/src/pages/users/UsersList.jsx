@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
 // material-ui
@@ -33,7 +34,7 @@ import {
 } from '@mui/material';
 
 // icons
-import { Edit, Trash, Add, CloseCircle, Eye, User, Sms, Call, ShieldSecurity, Wallet, ScanBarcode } from 'iconsax-reactjs';
+import { Edit, Trash, Add, CloseCircle, Eye, User, Sms, Call, ShieldSecurity, Wallet, ScanBarcode, Timer1 } from 'iconsax-reactjs';
 
 // project-imports
 import MainCard from 'components/MainCard';
@@ -50,6 +51,7 @@ const ROLES = [
 
 export default function UsersList() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -224,6 +226,11 @@ export default function UsersList() {
                 </TableCell>
                 <TableCell>₹{user.wallet_bal}</TableCell>
                 <TableCell align="right">
+                  <Tooltip title="View Sessions">
+                    <IconButton color="info" onClick={() => navigate(`/sessions?user_id=${user.user_id}`)}>
+                      <Timer1 variant="Bold" size={20}/>
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="View Details">
                     <IconButton color="secondary" onClick={() => handleViewOpen(user)}>
                       <Eye variant="Bold" size={20}/>
