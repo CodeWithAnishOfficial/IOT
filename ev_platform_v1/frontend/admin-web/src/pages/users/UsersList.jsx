@@ -227,7 +227,7 @@ export default function UsersList() {
                 <TableCell>₹{user.wallet_bal}</TableCell>
                 <TableCell align="right">
                   <Tooltip title="View Sessions">
-                    <IconButton color="info" onClick={() => navigate(`/sessions?user_id=${user.user_id}`)}>
+                    <IconButton color="info" onClick={() => navigate(`/users/sessions?user_id=${user.user_id}`)}>
                       <Timer1 variant="Bold" size={20}/>
                     </IconButton>
                   </Tooltip>

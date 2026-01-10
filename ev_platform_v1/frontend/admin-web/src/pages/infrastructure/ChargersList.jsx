@@ -278,7 +278,7 @@ export default function ChargersList() {
                 </TableCell>
                 <TableCell align="right">
                   <Tooltip title="View Sessions">
-                    <IconButton color="info" onClick={() => navigate(`/sessions?charger_id=${charger.charger_id}`)}>
+                    <IconButton color="info" onClick={() => navigate(`/chargers/sessions?charger_id=${charger.charger_id}`)}>
                       <Activity variant="Bold" size={20}/>
                     </IconButton>
                   </Tooltip>

@@ -59,6 +59,10 @@ const MainRoutes = {
       element: <UsersList />
     },
     {
+      path: 'users/sessions',
+      element: <SessionsList />
+    },
+    {
       path: 'roles',
       element: <RolesList />
     },
@@ -69,6 +73,10 @@ const MainRoutes = {
     {
       path: 'chargers',
       element: <ChargersList />
+    },
+    {
+      path: 'chargers/sessions',
+      element: <SessionsList />
     },
     {
       path: 'sessions',
