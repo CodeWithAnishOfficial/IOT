@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:user_app/feature/home/domain/models/charging_station.dart';
+import 'package:user_app/feature/home/domain/models/charger.dart';
 import 'package:user_app/feature/reservation/presentation/controllers/reservation_controller.dart';
 import 'package:user_app/utils/theme/themes.dart';
 
 class BookingView extends StatefulWidget {
-  final ChargingStation station;
+  final Charger station;
   const BookingView({super.key, required this.station});
 
   @override

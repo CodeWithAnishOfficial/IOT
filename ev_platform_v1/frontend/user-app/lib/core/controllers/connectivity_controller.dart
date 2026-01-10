@@ -9,7 +9,6 @@ class ConnectivityController extends GetxController {
   late StreamSubscription<List<ConnectivityResult>> _subscription;
 
   RxBool isConnected = true.obs;
-  String? lastRoute; // Store the last visited screen
 
   @override
   void onInit() {
@@ -50,15 +49,6 @@ class ConnectivityController extends GetxController {
       }
 
       if (!isConnected.value) {
-        // Store the last route before redirecting
-        if (lastRoute == null || lastRoute != '/noInternet') {
-          try {
-            lastRoute = Get.currentRoute.isNotEmpty ? Get.currentRoute : '/';
-          } catch (e) {
-            lastRoute = '/';
-          }
-        }
-
         // Navigate to NoInternetScreen if not already there
         try {
           if (Get.currentRoute != '/noInternet') {
@@ -69,12 +59,10 @@ class ConnectivityController extends GetxController {
         }
       } else if (wasConnected != isConnected.value) {
         // Only navigate if connection status actually changed
-        // If internet is back, go back to the last visited screen
+        // If internet is back, pop the NoInternetScreen to resume previous state
         try {
-          if (!wasConnected &&
-              lastRoute != null &&
-              lastRoute != '/noInternet') {
-            Get.offNamed(lastRoute!);
+          if (!wasConnected && Get.currentRoute == '/noInternet') {
+             Get.back();
           }
         } catch (e) {
           debugPrint('Navigation error: $e');

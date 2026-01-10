@@ -9,7 +9,6 @@ import 'package:user_app/feature/auth/presentation/controllers/auth_controller.d
 import 'package:user_app/feature/auth/presentation/pages/login_view.dart';
 import 'package:user_app/feature/auth/presentation/pages/register_view.dart';
 import 'package:user_app/feature/home/presentation/controllers/home_controller.dart';
-import 'package:user_app/feature/home/presentation/pages/home_view.dart';
 import 'package:user_app/feature/dashboard/presentation/pages/dashboard_view.dart';
 import 'package:user_app/feature/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:user_app/feature/reservation/presentation/pages/reservation_view.dart';
@@ -77,7 +76,9 @@ void main() {
 }
 
 Future<void> _initServices(
-    ThemeController themeController, NotificationService notificationService) async {
+  ThemeController themeController,
+  NotificationService notificationService,
+) async {
   SharedPreferences? prefs;
   try {
     debugPrint('Initializing SharedPreferences in background...');

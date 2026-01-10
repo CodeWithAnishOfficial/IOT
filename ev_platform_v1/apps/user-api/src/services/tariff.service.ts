@@ -1,4 +1,4 @@
-import { Tariff, ChargingStation, Logger } from '@ev-platform-v1/shared';
+import { Tariff, Charger, Site, Logger } from '@ev-platform-v1/shared';
 import moment from 'moment'; // We need moment or date-fns for time checking. Since not installed, using plain JS or assume installed
 
 const logger = new Logger('TariffService');
@@ -14,11 +14,19 @@ export class TariffService {
   static async calculateCost(energyKwh: number, durationMin: number, startTime: Date, chargerId: string): Promise<number> {
     try {
       // Find Tariff
-      const station = await ChargingStation.findOne({ charger_id: chargerId });
+      const station = await Charger.findOne({ charger_id: chargerId });
       let tariff = null;
       
       if (station && station.tariff_id) {
         tariff = await Tariff.findById(station.tariff_id);
+      }
+
+      // Fallback to Site Tariff
+      if (!tariff && station && station.site_id) {
+          const site = await Site.findById(station.site_id);
+          if (site && site.tariff_id) {
+              tariff = await Tariff.findById(site.tariff_id);
+          }
       }
 
       if (!tariff) {

@@ -22,10 +22,10 @@ const infrastructure = {
       icon: icons.sites
     },
     {
-      id: 'stations',
-      title: 'Charging Stations',
+      id: 'chargers',
+      title: 'Chargers',
       type: 'item',
-      url: '/charging-stations',
+      url: '/chargers',
       icon: icons.stations
     }
   ]

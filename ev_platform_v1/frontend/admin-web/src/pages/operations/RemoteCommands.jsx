@@ -21,7 +21,7 @@ import {
 
 // project-imports
 import MainCard from 'components/MainCard';
-import StationService from 'api/station';
+import ChargerService from 'api/charger';
 import RemoteCommandService from 'api/remote-command';
 
 export default function RemoteCommands() {
@@ -48,7 +48,7 @@ export default function RemoteCommands() {
 
   const fetchStations = async () => {
     try {
-      const response = await StationService.getAllStations();
+      const response = await ChargerService.getAllChargers();
       if (!response.data.error) {
         setStations(response.data.data);
       }

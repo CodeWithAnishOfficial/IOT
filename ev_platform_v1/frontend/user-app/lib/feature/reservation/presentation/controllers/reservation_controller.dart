@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:user_app/core/network/api_provider.dart';
-import 'package:user_app/feature/home/domain/models/charging_station.dart';
+import 'package:user_app/feature/home/domain/models/charger.dart';
 import 'package:user_app/feature/home/presentation/controllers/home_controller.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,8 +12,8 @@ import 'package:user_app/feature/more/presentation/pages/account/presentation/co
 class ReservationController extends GetxController {
   final ApiProvider _apiProvider = ApiProvider();
   
-  final stations = <ChargingStation>[].obs;
-  final filteredStations = <ChargingStation>[].obs;
+  final stations = <Charger>[].obs;
+  final filteredStations = <Charger>[].obs;
   final isLoading = false.obs;
   
   final myReservations = <dynamic>[].obs; // List of user's reservations
@@ -91,7 +91,7 @@ class ReservationController extends GetxController {
     // But if isSearchingLocation is false (user cleared search or selected a place), we show filtered stations.
     if (isSearchingLocation.value) return;
 
-    List<ChargingStation> temp = stations;
+    List<Charger> temp = stations;
     
     // 1. Filter by Search (Name/Address) - Only if we have stations and not searching for a new place
     if (query.isNotEmpty && query.toLowerCase() != _lastSelectedPlaceText?.toLowerCase()) {
@@ -243,7 +243,7 @@ class ReservationController extends GetxController {
 
       if (response['data'] != null) {
         final List<dynamic> data = response['data'];
-        stations.value = data.map((e) => ChargingStation.fromJson(e)).toList();
+        stations.value = data.map((e) => Charger.fromJson(e)).toList();
         filterStations(); // Apply filters
       } else {
          stations.clear();
@@ -260,7 +260,7 @@ class ReservationController extends GetxController {
 
   void _loadMockData() {
      stations.value = [
-      ChargingStation(
+      Charger(
         chargerId: "MOCK-001",
         name: "KA | Bengaluru | The Pavilion 2",
         location: Location(
@@ -278,7 +278,7 @@ class ReservationController extends GetxController {
           Connector(connectorId: 1, status: "Available", type: "CCS2", maxPowerKw: 150.0),
         ],
       ),
-      ChargingStation(
+      Charger(
         chargerId: "MOCK-002",
         name: "L2STTEST",
         location: Location(
@@ -296,7 +296,7 @@ class ReservationController extends GetxController {
            Connector(connectorId: 1, status: "Available", type: "Type2", maxPowerKw: 22.0),
         ],
       ),
-      ChargingStation(
+      Charger(
         chargerId: "MOCK-003",
         name: "B&B Opulent Spire Car charger 3",
         location: Location(

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User, ChargingSession, ChargingStation, WalletTransaction, Logger } from '@ev-platform-v1/shared';
+import { User, ChargingSession, Charger, WalletTransaction, Logger } from '@ev-platform-v1/shared';
 
 const logger = new Logger('DashboardController');
 
@@ -8,8 +8,8 @@ export class DashboardController {
   static async getStats(req: Request, res: Response) {
     try {
       const totalUsers = await User.countDocuments();
-      const onlineStations = await ChargingStation.countDocuments({ status: 'online' });
-      const totalStations = await ChargingStation.countDocuments();
+      const onlineStations = await Charger.countDocuments({ status: 'online' });
+      const totalStations = await Charger.countDocuments();
       const activeSessions = await ChargingSession.countDocuments({ status: true });
 
       // Revenue aggregation
@@ -85,7 +85,7 @@ export class DashboardController {
       ]);
 
       // Station Status Distribution
-      const stationStatus = await ChargingStation.aggregate([
+      const stationStatus = await Charger.aggregate([
         {
           $group: {
             _id: "$status",

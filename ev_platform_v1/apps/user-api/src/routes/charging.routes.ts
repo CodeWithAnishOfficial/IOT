@@ -6,6 +6,22 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Route: GET /charging/history
+// Description: Get charging history
+router.get('/history', ChargingController.getHistory);
+
+// Route: GET /charging/invoice/:session_id
+// Description: Download invoice PDF
+router.get('/invoice/:session_id', ChargingController.downloadInvoice);
+
+// Route: GET /charging/status
+// Description: Check connector status
+router.get('/status', ChargingController.checkStatus);
+
+// Route: POST /charging/release
+// Description: Release connector lock
+router.post('/release', ChargingController.releaseLock);
+
 // Route: POST /charging/start
 // Description: Start a charging session
 router.post('/start', ChargingController.start);

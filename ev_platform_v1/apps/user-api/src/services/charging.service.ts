@@ -1,4 +1,4 @@
-import { Logger, User, ChargingSession, RedisService, ChargingStation, Payment } from '@ev-platform-v1/shared';
+import { Logger, User, ChargingSession, RedisService, Charger, Payment } from '@ev-platform-v1/shared';
 import { PaymentService } from './payment.service';
 
 const logger = new Logger('ChargingService');
@@ -19,6 +19,13 @@ export class ChargingService {
       const user = await User.findOne({ email_id: userId });
       if (!user) {
         throw new Error('User not found');
+      }
+
+      // 1b. Verify Lock
+      const lockKey = `lock:${stationId}:${connectorId}`;
+      const existingLock = await redis.get(lockKey);
+      if (existingLock && existingLock !== userId) {
+           throw new Error('Connector is reserved by another user');
       }
 
       // 2. Validate Payment OR Balance
@@ -66,7 +73,7 @@ export class ChargingService {
       }
 
       // 3. Validate Station
-      const station = await ChargingStation.findOne({ charger_id: stationId });
+      const station = await Charger.findOne({ charger_id: stationId });
       if (!station) {
         throw new Error('Station not found');
       }
@@ -178,5 +185,75 @@ export class ChargingService {
       logger.error('Error stopping session', error);
       throw error;
     }
+  }
+
+  static async checkConnectorStatus(stationId: string, connectorId: string | number, userId: string) {
+    const station = await Charger.findOne({ charger_id: stationId });
+
+    if (!station) {
+      throw new Error('Station not found');
+    }
+
+    if (station.status === 'offline') {
+      throw new Error('Station is offline');
+    }
+
+    if (station.status === 'faulted') {
+      throw new Error('Station is faulted');
+    }
+
+    const connector = station.connectors.find(c => c.connector_id === Number(connectorId));
+
+    if (!connector) {
+      throw new Error('Connector not found');
+    }
+
+    if (connector.status !== 'Available') {
+      throw new Error(`Connector is ${connector.status}`);
+    }
+
+    // Check for Lock
+    const lockKey = `lock:${stationId}:${connectorId}`;
+    const existingLock = await redis.get(lockKey);
+
+    if (existingLock && existingLock !== userId) {
+       throw new Error('Connector is currently being accessed by another user');
+    }
+
+    // Set Lock (TTL 5 minutes)
+    await redis.set(lockKey, userId, 300);
+
+    return {
+      allowed: true,
+      status: connector.status,
+      lock: 'acquired'
+    };
+  }
+
+  static async releaseLock(stationId: string, connectorId: string | number, userId: string) {
+    const lockKey = `lock:${stationId}:${connectorId}`;
+    const existingLock = await redis.get(lockKey);
+    
+    if (existingLock === userId) {
+        await redis.del(lockKey);
+        return { released: true };
+    }
+    return { released: false, reason: 'Lock not held by user' };
+  }
+
+  static async getHistory(userId: string) {
+    // Find all sessions for this user, sorted by date desc
+    const sessions = await ChargingSession.find({ email_id: userId })
+      .sort({ created_date: -1 });
+    return sessions;
+  }
+
+  static async getSessionDetails(userId: string, sessionId: string) {
+      const session = await ChargingSession.findOne({ 
+          session_id: Number(sessionId),
+          email_id: userId
+      });
+      if (!session) throw new Error('Session not found');
+      return session;
   }
 }

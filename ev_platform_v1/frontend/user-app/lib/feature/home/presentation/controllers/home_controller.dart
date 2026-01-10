@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart'; // Add url_launcher import
 import 'package:user_app/core/network/api_provider.dart';
 
-import 'package:user_app/feature/home/domain/models/charging_station.dart';
+import 'package:user_app/feature/home/domain/models/charger.dart';
 import 'package:user_app/feature/home/domain/models/saved_trip.dart'; // Import SavedTrip
 import 'package:user_app/feature/home/presentation/pages/search_location_view.dart';
 import 'package:user_app/feature/home/presentation/pages/qr_scanner_view.dart';
@@ -27,7 +28,7 @@ import 'package:user_app/utils/theme/themes.dart';
 class HomeController extends GetxController {
   final ApiProvider _apiProvider = ApiProvider();
 
-  final stations = <ChargingStation>[].obs;
+  final stations = <Charger>[].obs;
   final isLoading = false.obs;
 
   // Recent Searches
@@ -54,11 +55,12 @@ class HomeController extends GetxController {
   // Trip Planning State
   final departureSoC = 90.0.obs;
   final arrivalSoC = 0.0.obs; // Calculated
-  final tripStops = <ChargingStation>[].obs; // User added stops
+  final tripStops = <Charger>[].obs; // User added stops
   final isItineraryMinimized = false.obs;
-  
+
   final savedTrips = <SavedTrip>[].obs;
-  final currentSavedTripId = Rxn<String>(); // Track currently loaded saved trip ID
+  final currentSavedTripId =
+      Rxn<String>(); // Track currently loaded saved trip ID
 
   void toggleItineraryMinimize() => isItineraryMinimized.toggle();
 
@@ -111,7 +113,7 @@ class HomeController extends GetxController {
   WebSocketService? _wsService;
 
   // Selected station for details view
-  final selectedStation = Rxn<ChargingStation>();
+  final selectedStation = Rxn<Charger>();
 
   // Selected Connector IDs (Multiple Selection)
   final selectedConnectorIds = <String>{}.obs;
@@ -127,17 +129,21 @@ class HomeController extends GetxController {
     if (Get.isRegistered<DashboardController>()) {
       Get.find<DashboardController>().changeTabIndex(0);
     }
-    
+
     // 2. Find station in local list or fetch it
-    ChargingStation? station = stations.firstWhereOrNull((s) => s.chargerId == chargerId);
-    
+    Charger? station = stations.firstWhereOrNull(
+      (s) => s.chargerId == chargerId,
+    );
+
     if (station == null) {
       // Try fetching specific station
       try {
         isLoading.value = true;
-        final response = await _apiProvider.get('/stations/$chargerId'); // Assuming endpoint exists
+        final response = await _apiProvider.get(
+          '/chargers/details/$chargerId',
+        ); // Updated endpoint
         if (response['data'] != null) {
-             station = ChargingStation.fromJson(response['data']);
+          station = Charger.fromJson(response['data']);
         }
       } catch (e) {
         print("Error fetching station details: $e");
@@ -145,22 +151,22 @@ class HomeController extends GetxController {
         isLoading.value = false;
       }
     }
-    
+
     if (station != null) {
-       // 3. Center Map
-       if (station.location != null && _googleMapController != null) {
-          _googleMapController!.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(station.location!.lat, station.location!.lng),
-              15,
-            ),
-          );
-       }
-       
-       // 4. Select Station (triggers sheet)
-       selectStation(station);
+      // 3. Center Map
+      if (station.location != null && _googleMapController != null) {
+        _googleMapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(station.location!.lat, station.location!.lng),
+            15,
+          ),
+        );
+      }
+
+      // 4. Select Station (triggers sheet)
+      selectStation(station);
     } else {
-       Get.snackbar("Error", "Station not found");
+      Get.snackbar("Error", "Station not found");
     }
   }
 
@@ -175,7 +181,7 @@ class HomeController extends GetxController {
     }
   }
 
-  void initiateCharging() {
+  Future<void> initiateCharging() async {
     if (selectedConnectorIds.isEmpty) {
       Get.snackbar(
         "Select Connector",
@@ -190,12 +196,54 @@ class HomeController extends GetxController {
 
     final connectorId = selectedConnectorIds.first;
 
-    Get.to(
-      () => ChargingPreparationView(
-        connectorId: connectorId,
-        homeController: this,
-      ),
+    // Check Status before navigating
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
     );
+
+    try {
+      final stationId = selectedStation.value?.chargerId;
+      if (stationId == null) throw Exception("Station ID not found");
+
+      final statusRes = await _apiProvider.get(
+        '/charging/status?station_id=$stationId&connector_id=$connectorId',
+      );
+
+      Get.back(); // Close loading
+
+      if (statusRes['error'] == true) {
+        _handleError(statusRes['message']);
+        return;
+      }
+
+      await Get.to(
+        () => ChargingPreparationView(
+          connectorId: connectorId,
+          homeController: this,
+        ),
+      );
+
+      // Release lock when user returns (cancels or moves on)
+      _releaseConnectorLock(connectorId);
+    } catch (e) {
+      Get.back(); // Close loading
+      _handleError(e);
+    }
+  }
+
+  Future<void> _releaseConnectorLock(String connectorId) async {
+    final stationId = selectedStation.value?.chargerId;
+    if (stationId == null) return;
+    try {
+      // Fire and forget
+      _apiProvider.post('/charging/release', {
+        'station_id': stationId,
+        'connector_id': connectorId,
+      });
+    } catch (e) {
+      print("Error releasing lock: $e");
+    }
   }
 
   Future<void> startChargingSession(String connectorId, double amount) async {
@@ -211,6 +259,18 @@ class HomeController extends GetxController {
     );
 
     try {
+      // 0. Pre-check: Verify Connector Status
+      final stationId = selectedStation.value?.chargerId;
+      if (stationId == null) throw Exception("Station ID not found");
+
+      final statusRes = await _apiProvider.get(
+        '/charging/status?station_id=$stationId&connector_id=$connectorId',
+      );
+
+      if (statusRes['error'] == true) {
+        throw Exception(statusRes['message']);
+      }
+
       // 1. Initiate Payment Order
       print("Initiating payment for amount: $amount");
       final response = await _apiProvider.post('/charging/initiate-payment', {
@@ -461,7 +521,7 @@ class HomeController extends GetxController {
         _updateMarkers();
       }
     });
-    
+
     // Auto-update trip markers when stops change
     ever(tripStops, (_) => _updateTripMarkers());
 
@@ -606,8 +666,11 @@ class HomeController extends GetxController {
       if (token.isEmpty) return;
 
       // Using User API Port 3001
-      // Replace with your actual IP if testing on real device
-      final wsUrl = "ws://192.168.0.58:3001?token=$token";
+      // Use 192.168.0.57 for Android Emulator, localhost for iOS/Web
+      final wsUrl = Platform.isAndroid
+          ? "ws://192.168.0.57:3001?token=$token"
+          : "ws://192.168.0.57:3001?token=$token";
+
       _wsService = WebSocketService(wsUrl);
 
       _wsService?.stream.listen(
@@ -1400,7 +1463,9 @@ class HomeController extends GetxController {
     try {
       final res = await _apiProvider.get('/saved-trips');
       if (res['error'] == false) {
-        final list = (res['data'] as List).map((e) => SavedTrip.fromJson(e)).toList();
+        final list = (res['data'] as List)
+            .map((e) => SavedTrip.fromJson(e))
+            .toList();
         savedTrips.assignAll(list);
       }
     } catch (e) {
@@ -1409,59 +1474,83 @@ class HomeController extends GetxController {
   }
 
   Future<void> saveCurrentTrip(String name) async {
-     if (sourceLatLng.value == null || destinationLatLng.value == null) {
-       Get.snackbar("Error", "Source and Destination required");
-       return;
-     }
-     
-     final stopsData = tripStops.map((s) => TripStop(
-         chargerId: s.chargerId,
-         name: s.name,
-         address: s.location?.address,
-         location: TripLocation(
-             address: s.location?.address ?? '',
-             lat: s.location!.lat,
-             lng: s.location!.lng,
-         ),
-     )).toList();
+    if (sourceLatLng.value == null || destinationLatLng.value == null) {
+      Get.snackbar("Error", "Source and Destination required");
+      return;
+    }
 
-     final body = {
-        'name': name,
-        'source': {
-            'address': sourceController.text,
-            'lat': sourceLatLng.value!.latitude,
-            'lng': sourceLatLng.value!.longitude,
-        },
-        'destination': {
-            'address': destinationController.text,
-            'lat': destinationLatLng.value!.latitude,
-            'lng': destinationLatLng.value!.longitude,
-        },
-        'stops': stopsData.map((s) => s.toJson()).toList(),
-     };
+    final stopsData = tripStops
+        .map(
+          (s) => TripStop(
+            chargerId: s.chargerId,
+            name: s.name,
+            address: s.location?.address,
+            location: TripLocation(
+              address: s.location?.address ?? '',
+              lat: s.location!.lat,
+              lng: s.location!.lng,
+            ),
+          ),
+        )
+        .toList();
 
-     try {
-         final res = await _apiProvider.post('/saved-trips', body);
-         if (res['error'] == false) {
-             Get.snackbar("Success", "Trip saved successfully!", backgroundColor: Colors.green, colorText: Colors.white);
-             fetchSavedTrips();
-         } else {
-             Get.snackbar("Error", res['message'] ?? "Failed to save trip", backgroundColor: Colors.red, colorText: Colors.white);
-         }
-     } catch (e) {
-         print("Save Trip Error: $e");
-         Get.snackbar("Error", "Failed to save trip");
-     }
+    final body = {
+      'name': name,
+      'source': {
+        'address': sourceController.text,
+        'lat': sourceLatLng.value!.latitude,
+        'lng': sourceLatLng.value!.longitude,
+      },
+      'destination': {
+        'address': destinationController.text,
+        'lat': destinationLatLng.value!.latitude,
+        'lng': destinationLatLng.value!.longitude,
+      },
+      'stops': stopsData.map((s) => s.toJson()).toList(),
+    };
+
+    try {
+      final res = await _apiProvider.post('/saved-trips', body);
+      if (res['error'] == false) {
+        Get.snackbar(
+          "Success",
+          "Trip saved successfully!",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        fetchSavedTrips();
+      } else {
+        Get.snackbar(
+          "Error",
+          res['message'] ?? "Failed to save trip",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print("Save Trip Error: $e");
+      Get.snackbar("Error", "Failed to save trip");
+    }
   }
-  
+
   void deleteSavedTrip(String id) async {
     try {
       final res = await _apiProvider.delete('/saved-trips/$id');
       if (res['error'] == false) {
-        Get.snackbar("Success", "Trip deleted successfully!", backgroundColor: Colors.green, colorText: Colors.white);
+        Get.snackbar(
+          "Success",
+          "Trip deleted successfully!",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
         fetchSavedTrips(); // Refresh list
       } else {
-        Get.snackbar("Error", res['message'] ?? "Failed to delete trip", backgroundColor: Colors.red, colorText: Colors.white);
+        Get.snackbar(
+          "Error",
+          res['message'] ?? "Failed to delete trip",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
       }
     } catch (e) {
       print("Delete Trip Error: $e");
@@ -1470,46 +1559,49 @@ class HomeController extends GetxController {
   }
 
   void loadSavedTrip(SavedTrip trip) {
-     currentSavedTripId.value = trip.id; // Set ID
-     sourceController.text = trip.source.address;
-     sourceLatLng.value = LatLng(trip.source.lat, trip.source.lng);
-     
-     destinationController.text = trip.destination.address;
-     destinationLatLng.value = LatLng(trip.destination.lat, trip.destination.lng);
-     
-     tripStops.clear();
-     
-     // Correct mapping for ChargingStation constructor
-     final mappedStations = trip.stops.map((s) {
-        return ChargingStation(
-           chargerId: s.chargerId ?? 'unknown',
-           name: s.name,
-           location: Location(
-               lat: s.location.lat, 
-               lng: s.location.lng, 
-               address: s.location.address
-           ),
-           status: 'Unknown',
-           maxPowerKw: 0,
-           connectors: [],
-        );
-     }).toList();
-     
-     tripStops.assignAll(mappedStations);
-     
-     // Switch to trip mode
-     searchMode.value = 'trip';
-     Get.to(
-       () => const SearchLocationView(
-         isEmbedded: true, 
-         showBackButton: true,
-         isSavedTripMode: true,
-       ),
-       arguments: {'fromSaved': true},
-     );
-     
-     // Trigger route calculation
-     _executeTripPlanning();
+    currentSavedTripId.value = trip.id; // Set ID
+    sourceController.text = trip.source.address;
+    sourceLatLng.value = LatLng(trip.source.lat, trip.source.lng);
+
+    destinationController.text = trip.destination.address;
+    destinationLatLng.value = LatLng(
+      trip.destination.lat,
+      trip.destination.lng,
+    );
+
+    tripStops.clear();
+
+    // Correct mapping for Charger constructor
+    final mappedStations = trip.stops.map((s) {
+      return Charger(
+        chargerId: s.chargerId ?? 'unknown',
+        name: s.name,
+        location: Location(
+          lat: s.location.lat,
+          lng: s.location.lng,
+          address: s.location.address,
+        ),
+        status: 'Unknown',
+        maxPowerKw: 0,
+        connectors: [],
+      );
+    }).toList();
+
+    tripStops.assignAll(mappedStations);
+
+    // Switch to trip mode
+    searchMode.value = 'trip';
+    Get.to(
+      () => const SearchLocationView(
+        isEmbedded: true,
+        showBackButton: true,
+        isSavedTripMode: true,
+      ),
+      arguments: {'fromSaved': true},
+    );
+
+    // Trigger route calculation
+    _executeTripPlanning();
   }
 
   void _updateTripMarkers() {
@@ -1784,6 +1876,21 @@ class HomeController extends GetxController {
     if (_darkMapStyle != null) {
       tripMapController?.setMapStyle(_darkMapStyle);
     }
+
+    // Center map on current location if available
+    if (currentLocation.value != null) {
+      tripMapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(
+              currentLocation.value!.latitude,
+              currentLocation.value!.longitude,
+            ),
+            zoom: 14,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> fetchNearbyStations({
@@ -1870,7 +1977,7 @@ class HomeController extends GetxController {
   void _loadMockData(double centerLat, double centerLng) {
     // Generate some mock stations around the center
     stations.value = [
-      ChargingStation(
+      Charger(
         chargerId: "MOCK-001",
         name: "Connaught Place Supercharger",
         location: Location(
@@ -1902,7 +2009,7 @@ class HomeController extends GetxController {
           ),
         ],
       ),
-      ChargingStation(
+      Charger(
         chargerId: "MOCK-002",
         name: "Cyber City Fast Charge",
         location: Location(
@@ -1930,7 +2037,7 @@ class HomeController extends GetxController {
           ),
         ],
       ),
-      ChargingStation(
+      Charger(
         chargerId: "MOCK-003",
         name: "Mall of India Station",
         location: Location(
@@ -1968,7 +2075,7 @@ class HomeController extends GetxController {
     );
   }
 
-  Future<void> startNavigation(ChargingStation station) async {
+  Future<void> startNavigation(Charger station) async {
     if (station.location == null) return;
 
     // 1. Get current location if not available
@@ -2164,7 +2271,7 @@ class HomeController extends GetxController {
     return points;
   }
 
-  void selectStation(ChargingStation station) {
+  void selectStation(Charger station) {
     selectedStation.value = station;
 
     // Animate camera slightly South (-lat) so the station appears higher on screen (above the sheet)
@@ -2197,7 +2304,7 @@ class HomeController extends GetxController {
     });
   }
 
-  void animateToStation(ChargingStation station, {double offsetLat = 0.0}) {
+  void animateToStation(Charger station, {double offsetLat = 0.0}) {
     if (station.location != null) {
       _safeAnimateCamera(
         CameraUpdate.newCameraPosition(
@@ -2284,6 +2391,6 @@ class HomeController extends GetxController {
 }
 
 // Top-level function for background isolate
-List<ChargingStation> _parseStations(List<dynamic> data) {
-  return data.map((e) => ChargingStation.fromJson(e)).toList();
+List<Charger> _parseStations(List<dynamic> data) {
+  return data.map((e) => Charger.fromJson(e)).toList();
 }

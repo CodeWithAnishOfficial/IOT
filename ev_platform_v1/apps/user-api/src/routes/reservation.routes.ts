@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Reservation, RedisService, Logger, ChargingStation } from '@ev-platform-v1/shared';
+import { Reservation, RedisService, Logger, Charger } from '@ev-platform-v1/shared';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -17,7 +17,7 @@ router.post('/create', async (req: Request, res: Response) => {
     const userId = req.user.user_id;
 
     // Check if station exists and connector is available (naive check)
-    const station = await ChargingStation.findOne({ charger_id });
+    const station = await Charger.findOne({ charger_id });
     if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
 
     // In production, we should check if there are overlapping reservations or if connector is currently charging.

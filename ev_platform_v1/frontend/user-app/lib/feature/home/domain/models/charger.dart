@@ -1,4 +1,4 @@
-class ChargingStation {
+class Charger {
   final String chargerId;
   final String? name;
   final Location? location;
@@ -13,7 +13,7 @@ class ChargingStation {
   final List<String> images;
   final List<String> facilities;
 
-  ChargingStation({
+  Charger({
     required this.chargerId,
     this.name,
     this.location,
@@ -29,8 +29,8 @@ class ChargingStation {
     this.facilities = const [],
   });
 
-  factory ChargingStation.fromJson(Map<String, dynamic> json) {
-    return ChargingStation(
+  factory Charger.fromJson(Map<String, dynamic> json) {
+    return Charger(
       chargerId: json['charger_id']?.toString() ?? '',
       name: json['name']?.toString(),
       location: json['location'] != null
@@ -54,11 +54,11 @@ class ChargingStation {
     );
   }
 
-  ChargingStation copyWith({
+  Charger copyWith({
     String? status,
     List<Connector>? connectors,
   }) {
-    return ChargingStation(
+    return Charger(
       chargerId: this.chargerId,
       name: this.name,
       location: this.location,

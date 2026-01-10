@@ -19,13 +19,17 @@ class WebSocketService {
   bool get isConnected => _isConnected;
 
   void connect() {
-    _cleanupExistingConnection();
+    // Only cleanup socket, keep stream controller alive for listeners
+    _cleanupSocketOnly();
 
     try {
       debugPrint('Connecting to WebSocket: $url');
 
       _channel = WebSocketChannel.connect(Uri.parse(url));
-      _streamController = StreamController<dynamic>.broadcast();
+      
+      if (_streamController == null || _streamController!.isClosed) {
+        _streamController = StreamController<dynamic>.broadcast();
+      }
 
       // Listen to incoming frames
       _subscription = _channel!.stream.listen(
@@ -94,7 +98,7 @@ class WebSocketService {
     }
   }
 
-  void _cleanupExistingConnection() {
+  void _cleanupSocketOnly() {
     _cancelHeartbeatTimeout();
 
     if (_subscription != null) {
@@ -117,9 +121,12 @@ class WebSocketService {
       }
       _channel = null;
     }
-
-    _closeStreamController();
     _isConnected = false;
+  }
+
+  void _cleanupExistingConnection() {
+    _cleanupSocketOnly();
+    _closeStreamController();
   }
 
   void _closeStreamController() {

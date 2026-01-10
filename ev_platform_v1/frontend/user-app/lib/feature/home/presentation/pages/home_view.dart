@@ -169,43 +169,21 @@ class _HomeViewState extends State<HomeView> {
                 : const SizedBox.shrink(),
           ),
 
-          // 4. Current Location & Plan Trip Buttons
+          // 4. Current Location Button (Trip Icon Removed)
           Positioned(
             right: 20,
-            bottom: 300, // Raised to avoid overlapping with Station Cards (120 + 160 + padding)
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Plan Trip Button
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: FloatingActionButton(
-                    heroTag: "planTrip",
-                    onPressed: () => controller.openSearch(mode: 'trip'),
-                    backgroundColor: const Color(0xFF1E1E1E), // Match station card background
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                    ),
-                    child: const Icon(Icons.directions),
-                  ),
-                ),
-
-                FloatingActionButton(
-                  heroTag: "myLocation",
-                  onPressed: () => controller.recenterMap(),
-                  backgroundColor: const Color(0xFF1E1E1E), // Match station card background
-                  foregroundColor: AppTheme.primaryColor,
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: const Icon(Icons.my_location),
-                ),
-              ],
+            bottom: 260, // Adjusted after removing Trip button and moving cards down
+            child: FloatingActionButton(
+              heroTag: "myLocation",
+              onPressed: () => controller.recenterMap(),
+              backgroundColor: const Color(0xFF1E1E1E), // Match station card background
+              foregroundColor: AppTheme.primaryColor,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: const Icon(Icons.my_location),
             ),
           ),
 
@@ -257,7 +235,7 @@ class _HomeViewState extends State<HomeView> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 120, // Raised to clear floating navbar (72 + 34 + padding)
+            bottom: 90, // Moved down slightly as requested (was 110)
             child: Obx(() {
               // 5a. Detail Sheet
               if (controller.selectedStation.value != null) {
@@ -365,41 +343,31 @@ class _HomeViewState extends State<HomeView> {
                     return NotificationListener<ScrollNotification>(
                       onNotification: (notification) {
                         if (notification is ScrollEndNotification) {
-                          // Calculate center index based on scroll offset
-                          // Card width (260) + Separator (12) = 272
-                          final double itemWidth = 272.0;
                           final offset = controller.stationScrollController.offset;
-
-                          // Current index
-                          int index = (offset / itemWidth).round();
-
-                          // Bounds check
-                          if (index < 0) index = 0;
-                          if (index >= controller.stations.length) {
-                            index = controller.stations.length - 1;
-                          }
-
-                          if (controller.stations.isNotEmpty) {
-                            final station = controller.stations[index];
-                            // Animate map to this station
-                            controller.animateToStation(station, offsetLat: -0.002);
+                          final index = (offset / 272.0).round();
+                          if (index >= 0 && index < controller.stations.length) {
+                             final station = controller.stations[index];
+                             controller.animateToStation(station, offsetLat: -0.002);
                           }
                         }
                         return false;
                       },
-                      child: ListView.separated(
+                      child: ListView.builder(
                         controller: controller.stationScrollController,
-                        padding: const EdgeInsets.only(left: 72, right: 16), // Align with Green Dot
+                        physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+                        itemExtent: 272,
+                        padding: const EdgeInsets.only(left: 72, right: 16),
                         scrollDirection: Axis.horizontal,
                         itemCount: controller.stations.length,
-                        separatorBuilder: (_, index) => const SizedBox(width: 12),
                         itemBuilder: (context, index) {
-                        final station = controller.stations[index];
-                        final isOnline = station.status.toLowerCase() == 'online';
+                          final station = controller.stations[index];
+                          final isOnline = station.status.toLowerCase() == 'online';
 
-                        return GestureDetector(
-                          onTap: () => controller.selectStation(station),
-                          child: Container(
+                          return Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            child: GestureDetector(
+                              onTap: () => controller.selectStation(station),
+                              child: Container(
                             width: 260, // Increased Width
                             padding: const EdgeInsets.all(16), // Consistent Padding
                             decoration: BoxDecoration(
@@ -512,6 +480,7 @@ class _HomeViewState extends State<HomeView> {
                               ],
                             ),
                           ),
+                        ),
                         );
                       },
                     ),

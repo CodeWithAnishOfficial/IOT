@@ -5,7 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { Logger, Database } from '@ev-platform-v1/shared';
 import dotenv from 'dotenv';
-import chargingStationRoutes from './routes/charging-station.routes';
+import chargerRoutes from './routes/charger.routes';
 import remoteCommandRoutes from './routes/remote-command.routes';
 import userRoutes from './routes/user.routes';
 import tariffRoutes from './routes/tariff.routes';
@@ -35,7 +35,7 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
-app.use('/stations', chargingStationRoutes);
+app.use('/chargers', chargerRoutes);
 app.use('/sites', siteRoutes);
 app.use('/roles', roleRoutes);
 app.use('/commands', remoteCommandRoutes);

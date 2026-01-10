@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:user_app/feature/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:user_app/feature/home/domain/models/charging_station.dart';
+import 'package:user_app/feature/home/domain/models/charger.dart';
 import 'package:user_app/feature/reservation/presentation/controllers/reservation_controller.dart';
 import 'package:user_app/feature/reservation/presentation/pages/booking_view.dart';
 import 'package:user_app/utils/theme/themes.dart';
@@ -19,8 +19,6 @@ class ReservationView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF121212),
         elevation: 0,
-        automaticallyImplyLeading: true,
-        iconTheme: const IconThemeData(color: Colors.white),
         title: Row(
           children: [
             Expanded(
@@ -349,7 +347,7 @@ class ReservationView extends StatelessWidget {
     );
   }
 
-  Widget _buildStationCard(BuildContext context, ChargingStation station) {
+  Widget _buildStationCard(BuildContext context, Charger station) {
     bool isAvailable = station.status.toLowerCase() == 'online';
     bool hasDC = station.connectors.any((c) => (c.type?.contains('CCS') ?? false) || (c.type?.contains('DC') ?? false));
     

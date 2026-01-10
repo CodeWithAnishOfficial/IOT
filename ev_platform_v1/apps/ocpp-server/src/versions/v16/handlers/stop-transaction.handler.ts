@@ -1,5 +1,5 @@
 import { OCPPConnection } from '../../../core/connection.manager';
-import { ChargingSession, Logger, RabbitMQService } from '@ev-platform-v1/shared';
+import { ChargingSession, Logger, RabbitMQService, RedisService } from '@ev-platform-v1/shared';
 
 const logger = new Logger('StopTransactionHandler');
 
@@ -30,6 +30,17 @@ export async function handleStopTransaction(connection: OCPPConnection, payload:
     session.modified_date = new Date();
     
     await session.save();
+    
+    // Clear Lock
+    try {
+        const redis = RedisService.getInstance();
+        const lockKey = `lock:${session.charger_id}:${session.connector_id}`;
+        await redis.del(lockKey);
+        logger.info(`Released lock for ${lockKey}`);
+    } catch (e) {
+        logger.error('Failed to release lock', e);
+    }
+
     sessionData = session.toObject();
   } else {
       // In case session is not found (maybe started offline?), create a partial one or just log
@@ -44,8 +55,9 @@ export async function handleStopTransaction(connection: OCPPConnection, payload:
           chargerId: connection.id,
           meterStop,
           timestamp,
-          totalEnergy: session ? session.unit_consumed : 0,
+          totalEnergy: session ? (session.unit_consumed / 1000) : 0,
           userId: session ? session.user_id : null,
+          userEmail: session ? session.email_id : null,
           sessionId: session ? session.session_id : null
       });
       logger.info(`Published CDR event for transaction ${transactionId}`);

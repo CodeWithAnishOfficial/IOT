@@ -42,7 +42,7 @@ export class App {
     this.app.use('/', gatewayRoutes);
 
     // Proxy to User API
-    const userApiUrl = process.env.USER_API_URL || 'http://127.0.0.1:3001';
+    const userApiUrl = process.env.USER_API_URL || 'http://localhost:3001';
     
     const userServices = [
         '/auth', '/wallet', '/profile', '/search', 
@@ -62,11 +62,11 @@ export class App {
     });
 
     // Proxy to Admin API
-    const adminApiUrl = process.env.ADMIN_API_URL || 'http://127.0.0.1:3002';
+    const adminApiUrl = process.env.ADMIN_API_URL || 'http://localhost:3002';
     
     // Explicitly proxy admin services if accessed without /admin prefix
     const adminServices = [
-      '/stations', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard'
+      '/chargers', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard', '/users'
     ];
 
     adminServices.forEach(service => {

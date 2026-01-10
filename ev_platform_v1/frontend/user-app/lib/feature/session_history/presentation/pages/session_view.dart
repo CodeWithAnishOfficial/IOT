@@ -39,17 +39,31 @@ class SessionView extends GetView<SessionHistoryController> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (controller.sessions.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No charging sessions found.',
-                    style: TextStyle(color: Colors.white70),
+                return RefreshIndicator(
+                  onRefresh: controller.fetchSessions,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.7,
+                        child: const Center(
+                          child: Text(
+                            'No charging sessions found.',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
-              return ListView.builder(
-                itemCount: controller.sessions.length,
-                itemBuilder: (context, index) {
-                  final session = controller.sessions[index];
+              return RefreshIndicator(
+                onRefresh: controller.fetchSessions,
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: controller.sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = controller.sessions[index];
                   final isActive = session.status == 'active';
 
                   return Card(
@@ -107,11 +121,12 @@ class SessionView extends GetView<SessionHistoryController> {
                     ),
                   );
                 },
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
+              ),
+            );
+          }),
+        ),
+      ],
+    ),
+  );
+}
 }

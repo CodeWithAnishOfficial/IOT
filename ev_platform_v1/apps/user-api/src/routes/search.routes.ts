@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { ChargingStation, Logger, RedisService, Site } from '@ev-platform-v1/shared';
+import { Charger, Logger, RedisService, Site } from '@ev-platform-v1/shared';
 
 const router = Router();
 const logger = new Logger('SearchController');
@@ -26,7 +26,7 @@ router.get('/nearby', async (req: Request, res: Response) => {
     let stations = await redis.get(CACHE_KEY);
 
     if (!stations) {
-        stations = await ChargingStation.find({}).populate('site_id'); // Show all stations and populate site
+        stations = await Charger.find({}).populate('site_id'); // Show all stations and populate site
         await redis.set(CACHE_KEY, stations, 60); // Cache for 60 seconds
     }
     
@@ -91,7 +91,7 @@ router.post('/route', async (req: Request, res: Response) => {
     let stations = await redis.get(CACHE_KEY);
 
     if (!stations) {
-        stations = await ChargingStation.find({}).populate('site_id');
+        stations = await Charger.find({}).populate('site_id');
         await redis.set(CACHE_KEY, stations, 60);
     }
 
@@ -229,7 +229,7 @@ function isPointNearPolyline(point: {lat: number, lng: number}, polyline: any[],
 router.get('/station/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const station = await ChargingStation.findOne({ charger_id: id });
+        const station = await Charger.findOne({ charger_id: id });
         if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
         res.json({ error: false, data: station });
     } catch (error: any) {

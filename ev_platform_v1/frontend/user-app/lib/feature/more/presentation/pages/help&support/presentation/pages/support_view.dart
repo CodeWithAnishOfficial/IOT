@@ -1,93 +1,195 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/support_controller.dart';
+import 'create_ticket_sheet.dart';
+import 'ticket_chat_view.dart';
+import '../../domain/models/support_ticket.dart';
 
 class SupportView extends GetView<SupportController> {
   const SupportView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const backgroundColor = Color(0xFF121212);
+    const cardColor = Color(0xFF1E1E1E);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Support')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateTicketDialog(context),
-        child: const Icon(Icons.add),
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: const Text('Help & Support', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Get.bottomSheet(
+            const CreateTicketSheet(),
+            isScrollControlled: true,
+          );
+        },
+        label: const Text('New Ticket', style: TextStyle(fontWeight: FontWeight.bold)),
+        icon: const Icon(Icons.add),
+        backgroundColor: Get.theme.primaryColor,
+        foregroundColor: Colors.black, // Primary usually implies black text on neon/lime
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
+        
         if (controller.tickets.isEmpty) {
-          return const Center(child: Text('No support tickets found.'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.support_agent, size: 80, color: Colors.grey[800]),
+                const SizedBox(height: 16),
+                const Text(
+                  'No support tickets yet',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white70),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Need help? Create a new ticket below.',
+                  style: TextStyle(color: Colors.white38),
+                ),
+              ],
+            ),
+          );
         }
-        return ListView.builder(
-          itemCount: controller.tickets.length,
-          itemBuilder: (context, index) {
-            final ticket = controller.tickets[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ExpansionTile(
-                title: Text(ticket.subject),
-                subtitle: Text('${ticket.status} - ${ticket.category}'),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Description: ${ticket.description}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        const Text('Responses:', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        if (ticket.responses.isEmpty) const Text('No responses yet.'),
-                        ...ticket.responses.map((r) => ListTile(
-                          title: Text(r.message),
-                          subtitle: Text('${r.sender} - ${r.timestamp}'),
-                          tileColor: r.sender == 'admin' ? Colors.grey[100] : null,
-                        )),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            );
-          },
+
+        return RefreshIndicator(
+          onRefresh: () => controller.fetchTickets(),
+          child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 80, top: 16, left: 16, right: 16),
+            itemCount: controller.tickets.length,
+            itemBuilder: (context, index) {
+              final ticket = controller.tickets[index];
+              return _buildTicketCard(ticket, cardColor);
+            },
+          ),
         );
       }),
     );
   }
 
-  void _showCreateTicketDialog(BuildContext context) {
-    final subjectController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final category = 'General'.obs;
-
-    Get.defaultDialog(
-      title: 'New Ticket',
-      content: Column(
-        children: [
-          TextField(controller: subjectController, decoration: const InputDecoration(labelText: 'Subject')),
-          TextField(controller: descriptionController, decoration: const InputDecoration(labelText: 'Description'), maxLines: 3),
-          const SizedBox(height: 16),
-          Obx(() => DropdownButton<String>(
-            value: category.value,
-            items: ['Billing', 'Technical', 'General', 'Other']
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                .toList(),
-            onChanged: (val) => category.value = val!,
-            isExpanded: true,
-          )),
-        ],
+  Widget _buildTicketCard(SupportTicket ticket, Color cardColor) {
+    return Card(
+      elevation: 2,
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          Get.to(() => TicketChatView(ticketId: ticket.ticketId));
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildStatusChip(ticket.status),
+                  Text(
+                    _formatDate(ticket.createdAt),
+                    style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                ticket.subject,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                ticket.description,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Divider(color: Colors.white.withOpacity(0.1)),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.folder_outlined, size: 16, color: Colors.white38),
+                  const SizedBox(width: 4),
+                  Text(
+                    ticket.category,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(Icons.chat_bubble_outline, size: 16, color: Colors.white38),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${ticket.responses.length} msg',
+                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white38),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
-      textConfirm: 'Submit',
-      textCancel: 'Cancel',
-      onConfirm: () {
-        if (subjectController.text.isEmpty || descriptionController.text.isEmpty) {
-          Get.snackbar('Error', 'Please fill required fields');
-          return;
-        }
-        controller.createTicket(subjectController.text, descriptionController.text, category.value);
-      },
     );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color color;
+    Color bgColor;
+    
+    switch (status.toLowerCase()) {
+      case 'open':
+        color = Colors.greenAccent[400]!;
+        bgColor = Colors.green.withOpacity(0.1);
+        break;
+      case 'closed':
+        color = Colors.grey[400]!;
+        bgColor = Colors.grey.withOpacity(0.1);
+        break;
+      default:
+        color = Colors.orangeAccent[400]!;
+        bgColor = Colors.orange.withOpacity(0.1);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

@@ -1,0 +1,25 @@
+import axios from 'utils/axios';
+
+const ChargerService = {
+  getAllChargers: () => {
+    return axios.get('/chargers/list');
+  },
+
+  getChargerDetails: (id) => {
+    return axios.get(`/chargers/details/${id}`);
+  },
+
+  createCharger: (chargerData) => {
+    return axios.post('/chargers/create', chargerData);
+  },
+
+  updateCharger: (id, chargerData) => {
+    return axios.put(`/chargers/update/${id}`, chargerData);
+  },
+
+  deleteCharger: (id) => {
+    return axios.delete(`/chargers/delete/${id}`);
+  }
+};
+
+export default ChargerService;

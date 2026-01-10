@@ -1,5 +1,5 @@
 import { OCPPConnection } from '../../../core/connection.manager';
-import { ChargingStation, Logger } from '@ev-platform-v1/shared';
+import { Charger, Logger } from '@ev-platform-v1/shared';
 
 const logger = new Logger('StatusNotificationHandlerV201');
 
@@ -16,7 +16,7 @@ export async function handleStatusNotification(connection: OCPPConnection, paylo
   const targetConnectorId = evseId > 0 ? evseId : connectorId;
 
   if (targetConnectorId > 0) {
-      await ChargingStation.findOneAndUpdate(
+      await Charger.findOneAndUpdate(
         { charger_id: connection.id, 'connectors.connector_id': targetConnectorId },
         { 
             $set: { 

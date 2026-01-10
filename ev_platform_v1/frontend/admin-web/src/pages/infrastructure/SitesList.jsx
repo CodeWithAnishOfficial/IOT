@@ -23,7 +23,11 @@ import {
   Stack,
   Typography,
   Grid,
-  Divider
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 
 // icons
@@ -37,6 +41,7 @@ import L from 'leaflet';
 // project-imports
 import MainCard from 'components/MainCard';
 import SiteService from 'api/site';
+import TariffService from 'api/tariff';
 
 // Fix Leaflet marker icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -63,6 +68,7 @@ function LocationMarker({ position, setPosition }) {
 export default function SitesList() {
   const theme = useTheme();
   const [sites, setSites] = useState([]);
+  const [tariffs, setTariffs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
@@ -83,11 +89,13 @@ export default function SitesList() {
     lat: '',
     lng: '',
     facilities: '',
-    images: ''
+    images: '',
+    tariff_id: ''
   });
 
   useEffect(() => {
     fetchSites();
+    fetchTariffs();
   }, []);
 
   const fetchSites = async () => {
@@ -100,6 +108,17 @@ export default function SitesList() {
       console.error('Error fetching sites:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTariffs = async () => {
+    try {
+      const response = await TariffService.getAllTariffs();
+      if (!response.data.error) {
+        setTariffs(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching tariffs:', error);
     }
   };
 
@@ -117,7 +136,8 @@ export default function SitesList() {
         lat: site.location?.lat || '',
         lng: site.location?.lng || '',
         facilities: site.facilities ? site.facilities.join(', ') : '',
-        images: site.images ? site.images.join(', ') : ''
+        images: site.images ? site.images.join(', ') : '',
+        tariff_id: site.tariff_id || ''
       });
       if (site.location?.lat && site.location?.lng) {
           setMapPosition({ lat: site.location.lat, lng: site.location.lng });
@@ -135,7 +155,8 @@ export default function SitesList() {
         lat: '',
         lng: '',
         facilities: '',
-        images: ''
+        images: '',
+        tariff_id: ''
       });
       setMapPosition({ lat: 20.5937, lng: 78.9629 });
     }
@@ -203,7 +224,8 @@ export default function SitesList() {
         location: {
           lat: parseFloat(formData.lat) || 0,
           lng: parseFloat(formData.lng) || 0
-        }
+        },
+        tariff_id: formData.tariff_id
       };
 
       if (isEdit) {
@@ -381,6 +403,28 @@ export default function SitesList() {
                             onChange={handleInputChange}
                         />
                         </Stack>
+                        
+                        <FormControl fullWidth>
+                          <InputLabel id="tariff-select-label">Default Tariff</InputLabel>
+                          <Select
+                            labelId="tariff-select-label"
+                            id="tariff-select"
+                            name="tariff_id"
+                            value={formData.tariff_id}
+                            label="Default Tariff"
+                            onChange={handleInputChange}
+                          >
+                            <MenuItem value="">
+                              <em>None</em>
+                            </MenuItem>
+                            {tariffs.map((tariff) => (
+                              <MenuItem key={tariff._id} value={tariff._id}>
+                                {tariff.name} ({tariff.currency} {tariff.price_per_kwh}/kWh)
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+
                         <TextField
                             name="facilities"
                             label="Facilities (comma separated)"

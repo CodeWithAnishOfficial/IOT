@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IChargingStation extends Document {
+export interface ICharger extends Document {
   charger_id: string;
   name?: string;
   location?: {
@@ -34,7 +34,7 @@ export interface IChargingStation extends Document {
   updated_at: Date;
 }
 
-const ChargingStationSchema: Schema = new Schema({
+const ChargerSchema: Schema = new Schema({
   charger_id: { type: String, required: true, unique: true },
   name: { type: String },
   location: {
@@ -68,4 +68,4 @@ const ChargingStationSchema: Schema = new Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-export const ChargingStation = mongoose.model<IChargingStation>('ChargingStation', ChargingStationSchema);
+export const Charger = mongoose.model<ICharger>('Charger', ChargerSchema);

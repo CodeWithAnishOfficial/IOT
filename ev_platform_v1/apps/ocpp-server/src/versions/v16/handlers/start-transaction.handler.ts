@@ -1,5 +1,5 @@
 import { OCPPConnection } from '../../../core/connection.manager';
-import { ChargingSession, Logger, RabbitMQService } from '@ev-platform-v1/shared';
+import { ChargingSession, Logger, RabbitMQService, User } from '@ev-platform-v1/shared';
 import { SmartChargingService } from '../../../services/smart-charging.service';
 
 const logger = new Logger('StartTransactionHandler');
@@ -38,7 +38,28 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
       sessionId = pendingSession.session_id;
       // userId = pendingSession.user_id; // Keep as is
   } else {
-      logger.info(`No pending session found. Creating new ad-hoc session.`);
+      logger.info(`No pending session found. Validating idTag ${idTag}...`);
+      
+      // Validate User (RFID or Email)
+      const user = await User.findOne({
+          $or: [
+              { rfid_tag: idTag },
+              { email_id: idTag }
+          ]
+      });
+
+      if (!user) {
+          logger.warn(`Unauthorized StartTransaction attempt with tag ${idTag}`);
+          return {
+              transactionId,
+              idTagInfo: {
+                  status: 'Invalid'
+              }
+          };
+      }
+
+      logger.info(`Authorized user ${user.email_id} for ad-hoc session`);
+
       // Create active session
       // Generate numeric ID
       sessionId = Math.floor(1000000 + Math.random() * 9000000);
@@ -48,8 +69,8 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
         transaction_id: transactionId,
         charger_id: connection.id,
         connector_id: connectorId,
-        user_id: 0, // Ad-hoc, unknown user? Or idTag if numeric?
-        email_id: idTag, // Assume idTag is email or tag
+        user_id: user.user_id, 
+        email_id: user.email_id,
         start_time: new Date(timestamp),
         start_meter_value: meterStart,
         current_meter_value: meterStart,

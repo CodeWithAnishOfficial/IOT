@@ -48,6 +48,7 @@ dependencies:
   url_launcher: ^6.3.0
   mobile_scanner: ^5.2.3
   razorpay_flutter: ^1.4.0
+  flutter_native_splash: ^2.3.10
 
 dev_dependencies:
   flutter_test:
@@ -60,7 +61,6 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.3.10
 
 flutter_launcher_icons:
   android: "launcher_icon"

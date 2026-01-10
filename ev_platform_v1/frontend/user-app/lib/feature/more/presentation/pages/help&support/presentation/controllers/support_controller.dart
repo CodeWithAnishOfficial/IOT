@@ -51,4 +51,23 @@ class SupportController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  Future<void> replyToTicket(String ticketId, String message) async {
+    if (message.trim().isEmpty) return;
+    try {
+      // Don't set full page loading for a chat reply, maybe just local state in the view or handled optimistically
+      // For now, let's just do the API call
+      
+      await _apiProvider.post('/support/$ticketId/reply', {
+        'message': message,
+      });
+      
+      // Refresh tickets to get the new message
+      // In a real chat app, we'd append it locally first, but this is fine for now
+      await fetchTickets(); 
+      Get.snackbar('Success', 'Reply sent successfully');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to send reply: $e');
+    }
+  }
 }

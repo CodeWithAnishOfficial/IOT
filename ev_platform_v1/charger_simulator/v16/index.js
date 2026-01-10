@@ -18,6 +18,7 @@ const ws = new WebSocket(BACKEND_URL, 'ocpp1.6', options);
 let messageId = 1;
 let heartbeatInterval;
 let transactionId = 0;
+const pendingRequests = new Map();
 
 function getMessageId() {
     return (messageId++).toString();
@@ -70,9 +71,11 @@ ws.on('message', function incoming(data) {
     if (msgType === 3) {
         const requestId = msg[1];
         const payload = msg[2];
+        const action = pendingRequests.get(requestId);
+        pendingRequests.delete(requestId);
         
         // Handle BootNotification Response
-        if (payload.status === 'Accepted' && payload.interval) {
+        if (action === 'BootNotification' && payload.status === 'Accepted') {
             console.log(`BootNotification Accepted. Interval: ${payload.interval}`);
             
             // Start Heartbeat
@@ -88,7 +91,7 @@ ws.on('message', function incoming(data) {
             setTimeout(() => {
                 sendAuthorize();
             }, 5000);
-        } else if (payload.transactionId) {
+        } else if (action === 'StartTransaction' && payload.transactionId) {
             console.log(`Transaction Started! ID: ${payload.transactionId}`);
             transactionId = payload.transactionId;
             sendStatusNotification(1, 'Charging');
@@ -98,9 +101,11 @@ ws.on('message', function incoming(data) {
             
             // Stop Transaction after 10s
             setTimeout(() => sendStopTransaction(transactionId), 10000);
-        } else if (payload.idTagInfo && payload.idTagInfo.status === 'Accepted') {
+        } else if (action === 'Authorize' && payload.idTagInfo && payload.idTagInfo.status === 'Accepted') {
             console.log('Authorized! Starting Transaction...');
             sendStartTransaction();
+        } else if (action === 'StopTransaction') {
+             console.log('Transaction Stopped Successfully.');
         }
     }
     
@@ -144,6 +149,7 @@ ws.on('error', function error(err) {
 function send(msg) {
     const msgType = msg[0];
     if (msgType === 2) {
+        pendingRequests.set(msg[1], msg[2]);
         console.log(`\n[CLIENT REQUEST] <<< ${msg[2]} (ID: ${msg[1]})`);
     } else if (msgType === 3) {
          console.log(`\n[CLIENT RESPONSE] <<< To Request ID: ${msg[1]}`);
@@ -235,7 +241,7 @@ function sendMeterValues(transId) {
                 {
                     "timestamp": new Date().toISOString(),
                     "sampledValue": [
-                        { "value": "10", "context": "Sample.Periodic", "format": "Raw", "measurand": "Energy.Active.Import.Register", "unit": "Wh" }
+                        { "value": "100", "context": "Sample.Periodic", "format": "Raw", "measurand": "Energy.Active.Import.Register", "unit": "Wh" }
                     ]
                 }
             ]
@@ -252,7 +258,7 @@ function sendStopTransaction(transId, idTag = 'TAG001') {
         {
             "transactionId": transId,
             "idTag": idTag,
-            "meterStop": 20,
+            "meterStop": 500,
             "timestamp": new Date().toISOString(),
             "reason": "Local"
         }

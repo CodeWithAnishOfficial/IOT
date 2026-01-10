@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Tariff, Logger, ChargingStation } from '@ev-platform-v1/shared';
+import { Tariff, Logger, Charger } from '@ev-platform-v1/shared';
 
 const logger = new Logger('TariffController');
 
@@ -39,7 +39,7 @@ export class TariffController {
     try {
       const { id } = req.params;
       
-      const stationsCount = await ChargingStation.countDocuments({ tariff_id: id });
+      const stationsCount = await Charger.countDocuments({ tariff_id: id });
       if (stationsCount > 0) {
         return res.status(400).json({ error: true, message: `Cannot delete tariff. It is assigned to ${stationsCount} stations.` });
       }

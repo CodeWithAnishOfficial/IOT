@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:user_app/feature/home/domain/models/charging_station.dart';
+import 'package:user_app/feature/home/domain/models/charger.dart';
 import 'package:user_app/feature/home/presentation/controllers/home_controller.dart';
 import 'package:user_app/utils/theme/themes.dart';
 
 class StationDetailSheet extends StatelessWidget {
-  final ChargingStation station;
+  final Charger station;
   final ScrollController scrollController;
   final HomeController controller;
 

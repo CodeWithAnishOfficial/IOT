@@ -3,7 +3,7 @@ export * from './types';
 export * from './logger';
 export * from './database';
 export * from './models/user.model';
-export * from './models/charging-station.model';
+export * from './models/charger.model';
 export * from './models/charging-session.model';
 export * from './models/wallet-transaction.model';
 export * from './models/tariff.model';

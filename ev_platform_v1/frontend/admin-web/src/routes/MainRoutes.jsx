@@ -11,7 +11,7 @@ const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')))
 const UsersList = Loadable(lazy(() => import('pages/users/UsersList')));
 const RolesList = Loadable(lazy(() => import('pages/users/RolesList')));
 const SitesList = Loadable(lazy(() => import('pages/infrastructure/SitesList')));
-const StationsList = Loadable(lazy(() => import('pages/infrastructure/StationsList')));
+const ChargersList = Loadable(lazy(() => import('pages/infrastructure/ChargersList')));
 const SessionsList = Loadable(lazy(() => import('pages/operations/SessionsList')));
 const RemoteCommands = Loadable(lazy(() => import('pages/operations/RemoteCommands')));
 const SystemMonitor = Loadable(lazy(() => import('pages/operations/SystemMonitor')));
@@ -67,8 +67,8 @@ const MainRoutes = {
       element: <SitesList />
     },
     {
-      path: 'charging-stations',
-      element: <StationsList />
+      path: 'chargers',
+      element: <ChargersList />
     },
     {
       path: 'sessions',

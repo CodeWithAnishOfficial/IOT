@@ -98,7 +98,7 @@ function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const response = await axios.post('/auth/login', {
+    const response = await axios.post('/admin/auth/login', {
       email,
       password
     });

@@ -165,7 +165,7 @@ class ChargingView extends StatelessWidget {
                                   Expanded(
                                     child: Obx(() => _buildStatTile(
                                       icon: Icons.battery_charging_full,
-                                      value: "${controller.energyDelivered.value.toStringAsFixed(2)} kW",
+                                      value: "${controller.energyDelivered.value.toStringAsFixed(2)} kWh",
                                       label: "Charged",
                                       alignLeft: false,
                                     )),
@@ -181,7 +181,7 @@ class ChargingView extends StatelessWidget {
                                   Expanded(
                                     child: _buildStatTile(
                                       icon: Icons.price_change,
-                                      value: "${controller.ratePerKwh}\$/kWh",
+                                      value: "₹${controller.ratePerKwh}/kWh",
                                       label: "Rate",
                                       alignLeft: true,
                                     ),
@@ -190,7 +190,7 @@ class ChargingView extends StatelessWidget {
                                   Expanded(
                                     child: Obx(() => _buildStatTile(
                                       icon: Icons.attach_money,
-                                      value: "${controller.currentCost.value.toStringAsFixed(2)}\$",
+                                      value: "₹${controller.currentCost.value.toStringAsFixed(2)}",
                                       label: "Cost",
                                       alignLeft: false,
                                     )),
@@ -202,33 +202,66 @@ class ChargingView extends StatelessWidget {
                         ),
 
                         // The Center Button
-                        GestureDetector(
-                          onTap: controller.stopCharging,
-                          child: Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFFCCFF00), // Neon Lime
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFCCFF00).withOpacity(0.3),
-                                  blurRadius: 20,
-                                  spreadRadius: 2,
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Progress Ring
+                            Obx(() {
+                              double progress = 0.0;
+                              if (controller.initialAmount > 0) {
+                                progress = controller.currentCost.value / controller.initialAmount;
+                                if (progress > 1.0) progress = 1.0;
+                              }
+                              return SizedBox(
+                                width: 120,
+                                height: 120,
+                                child: CircularProgressIndicator(
+                                  value: progress,
+                                  strokeWidth: 6,
+                                  backgroundColor: Colors.white.withOpacity(0.1),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFCCFF00)),
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Obx(() => Text(
-                                controller.status.value == "Completed" ? "DONE" : "STOP",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                              );
+                            }),
+
+                            GestureDetector(
+                              onTap: controller.stopCharging,
+                              child: Container(
+                                width: 90,
+                                height: 90,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFFCCFF00), // Neon Lime
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFCCFF00).withOpacity(0.3),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
                                 ),
-                              )),
+                                child: Center(
+                                  child: Obx(() {
+                                     if (controller.status.value == "Stopping") {
+                                       return const SizedBox(
+                                         width: 24, 
+                                         height: 24, 
+                                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black)
+                                       );
+                                     }
+                                     return Text(
+                                      controller.status.value == "Completed" ? "DONE" : "STOP",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),

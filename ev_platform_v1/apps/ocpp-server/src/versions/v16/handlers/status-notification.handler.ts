@@ -1,5 +1,5 @@
 import { OCPPConnection } from '../../../core/connection.manager';
-import { ChargingStation, Logger, RabbitMQService } from '@ev-platform-v1/shared';
+import { Charger, Logger, RabbitMQService } from '@ev-platform-v1/shared';
 
 const logger = new Logger('StatusNotificationHandler');
 
@@ -7,7 +7,7 @@ export async function handleStatusNotification(connection: OCPPConnection, paylo
   const { connectorId, status, errorCode } = payload;
   logger.info(`StatusNotification from ${connection.id}: Connector ${connectorId} -> ${status}`);
 
-  await ChargingStation.updateOne(
+  await Charger.updateOne(
     { charger_id: connection.id, 'connectors.connector_id': connectorId },
     { 
       $set: { 
@@ -21,7 +21,7 @@ export async function handleStatusNotification(connection: OCPPConnection, paylo
   // For now assuming connectors are pre-provisioned or we upsert carefully.
   // Actually, let's just update the main status if it's connector 0 (Main controller)
   if (connectorId === 0) {
-    await ChargingStation.updateOne(
+    await Charger.updateOne(
       { charger_id: connection.id },
       { status: status === 'Available' ? 'online' : status.toLowerCase() }
     );

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
 import 'package:user_app/feature/session_history/domain/models/charging_session.dart';
 import 'package:user_app/core/network/api_provider.dart';
@@ -25,7 +26,8 @@ class SessionHistoryController extends GetxController {
   Future<void> fetchSessions() async {
     try {
       isLoading.value = true;
-      final response = await _apiProvider.get('/profile/sessions');
+      // Using new endpoint /charging/history
+      final response = await _apiProvider.get('/charging/history');
       if (response['data'] != null) {
         final List<dynamic> data = response['data'];
         sessions.value = data.map((e) => ChargingSession.fromJson(e)).toList();
@@ -39,13 +41,21 @@ class SessionHistoryController extends GetxController {
 
   Future<void> requestInvoice(String sessionId) async {
     try {
-      final response = await _apiProvider.post(
-        '/profile/sessions/$sessionId/invoice',
-        {},
-      );
-      Get.snackbar('Success', response['message']);
+      final token = _sessionController.token.value;
+      if (token.isEmpty) {
+        Get.snackbar('Error', 'Not authenticated');
+        return;
+      }
+      
+      final url = '${ApiProvider.baseUrl}/charging/invoice/$sessionId?token=$token';
+      
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } else {
+        Get.snackbar('Error', 'Could not launch invoice download');
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to send invoice');
+      Get.snackbar('Error', 'Failed to download invoice: $e');
     }
   }
 
@@ -77,12 +87,52 @@ class SessionHistoryController extends GetxController {
               final jsonStr = line.substring(6);
               try {
                 final jsonData = json.decode(jsonStr);
-                // Process update
-                // If status update
-                if (jsonData['status'] != null) {
-                  currentStatus.value = 'Status: ${jsonData['status']}';
-                  // If session updated, refresh list
-                  fetchSessions();
+                
+                // Update specific session if sessionId is present
+                if (jsonData['sessionId'] != null) {
+                  final sId = jsonData['sessionId'].toString();
+                  final index = sessions.indexWhere((s) => s.sessionId == sId);
+                  
+                  if (index != -1) {
+                    final oldSession = sessions[index];
+                    
+                    String newStatus = oldSession.status;
+                    if (jsonData['status'] != null) {
+                       newStatus = jsonData['status'];
+                       // Update banner if it's the latest relevant status
+                       currentStatus.value = 'Status: $newStatus';
+                    }
+                    
+                    double newEnergy = oldSession.totalEnergy;
+                    if (jsonData['energyConsumed'] != null) {
+                      newEnergy = (jsonData['energyConsumed'] as num).toDouble();
+                    }
+                    
+                    // Replace with new object to trigger UI update for that item
+                    sessions[index] = ChargingSession(
+                      sessionId: oldSession.sessionId,
+                      transactionId: oldSession.transactionId,
+                      chargerId: oldSession.chargerId,
+                      connectorId: oldSession.connectorId,
+                      userId: oldSession.userId,
+                      startTime: oldSession.startTime,
+                      stopTime: oldSession.stopTime,
+                      meterStart: oldSession.meterStart,
+                      meterStop: oldSession.meterStop,
+                      totalEnergy: newEnergy,
+                      cost: oldSession.cost, // Assuming cost isn't sent in progress, or add logic if it is
+                      status: newStatus,
+                    );
+                  } else {
+                    // New session? Refresh list
+                     if (jsonData['status'] == 'active') {
+                        fetchSessions();
+                     }
+                  }
+                } else if (jsonData['status'] != null) {
+                   // Fallback for global status updates without sessionId
+                   currentStatus.value = 'Status: ${jsonData['status']}';
+                   fetchSessions();
                 }
               } catch (e) {
                 // ignore keepalive or connect messages

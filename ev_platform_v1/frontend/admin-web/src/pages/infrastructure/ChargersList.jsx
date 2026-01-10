@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
 // material-ui
@@ -33,7 +33,7 @@ import {
 } from '@mui/material';
 
 // icons
-import { Edit, Trash, Add, Convert3DCube, Eye, Box1, Cpu, Electricity, Barcode, Wifi, Location } from 'iconsax-reactjs';
+import { Edit, Trash, Add, Convert3DCube, Eye, Box1, Cpu, Electricity, Barcode, Wifi, Location, Activity } from 'iconsax-reactjs';
 
 // project-imports
 import MainCard from 'components/MainCard';
@@ -41,17 +41,18 @@ import ChargerService from 'api/charger';
 import SiteService from 'api/site';
 import TariffService from 'api/tariff';
 
-export default function StationsList() {
+export default function ChargersList() {
   const theme = useTheme();
   const location = useLocation();
-  const [stations, setStations] = useState([]);
+  const navigate = useNavigate();
+  const [chargers, setChargers] = useState([]);
   const [sites, setSites] = useState([]);
   const [tariffs, setTariffs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [selectedStation, setSelectedStation] = useState(null);
+  const [selectedCharger, setSelectedCharger] = useState(null);
 
   // Check for navigation state to open modal
   useEffect(() => {
@@ -77,20 +78,20 @@ export default function StationsList() {
 
   useEffect(() => {
     Promise.all([
-      fetchStations(),
+      fetchChargers(),
       fetchSites(),
       fetchTariffs()
     ]).finally(() => setLoading(false));
   }, []);
 
-  const fetchStations = async () => {
+  const fetchChargers = async () => {
     try {
       const response = await ChargerService.getAllChargers();
       if (!response.data.error) {
-        setStations(response.data.data);
+        setChargers(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching stations:', error);
+      console.error('Error fetching chargers:', error);
     }
   };
 
@@ -116,24 +117,24 @@ export default function StationsList() {
     }
   };
 
-  const handleOpen = (station = null) => {
-    if (station) {
+  const handleOpen = (charger = null) => {
+    if (charger) {
       setIsEdit(true);
-      setSelectedStation(station);
+      setSelectedCharger(charger);
       setFormData({
-        charger_id: station.charger_id,
-        name: station.name,
-        site_id: station.site_id || '',
-        vendor: station.vendor || '',
-        model: station.modelName || '',
-        serial_number: station.serial_number || '',
+        charger_id: charger.charger_id,
+        name: charger.name,
+        site_id: charger.site_id || '',
+        vendor: charger.vendor || '',
+        model: charger.modelName || '',
+        serial_number: charger.serial_number || '',
         ocpp_password: '', // Don't show password
-        connectors: station.connectors, // preserve existing connectors
-        tariff_id: station.tariff_id || ''
+        connectors: charger.connectors, // preserve existing connectors
+        tariff_id: charger.tariff_id || ''
       });
     } else {
       setIsEdit(false);
-      setSelectedStation(null);
+      setSelectedCharger(null);
       setFormData({
         charger_id: '',
         name: '',
@@ -154,8 +155,8 @@ export default function StationsList() {
     setViewOpen(false);
   };
 
-  const handleViewOpen = (station) => {
-    setSelectedStation(station);
+  const handleViewOpen = (charger) => {
+    setSelectedCharger(charger);
     setViewOpen(true);
   };
 
@@ -187,26 +188,26 @@ export default function StationsList() {
   const handleSubmit = async () => {
     try {
       if (isEdit) {
-        await ChargerService.updateCharger(selectedStation.charger_id, formData);
+        await ChargerService.updateCharger(selectedCharger.charger_id, formData);
       } else {
         await ChargerService.createCharger(formData);
       }
-      fetchStations();
+      fetchChargers();
       handleClose();
     } catch (error) {
-      console.error('Error saving station:', error);
-      alert(error.response?.data?.message || 'Error saving station');
+      console.error('Error saving charger:', error);
+      alert(error.response?.data?.message || 'Error saving charger');
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this station?')) {
+    if (window.confirm('Are you sure you want to delete this charger?')) {
       try {
         await ChargerService.deleteCharger(id);
-        fetchStations();
+        fetchChargers();
       } catch (error) {
-        console.error('Error deleting station:', error);
-        alert(error.response?.data?.message || 'Error deleting station');
+        console.error('Error deleting charger:', error);
+        alert(error.response?.data?.message || 'Error deleting charger');
       }
     }
   };
@@ -235,13 +236,13 @@ export default function StationsList() {
   }
 
   return (
-    <MainCard title="Charging Stations" secondary={
+    <MainCard title="Chargers" secondary={
       <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
-        Add Station
+        Add Charger
       </Button>
     }>
       <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
-        <Table sx={{ minWidth: 650 }} aria-label="stations table">
+        <Table sx={{ minWidth: 650 }} aria-label="chargers table">
           <TableHead>
             <TableRow>
               <TableCell>Charger ID</TableCell>
@@ -253,51 +254,56 @@ export default function StationsList() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {stations.map((station, index) => (
-              <TableRow key={station.charger_id} sx={{ backgroundColor: index % 2 !== 0 ? theme.palette.secondary.lighter : 'inherit' }}>
+            {chargers.map((charger, index) => (
+              <TableRow key={charger.charger_id} sx={{ backgroundColor: index % 2 !== 0 ? theme.palette.secondary.lighter : 'inherit' }}>
                 <TableCell>
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <Convert3DCube size={18} variant="Bold" />
-                    <Typography variant="subtitle1">{station.charger_id}</Typography>
+                    <Typography variant="subtitle1">{charger.charger_id}</Typography>
                   </Stack>
                 </TableCell>
-                <TableCell>{station.name}</TableCell>
-                <TableCell>{getSiteName(station.site_id)}</TableCell>
+                <TableCell>{charger.name}</TableCell>
+                <TableCell>{getSiteName(charger.site_id)}</TableCell>
                 <TableCell>
-                  <Typography variant="body2">{station.vendor}</Typography>
-                  <Typography variant="caption" color="textSecondary">{station.modelName}</Typography>
+                  <Typography variant="body2">{charger.vendor}</Typography>
+                  <Typography variant="caption" color="textSecondary">{charger.modelName}</Typography>
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={station.status} 
-                    color={getStatusColor(station.status)} 
+                    label={charger.status} 
+                    color={getStatusColor(charger.status)} 
                     size="small" 
                     variant="outlined"
                   />
                 </TableCell>
                 <TableCell align="right">
+                  <Tooltip title="View Sessions">
+                    <IconButton color="info" onClick={() => navigate(`/sessions?charger_id=${charger.charger_id}`)}>
+                      <Activity variant="Bold" size={20}/>
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="View Details">
-                    <IconButton color="secondary" onClick={() => handleViewOpen(station)}>
+                    <IconButton color="secondary" onClick={() => handleViewOpen(charger)}>
                       <Eye variant="Bold" size={20}/>
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Edit">
-                    <IconButton color="primary" onClick={() => handleOpen(station)}>
+                    <IconButton color="primary" onClick={() => handleOpen(charger)}>
                       <Edit variant="Bold" size={20}/>
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete">
-                    <IconButton color="error" onClick={() => handleDelete(station.charger_id)}>
+                    <IconButton color="error" onClick={() => handleDelete(charger.charger_id)}>
                       <Trash variant="Bold" size={20}/>
                     </IconButton>
                   </Tooltip>
                 </TableCell>
               </TableRow>
             ))}
-            {stations.length === 0 && (
+            {chargers.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  No charging stations found
+                  No chargers found
                 </TableCell>
               </TableRow>
             )}
@@ -307,7 +313,7 @@ export default function StationsList() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{isEdit ? 'Edit Station' : 'Create Station'}</DialogTitle>
+        <DialogTitle>{isEdit ? 'Edit Charger' : 'Create Charger'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
@@ -321,7 +327,7 @@ export default function StationsList() {
             />
             <TextField
               name="name"
-              label="Station Name"
+              label="Charger Name"
               fullWidth
               value={formData.name}
               onChange={handleInputChange}
@@ -436,105 +442,6 @@ export default function StationsList() {
           <Button onClick={handleSubmit} variant="contained">
             {isEdit ? 'Update' : 'Create'}
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Details Dialog */}
-      <Dialog open={viewOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Convert3DCube size={24} variant="Bold" />
-            Station Details
-        </DialogTitle>
-        <DialogContent dividers>
-            {selectedStation && (
-              <Grid container spacing={2}>
-                 <Grid size={{ xs: 12 }}>
-                    <MainCard content={false} sx={{ p: 2 }}>
-                         <Stack direction="row" spacing={2} alignItems="center">
-                            <Box sx={{ width: 48, height: 48, borderRadius: '12px', bgcolor: 'primary.lighter', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Box1 size={24} color="#333" variant="Bold" />
-                            </Box>
-                            <Stack>
-                                <Typography variant="h5">{selectedStation.name}</Typography>
-                                <Typography variant="caption" color="textSecondary">Charger ID: {selectedStation.charger_id}</Typography>
-                            </Stack>
-                             <Box sx={{ flexGrow: 1 }} />
-                             <Chip 
-                                label={selectedStation.status} 
-                                color={getStatusColor(selectedStation.status)} 
-                                size="small" 
-                                variant="combined"
-                            />
-                        </Stack>
-                    </MainCard>
-                </Grid>
-
-                 <Grid size={{ xs: 12 }}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>Technical Specifications</Typography>
-                    <Grid container spacing={2}>
-                        <Grid size={{ xs: 6 }}>
-                             <MainCard content={false} sx={{ p: 2 }}>
-                                <Stack spacing={1}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Cpu size={18} color="#666" />
-                                        <Typography variant="caption" color="textSecondary">Model</Typography>
-                                    </Stack>
-                                    <Typography variant="body1">{selectedStation.vendor}</Typography>
-                                    <Typography variant="caption">{selectedStation.modelName || 'N/A'}</Typography>
-                                </Stack>
-                            </MainCard>
-                        </Grid>
-                         <Grid size={{ xs: 6 }}>
-                             <MainCard content={false} sx={{ p: 2 }}>
-                                <Stack spacing={1}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Barcode size={18} color="#666" />
-                                        <Typography variant="caption" color="textSecondary">Serial Number</Typography>
-                                    </Stack>
-                                    <Typography variant="body1">{selectedStation.serial_number || 'N/A'}</Typography>
-                                </Stack>
-                            </MainCard>
-                        </Grid>
-                    </Grid>
-                 </Grid>
-
-                 <Grid size={{ xs: 12 }}>
-                     <Typography variant="h6" sx={{ mb: 2 }}>Site Information</Typography>
-                     <MainCard content={false} sx={{ p: 2 }}>
-                         <Stack direction="row" spacing={1} alignItems="center">
-                            <Location size={20} color="#666" />
-                            <Typography variant="body1">{getSiteName(selectedStation.site_id)}</Typography>
-                        </Stack>
-                     </MainCard>
-                 </Grid>
-
-                  <Grid size={{ xs: 12 }}>
-                     <Typography variant="h6" sx={{ mb: 2 }}>Connectors</Typography>
-                     <MainCard content={false}>
-                        <Stack divider={<Divider />}>
-                             {selectedStation.connectors && selectedStation.connectors.map((conn, idx) => (
-                                 <Stack key={idx} direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2 }}>
-                                     <Stack direction="row" spacing={2} alignItems="center">
-                                         <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'secondary.lighter', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                             <Typography variant="subtitle2">{idx+1}</Typography>
-                                         </Box>
-                                         <Box>
-                                             <Typography variant="subtitle1">{conn.type}</Typography>
-                                             <Typography variant="caption" color="textSecondary">Max Power: {conn.max_power_kw} kW</Typography>
-                                         </Box>
-                                     </Stack>
-                                     <Chip label={conn.status} size="small" color={conn.status === 'Available' ? 'success' : 'default'} variant="light" />
-                                 </Stack>
-                             ))}
-                        </Stack>
-                     </MainCard>
-                  </Grid>
-
-              </Grid>
-            )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} variant="contained">Close</Button>
         </DialogActions>
       </Dialog>
     </MainCard>

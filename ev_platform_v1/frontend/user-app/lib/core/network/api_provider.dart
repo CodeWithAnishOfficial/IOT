@@ -17,15 +17,14 @@ class ApiException implements Exception {
 }
 
 class ApiProvider {
-  // Use 10.0.2.2 for Android emulator, localhost for iOS simulator
+  // Use 192.168.0.57 for Android emulator, localhost for iOS simulator
   static String get baseUrl {
     if (Platform.isAndroid) {
-      // TODO: Change this IP to your computer's local IP address
-      // For Emulator use: 'http://10.0.2.2:3000'
-      // For Real Device use: 'http://YOUR_PC_IP:3000' (e.g. 192.168.0.58)
-      return 'http://192.168.0.58:3000';
+      // Android Emulator maps 192.168.0.57 to host localhost
+      return 'http://192.168.0.57:3000';
     }
-    return 'http://192.168.0.58:3000';
+    // iOS Simulator / Web uses localhost
+    return 'http://192.168.0.57:3000';
   }
 
   final SessionController _sessionController = Get.find<SessionController>();
@@ -37,17 +36,15 @@ class ApiProvider {
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } on SocketException catch (_) {
-      // Return null or throw specific exception that UI can handle without crashing
-      // Re-throwing as a simple Exception is fine, but ensure it's caught upstream
-      throw ApiException('Connection refused: Server is unreachable', 503);
+      throw ApiException('Unable to connect to server. Please check your internet.', 503);
     } on TimeoutException catch (_) {
-      throw ApiException('Connection timed out', 408);
+      throw ApiException('Server is taking too long to respond.', 408);
     } catch (e) {
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
-        throw ApiException('Connection refused: Server is unreachable', 503);
+        throw ApiException('Unable to connect to server. Please check your internet.', 503);
       }
-      throw ApiException('Network error: $e', 500);
+      throw ApiException('Something went wrong. Please try again.', 500);
     }
   }
 
@@ -84,15 +81,15 @@ class ApiProvider {
           .timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } on SocketException catch (_) {
-      throw ApiException('Connection refused: Server is unreachable', 503);
+      throw ApiException('Unable to connect to server. Please check your internet.', 503);
     } on TimeoutException catch (_) {
-      throw ApiException('Connection timed out', 408);
+      throw ApiException('Server is taking too long to respond.', 408);
     } catch (e) {
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
-        throw ApiException('Connection refused: Server is unreachable', 503);
+        throw ApiException('Unable to connect to server. Please check your internet.', 503);
       }
-      throw ApiException('Network error: $e', 500);
+      throw ApiException('Something went wrong. Please try again.', 500);
     }
   }
 
@@ -161,20 +158,24 @@ class ApiProvider {
 
     // Handle Server Errors (500+)
     if (response.statusCode >= 500) {
-      String errorMessage = 'Internal Server Error';
+      String errorMessage = 'Something went wrong on our end.';
       try {
         final body = json.decode(response.body);
         if (body['message'] != null) {
+          // If the server sends a specific message, it might be technical. 
+          // But usually we trust our own server messages. 
+          // If the user wants "user friendly", we might mask it unless it's a known business error.
+          // For now, I'll keep the server message but fallback to friendly.
           errorMessage = body['message'];
         }
       } catch (_) {
-        // Fallback to status text
+        // Fallback
       }
       throw ApiException(errorMessage, response.statusCode, response.body);
     }
 
     // Handle Client Errors (400-499)
-    String errorMessage = 'Request Failed: ${response.statusCode}';
+    String errorMessage = 'Request Failed';
     try {
       final body = json.decode(response.body);
       if (body['message'] != null) {
@@ -183,15 +184,9 @@ class ApiProvider {
         errorMessage = body['error'];
       }
     } catch (_) {
-      // If parsing fails (likely HTML), try to extract title if HTML
-      if (response.body.trim().toLowerCase().startsWith('<!doctype html') ||
-          response.body.trim().toLowerCase().startsWith('<html')) {
-        errorMessage =
-            'Server returned HTML (likely 404/500 page). URL: ${response.request?.url}';
-      } else if (response.body.isNotEmpty) {
-        errorMessage = response.body.length > 100
-            ? response.body.substring(0, 100)
-            : response.body;
+      if (response.body.isNotEmpty) {
+         // Don't show raw HTML or code to user
+         errorMessage = 'An unexpected error occurred.'; 
       }
     }
 

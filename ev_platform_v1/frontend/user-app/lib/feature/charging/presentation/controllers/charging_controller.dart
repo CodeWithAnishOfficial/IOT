@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/core/Networks/websocket_service.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
-
+import 'package:user_app/feature/charging/presentation/pages/bill_summary_view.dart';
 import 'package:user_app/core/network/api_provider.dart';
 
 class ChargingController extends GetxController {
@@ -19,6 +20,9 @@ class ChargingController extends GetxController {
   final currentCost = 0.0.obs;
   final currentPower = 0.0.obs; // kW
   final status = "Charging".obs;
+  
+  // Full session details for Bill Summary
+  final finalSessionData = <String, dynamic>{}.obs;
 
   Timer? _timer;
   WebSocketService? _wsService;
@@ -72,7 +76,7 @@ class ChargingController extends GetxController {
 
       // Using User API Port 3001 for WebSocket
       // NOTE: Ensure device is on same network and IP is reachable
-      final wsUrl = "ws://192.168.0.58:3001?token=$token";
+      final wsUrl = "ws://192.168.0.57:3001?token=$token";
 
       _wsService = WebSocketService(wsUrl);
       _wsService?.onConnected = () {
@@ -106,7 +110,9 @@ class ChargingController extends GetxController {
               stopCharging();
             }
           } else if (event == 'session_completed') {
-            stopCharging();
+             // Handle completion
+             final payload = decoded['data'];
+             handleSessionCompleted(payload);
           }
         } catch (e) {
           print("WS Parse Error: $e");
@@ -117,6 +123,33 @@ class ChargingController extends GetxController {
     } catch (e) {
       print("WS Connection Error: $e");
     }
+  }
+
+  void handleSessionCompleted(Map<String, dynamic> data) {
+    if (status.value == "Completed") return;
+    
+    finalSessionData.value = data;
+    
+    // Update display values if present
+    if (data['unit_consumed'] != null) {
+        energyDelivered.value = (data['unit_consumed'] / 1000.0); // Wh -> kWh
+    }
+    if (data['consumed_amount'] != null) {
+        currentCost.value = (data['consumed_amount'] as num).toDouble();
+    } else if (data['cost'] != null) {
+        currentCost.value = (data['cost'] as num).toDouble();
+    }
+
+    finalizeSession();
+  }
+
+  void finalizeSession() {
+    status.value = "Completed";
+    _timer?.cancel();
+    _wsService?.disconnect();
+    currentPower.value = 0;
+    
+    Get.off(() => BillSummaryView(controller: this));
   }
 
   Future<void> stopCharging() async {
@@ -130,14 +163,28 @@ class ChargingController extends GetxController {
       print("Error stopping session: $e");
     }
 
-    _timer?.cancel();
-    _wsService?.disconnect();
-    status.value = "Completed";
-    currentPower.value = 0;
+    // Safety timeout: if no WS event in 5 seconds, finish locally
+    Future.delayed(const Duration(seconds: 5), () {
+       if (status.value != "Completed") {
+           finalizeSession();
+       }
+    });
+  }
 
-    Get.snackbar(
-      "Session Ended",
-      "Charging complete. Final cost: ${currentCost.value.toStringAsFixed(2)}",
-    );
+  Future<void> downloadInvoice() async {
+    try {
+      final sessionController = Get.find<SessionController>();
+      final token = sessionController.token.value;
+      
+      final url = '${ApiProvider.baseUrl}/charging/invoice/$sessionId?token=$token';
+      
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } else {
+        Get.snackbar('Error', 'Could not launch invoice download');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to download invoice: $e');
+    }
   }
 }

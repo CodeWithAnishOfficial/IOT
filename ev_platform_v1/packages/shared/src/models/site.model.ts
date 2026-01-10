@@ -14,6 +14,7 @@ export interface ISite extends Document {
   images?: string[];
   facilities?: string[]; // e.g. ['Wifi', 'Cafe', 'Restroom']
   contact_number?: string;
+  tariff_id?: string; // Reference to Tariff
   created_at: Date;
   updated_at: Date;
 }
@@ -32,6 +33,7 @@ const SiteSchema: Schema = new Schema({
   images: [{ type: String }],
   facilities: [{ type: String }],
   contact_number: { type: String },
+  tariff_id: { type: String }, // Optional tariff reference
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

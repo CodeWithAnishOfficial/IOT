@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
 // material-ui
@@ -39,15 +40,29 @@ import SessionService from 'api/session';
 
 export default function SessionsList() {
   const theme = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [chargerIdFilter, setChargerIdFilter] = useState('');
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
 
   useEffect(() => {
+    // Parse query params
+    const params = new URLSearchParams(location.search);
+    const chargerId = params.get('charger_id');
+    if (chargerId) {
+      setChargerIdFilter(chargerId);
+    } else {
+        setChargerIdFilter('');
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     fetchSessions();
-  }, [statusFilter]);
+  }, [statusFilter, chargerIdFilter]);
 
   const fetchSessions = async () => {
     try {
@@ -55,6 +70,9 @@ export default function SessionsList() {
       const filters = {};
       if (statusFilter && statusFilter !== 'all') {
         filters.status = statusFilter;
+      }
+      if (chargerIdFilter) {
+          filters.charger_id = chargerIdFilter;
       }
       
       const response = await SessionService.getAllSessions(1, 50, filters); // Fetching 50 for now
@@ -86,17 +104,14 @@ export default function SessionsList() {
     return new Date(dateString).toLocaleString();
   };
 
+  const getStatusLabel = (status) => {
+    return status ? 'ACTIVE' : 'COMPLETED';
+  };
+
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'active':
-        return 'primary';
-      case 'completed':
-        return 'success';
-      case 'error':
-        return 'error';
-      default:
-        return 'default';
-    }
+    // status is boolean: true = active, false = completed
+    if (status) return 'primary';
+    return 'success';
   };
 
   const formatEnergy = (energy) => {
@@ -105,6 +120,11 @@ export default function SessionsList() {
 
   const formatCost = (cost) => {
     return `₹${cost.toFixed(2)}`;
+  };
+
+  const clearChargerFilter = () => {
+    setChargerIdFilter('');
+    navigate('/sessions'); // Remove query param
   };
 
   if (loading && sessions.length === 0) {
@@ -116,22 +136,28 @@ export default function SessionsList() {
   }
 
   return (
-    <MainCard title="Charging Sessions" secondary={
-      <FormControl sx={{ minWidth: 120 }} size="small">
-        <InputLabel id="status-filter-label">Status</InputLabel>
-        <Select
-          labelId="status-filter-label"
-          id="status-filter"
-          value={statusFilter}
-          label="Status"
-          onChange={handleStatusChange}
-        >
-          <MenuItem value="all">All</MenuItem>
-          <MenuItem value="active">Active</MenuItem>
-          <MenuItem value="completed">Completed</MenuItem>
-          <MenuItem value="error">Error</MenuItem>
-        </Select>
-      </FormControl>
+    <MainCard title={chargerIdFilter ? `Sessions for Charger: ${chargerIdFilter}` : "Charging Sessions"} secondary={
+      <Stack direction="row" spacing={2} alignItems="center">
+        {chargerIdFilter && (
+             <Button size="small" variant="outlined" color="error" onClick={clearChargerFilter}>
+                Clear Filter
+             </Button>
+        )}
+        <FormControl sx={{ minWidth: 120 }} size="small">
+          <InputLabel id="status-filter-label">Status</InputLabel>
+          <Select
+            labelId="status-filter-label"
+            id="status-filter"
+            value={statusFilter}
+            label="Status"
+            onChange={handleStatusChange}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="true">Active</MenuItem>
+            <MenuItem value="false">Completed</MenuItem>
+          </Select>
+        </FormControl>
+      </Stack>
     }>
       <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
         <Table sx={{ minWidth: 650 }} aria-label="sessions table">
@@ -152,7 +178,7 @@ export default function SessionsList() {
               <TableRow key={session.session_id} sx={{ backgroundColor: index % 2 !== 0 ? theme.palette.secondary.lighter : 'inherit' }}>
                 <TableCell>
                   <Typography variant="subtitle2" sx={{ fontFamily: 'monospace' }}>
-                    {session.session_id.substring(0, 8)}...
+                    {String(session.session_id).substring(0, 8)}...
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -161,10 +187,10 @@ export default function SessionsList() {
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={session.status.toUpperCase()} 
+                    label={getStatusLabel(session.status)} 
                     color={getStatusColor(session.status)} 
                     size="small" 
-                    variant={session.status === 'active' ? 'filled' : 'outlined'}
+                    variant={session.status ? 'filled' : 'outlined'}
                   />
                 </TableCell>
                 <TableCell>
@@ -217,15 +243,15 @@ export default function SessionsList() {
                                 <Flash size={24} color={selectedSession.status === 'active' ? '#4680FF' : '#5B6B79'} variant="Bold" />
                             </Box>
                             <Stack>
-                                <Typography variant="h5">Session #{selectedSession.session_id.substring(0, 8)}</Typography>
+                                <Typography variant="h5">Session #{String(selectedSession.session_id).substring(0, 8)}</Typography>
                                 <Typography variant="caption" color="textSecondary">Full ID: {selectedSession.session_id}</Typography>
                             </Stack>
                             <Box sx={{ flexGrow: 1 }} />
                              <Chip 
-                                label={selectedSession.status.toUpperCase()} 
+                                label={getStatusLabel(selectedSession.status)} 
                                 color={getStatusColor(selectedSession.status)} 
                                 size="small" 
-                                variant={selectedSession.status === 'active' ? 'filled' : 'combined'}
+                                variant={selectedSession.status ? 'filled' : 'combined'}
                             />
                         </Stack>
                     </MainCard>

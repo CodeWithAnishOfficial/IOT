@@ -1,5 +1,5 @@
 import { OCPPConnection } from '../../../core/connection.manager';
-import { ChargingStation, Logger } from '@ev-platform-v1/shared';
+import { Charger, Logger } from '@ev-platform-v1/shared';
 
 const logger = new Logger('BootNotificationHandler');
 
@@ -10,7 +10,7 @@ export async function handleBootNotification(connection: OCPPConnection, payload
   const { chargePointVendor, chargePointModel, chargePointSerialNumber, firmwareVersion } = payload;
   
   // Update station details
-  await ChargingStation.updateOne(
+  await Charger.updateOne(
     { charger_id: connection.id },
     { 
       $set: { 

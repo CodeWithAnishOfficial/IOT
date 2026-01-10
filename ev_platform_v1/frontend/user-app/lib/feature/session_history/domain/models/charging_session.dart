@@ -28,19 +28,39 @@ class ChargingSession {
   });
 
   factory ChargingSession.fromJson(Map<String, dynamic> json) {
+    // Helper to parse dates
+    DateTime parseDate(dynamic dateVal) {
+      if (dateVal == null) return DateTime.now(); // Fallback
+      if (dateVal is String) return DateTime.parse(dateVal);
+      if (dateVal is Map && dateVal['\$date'] != null) {
+        return DateTime.parse(dateVal['\$date']);
+      }
+      return DateTime.now();
+    }
+    
+    DateTime? parseDateNullable(dynamic dateVal) {
+      if (dateVal == null) return null;
+      if (dateVal is String) return DateTime.parse(dateVal);
+      if (dateVal is Map && dateVal['\$date'] != null) {
+        return DateTime.parse(dateVal['\$date']);
+      }
+      return null;
+    }
+
     return ChargingSession(
-      sessionId: json['session_id'],
+      sessionId: json['session_id'].toString(),
       transactionId: json['transaction_id'],
-      chargerId: json['charger_id'],
-      connectorId: json['connector_id'],
-      userId: json['user_id'],
-      startTime: DateTime.parse(json['start_time']),
-      stopTime: json['stop_time'] != null ? DateTime.parse(json['stop_time']) : null,
-      meterStart: (json['meter_start'] as num?)?.toDouble() ?? 0.0,
+      chargerId: json['charger_id'] ?? 'Unknown',
+      connectorId: json['connector_id'] ?? 1,
+      userId: json['user_id'].toString(),
+      startTime: parseDate(json['start_time']),
+      stopTime: parseDateNullable(json['stop_time']),
+      meterStart: (json['start_meter_value'] as num?)?.toDouble() ?? 0.0,
       meterStop: (json['meter_stop'] as num?)?.toDouble(),
-      totalEnergy: (json['total_energy'] as num?)?.toDouble() ?? 0.0,
-      cost: (json['cost'] as num?)?.toDouble() ?? 0.0,
-      status: json['status'],
+      totalEnergy: (json['unit_consumed'] as num?)?.toDouble() ?? 0.0,
+      cost: (json['consumed_amount'] as num?)?.toDouble() ?? 0.0,
+      // Use charger_status for the string status (stopping, completed, etc.)
+      status: json['charger_status'] ?? 'Unknown',
     );
   }
 }

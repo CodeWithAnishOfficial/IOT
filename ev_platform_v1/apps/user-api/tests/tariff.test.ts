@@ -5,7 +5,7 @@ import { TariffService } from '../src/services/tariff.service';
 describe('Tariff Service', () => {
     it('should calculate flat rate cost correctly', async () => {
         // Mock DB call
-        const mockFindOne = jest.spyOn(require('@ev-platform-v1/shared').ChargingStation, 'findOne');
+        const mockFindOne = jest.spyOn(require('@ev-platform-v1/shared').Charger, 'findOne');
         const mockTariffFind = jest.spyOn(require('@ev-platform-v1/shared').Tariff, 'findById');
 
         mockFindOne.mockResolvedValue({ tariff_id: '123' });

@@ -1,20 +1,20 @@
 import { Request, Response } from 'express';
-import { ChargingStation, Logger } from '@ev-platform-v1/shared';
+import { Charger, Logger } from '@ev-platform-v1/shared';
 
-const logger = new Logger('ChargingStationController');
+const logger = new Logger('ChargerController');
 
-export class ChargingStationController {
-  static async getAllStations(req: Request, res: Response) {
+export class ChargerController {
+  static async getAllChargers(req: Request, res: Response) {
     try {
-      const stations = await ChargingStation.find();
-      res.json({ error: false, data: stations });
+      const chargers = await Charger.find();
+      res.json({ error: false, data: chargers });
     } catch (error: any) {
-      logger.error('Error fetching stations', error);
+      logger.error('Error fetching chargers', error);
       res.status(500).json({ error: true, message: error.message });
     }
   }
 
-  static async createStation(req: Request, res: Response) {
+  static async createCharger(req: Request, res: Response) {
     try {
       const { 
         charger_id, 
@@ -31,7 +31,7 @@ export class ChargingStationController {
         ocpp_password
       } = req.body;
       
-      const existing = await ChargingStation.findOne({ charger_id });
+      const existing = await Charger.findOne({ charger_id });
       if (existing) {
         return res.status(400).json({ error: true, message: 'Charger ID already exists' });
       }
@@ -59,7 +59,7 @@ export class ChargingStationController {
       // 2. Security Defaults
       const finalPassword = ocpp_password || Math.random().toString(36).slice(-8); // Auto-gen password
 
-      const station = await ChargingStation.create({
+      const charger = await Charger.create({
         charger_id,
         name,
         location,
@@ -77,8 +77,8 @@ export class ChargingStationController {
 
       res.status(201).json({ 
         error: false, 
-        message: 'Station created', 
-        data: station,
+        message: 'Charger created', 
+        data: charger,
         credentials: {
             identity: charger_id,
             password: finalPassword,
@@ -86,25 +86,25 @@ export class ChargingStationController {
         }
       });
     } catch (error: any) {
-      logger.error('Error creating station', error);
+      logger.error('Error creating charger', error);
       res.status(500).json({ error: true, message: error.message });
     }
   }
 
-  static async getStationById(req: Request, res: Response) {
+  static async getChargerById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const station = await ChargingStation.findOne({ charger_id: id });
-      if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
+      const charger = await Charger.findOne({ charger_id: id });
+      if (!charger) return res.status(404).json({ error: true, message: 'Charger not found' });
       
-      res.json({ error: false, data: station });
+      res.json({ error: false, data: charger });
     } catch (error: any) {
-      logger.error('Error fetching station', error);
+      logger.error('Error fetching charger', error);
       res.status(500).json({ error: true, message: error.message });
     }
   }
 
-  static async updateStation(req: Request, res: Response) {
+  static async updateCharger(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -114,26 +114,26 @@ export class ChargingStationController {
         delete updates.model;
       }
 
-      const station = await ChargingStation.findOneAndUpdate({ charger_id: id }, updates, { new: true });
-      if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
+      const charger = await Charger.findOneAndUpdate({ charger_id: id }, updates, { new: true });
+      if (!charger) return res.status(404).json({ error: true, message: 'Charger not found' });
 
-      res.json({ error: false, message: 'Station updated', data: station });
+      res.json({ error: false, message: 'Charger updated', data: charger });
     } catch (error: any) {
-      logger.error('Error updating station', error);
+      logger.error('Error updating charger', error);
       res.status(500).json({ error: true, message: error.message });
     }
   }
 
-  static async deleteStation(req: Request, res: Response) {
+  static async deleteCharger(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const station = await ChargingStation.findOneAndDelete({ charger_id: id });
+      const charger = await Charger.findOneAndDelete({ charger_id: id });
       
-      if (!station) return res.status(404).json({ error: true, message: 'Station not found' });
+      if (!charger) return res.status(404).json({ error: true, message: 'Charger not found' });
 
-      res.json({ error: false, message: 'Station deleted successfully' });
+      res.json({ error: false, message: 'Charger deleted successfully' });
     } catch (error: any) {
-      logger.error('Error deleting station', error);
+      logger.error('Error deleting charger', error);
       res.status(500).json({ error: true, message: error.message });
     }
   }

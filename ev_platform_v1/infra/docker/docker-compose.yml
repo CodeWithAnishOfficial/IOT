@@ -72,18 +72,18 @@ services:
     networks:
       - ev-network
 
-  # admin-web:
-  #   build:
-  #     context: ../../frontend/admin-web
-  #     dockerfile: Dockerfile
-  #     args:
-  #       - VITE_APP_API_URL=http://localhost:3000
-  #   ports:
-  #     - "3004:80"
-  #   depends_on:
-  #     - api-gateway
-  #   networks:
-  #     - ev-network
+  admin-web:
+    build:
+      context: ../../frontend/admin-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_APP_API_URL=${VITE_APP_API_URL:-http://localhost:3000}
+    ports:
+      - "3004:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - ev-network
 
   redis:
     image: redis:alpine

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Site, Logger, ChargingStation } from '@ev-platform-v1/shared';
+import { Site, Logger, Charger } from '@ev-platform-v1/shared';
 
 const logger = new Logger('SiteController');
 
@@ -31,7 +31,7 @@ export class SiteController {
       if (!site) return res.status(404).json({ error: true, message: 'Site not found' });
       
       // Optionally fetch all chargers at this site
-      const chargers = await ChargingStation.find({ site_id: id });
+      const chargers = await Charger.find({ site_id: id });
       
       res.json({ error: false, data: { ...site.toObject(), chargers } });
     } catch (error: any) {
@@ -54,7 +54,7 @@ export class SiteController {
     try {
       const { id } = req.params;
       // Check if there are chargers linked
-      const chargersCount = await ChargingStation.countDocuments({ site_id: id });
+      const chargersCount = await Charger.countDocuments({ site_id: id });
       if (chargersCount > 0) {
         return res.status(400).json({ error: true, message: `Cannot delete site. It has ${chargersCount} chargers linked.` });
       }

@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { IncomingMessage } from 'http';
-import { Logger, ChargingStation } from '@ev-platform-v1/shared';
+import { Logger, Charger } from '@ev-platform-v1/shared';
 
 export class OCPPConnection {
   public readonly id: string;
@@ -71,7 +71,7 @@ export class ConnectionManager {
     }
 
     // AUTHENTICATION CHECK
-    const station = await ChargingStation.findOne({ charger_id: id });
+    const station = await Charger.findOne({ charger_id: id });
     
     if (!station) {
         this.logger.warn(`Unknown charger ${id} tried to connect from ${ip}`);
@@ -118,12 +118,12 @@ export class ConnectionManager {
     this.logger.info(`New connection: ${id} (v${version}) from ${ip}`);
     
     // Update IP in DB
-    await ChargingStation.updateOne({ charger_id: id }, { $set: { ip_address: ip, status: 'online' } });
+    await Charger.updateOne({ charger_id: id }, { $set: { ip_address: ip, status: 'online' } });
 
     ws.on('close', async () => {
       this.logger.info(`Connection closed: ${id}`);
       this.connections.delete(id);
-      await ChargingStation.updateOne({ charger_id: id }, { $set: { status: 'offline' } });
+      await Charger.updateOne({ charger_id: id }, { $set: { status: 'offline' } });
     });
 
     ws.on('pong', () => {
@@ -144,7 +144,7 @@ export class ConnectionManager {
         this.logger.warn(`Terminating inactive connection: ${conn.id}`);
         conn.ws.terminate();
         this.connections.delete(conn.id);
-        ChargingStation.updateOne({ charger_id: conn.id }, { $set: { status: 'offline' } }).catch(console.error);
+        Charger.updateOne({ charger_id: conn.id }, { $set: { status: 'offline' } }).catch(console.error);
         return;
       }
 

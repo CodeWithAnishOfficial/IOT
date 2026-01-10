@@ -25,10 +25,10 @@ class LoginView extends GetView<AuthController> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo & Header
-                Icon(
-                  Icons.electric_bolt_rounded, 
-                  size: 64, 
-                  color: AppTheme.primaryColor
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 64,
+                  // color: AppTheme.primaryColor, // Uncomment if you want to tint the logo, otherwise keep original
                 ),
                 const SizedBox(height: 24),
                 Text(

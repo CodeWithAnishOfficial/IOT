@@ -1,4 +1,4 @@
-import { ChargingStation, ChargingSession, Logger, RedisService } from '@ev-platform-v1/shared';
+import { Charger, ChargingSession, Logger, RedisService } from '@ev-platform-v1/shared';
 import { OCPPConnection } from '../core/connection.manager';
 
 const logger = new Logger('SmartChargingService');
@@ -14,7 +14,7 @@ export class SmartChargingService {
   static async applyLoadBalancing(connection: OCPPConnection, connectorId: number) {
     try {
       const chargerId = connection.id;
-      const station = await ChargingStation.findOne({ charger_id: chargerId });
+      const station = await Charger.findOne({ charger_id: chargerId });
       
       if (!station) {
         logger.warn(`Station ${chargerId} not found for smart charging`);
@@ -29,8 +29,10 @@ export class SmartChargingService {
         status: true
       });
 
-      const activeConnectorIds = activeSessions.map(s => s.connector_id);
-      // Add current connector if not already in list (it might not be saved as active yet in DB depending on timing)
+      // Dedup connector IDs using Set
+      const activeConnectorIds = Array.from(new Set(activeSessions.map(s => s.connector_id)));
+      
+      // Add current connector if not already in list
       if (!activeConnectorIds.includes(connectorId)) {
         activeConnectorIds.push(connectorId);
       }
@@ -45,9 +47,6 @@ export class SmartChargingService {
       logger.info(`Load Balancing for ${chargerId}: Active=${activeCount}, Max=${maxStationPower}kW, Alloc=${allocatedPower}kW`);
 
       // Send SetChargingProfile to ALL active connectors
-      // In a real scenario, we might only update if the new allocation is significantly different
-      // or if we are the ones starting the transaction.
-      
       for (const cid of activeConnectorIds) {
           await this.sendChargingProfile(connection, cid, allocatedPower);
       }
@@ -58,24 +57,15 @@ export class SmartChargingService {
   }
 
   private static async sendChargingProfile(connection: OCPPConnection, connectorId: number, powerLimitKw: number) {
-      // Convert kW to Amps (Approximation: 3-phase 400V or 1-phase 230V?)
-      // Assuming 3-phase 400V for commercial chargers. P = V * I * sqrt(3)
-      // I = P / (V * sqrt(3)) -> I = (PowerKw * 1000) / (400 * 1.732)
-      // Example: 11kW -> ~16A. 22kW -> ~32A.
-      // Let's use a standard conversion factor or just use Ampere if station supports it.
-      // OCPP usually uses TxProfile with limits in Amps or Watts.
-      
-      // Let's assume P = V * I (Single phase) or P = 3 * V * I (Three phase)
-      // For simplicity, let's assume 230V single phase or 3-phase equivalent per phase amps.
-      // 11kW 3-phase => 16A per phase. 
-      // 7.4kW 1-phase => 32A.
-      
-      // Let's assume we want to limit Amps. 
-      // If we don't know the phase config, we might default to a safe assumption or configuration.
-      // Let's assume 3-phase 400V roughly.
+      // Convert kW to Amps (Approximation: 3-phase 400V)
       // Amps = (kW * 1000) / (400 * 1.732)
       
-      const amps = Math.floor((powerLimitKw * 1000) / (400 * 1.732));
+      let amps = Math.floor((powerLimitKw * 1000) / (400 * 1.732));
+
+      // Enforce minimum charging current (usually 6A)
+      if (amps < 6) {
+          amps = 6;
+      }
 
       const profile = {
           connectorId: connectorId,
@@ -98,9 +88,6 @@ export class SmartChargingService {
       };
       
       const requestId = Date.now().toString();
-      // Send SetChargingProfile (Action: SetChargingProfile)
-      // Note: This requires the router to handle the response, or we send generic request
-      // We can use connection.send directly as a request
       
       connection.send([2, requestId, 'SetChargingProfile', profile]);
       logger.info(`Sent limit ${amps}A (${powerLimitKw}kW) to connector ${connectorId}`);

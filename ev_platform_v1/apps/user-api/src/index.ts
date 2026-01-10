@@ -70,10 +70,11 @@ const start = async () => {
     
     // CDR Processing
     await rabbit.consume('cdr_events', async (msg) => {
-        await BillingService.processCDR(msg);
+        const updatedSession = await BillingService.processCDR(msg);
         // Also notify user about completed session
-        if (msg.userId) {
-            SseService.sendToUser(msg.userId, 'session_completed', msg);
+        const targetUser = msg.userEmail || msg.userId;
+        if (targetUser) {
+            SseService.sendToUser(targetUser, 'session_completed', updatedSession || msg);
         }
     });
 

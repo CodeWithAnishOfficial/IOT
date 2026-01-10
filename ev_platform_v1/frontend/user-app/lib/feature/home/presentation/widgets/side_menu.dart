@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:user_app/feature/home/presentation/pages/saved_trips_view.dart';
+import 'package:user_app/feature/more/presentation/pages/about/presentation/pages/about_view.dart';
+import 'package:user_app/feature/more/presentation/pages/help&support/presentation/controllers/support_controller.dart';
 import 'package:user_app/feature/reservation/presentation/pages/reservation_view.dart';
 import 'package:user_app/feature/more/presentation/pages/account/presentation/controllers/profile_controller.dart';
+import 'package:user_app/feature/wallet/presentation/controllers/wallet_controller.dart';
+import 'package:user_app/feature/session_history/presentation/controllers/session_history_controller.dart';
+import 'package:user_app/feature/reservation/presentation/controllers/reservation_controller.dart';
 import 'package:user_app/routes/app_routes.dart';
 
 import 'package:user_app/utils/theme/themes.dart';
@@ -33,7 +38,10 @@ class SideMenu extends StatelessWidget {
             Obx(() {
               final user = controller.user.value;
               return InkWell(
-                onTap: () => Get.toNamed(Routes.PROFILE),
+                onTap: () {
+                    Get.delete<ProfileController>();
+                    Get.toNamed(Routes.PROFILE);
+                },
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
                   color: Colors.transparent,
@@ -86,14 +94,25 @@ class SideMenu extends StatelessWidget {
                   _buildMenuItem(
                     icon: Icons.history, // Or restore_rounded
                     title: 'Charging History',
-                    onTap: () => Get.toNamed(Routes.CHARGING_SESSIONS),
+                    onTap: () {
+                      // Ensure fresh data is loaded
+                      if (Get.isRegistered<SessionHistoryController>()) {
+                          Get.find<SessionHistoryController>().fetchSessions();
+                      } else {
+                          // Will be created and fetch on init
+                      }
+                      Get.toNamed(Routes.CHARGING_SESSIONS);
+                    },
                   ),
                   
                   // 2. Transaction History
                   _buildMenuItem(
                     icon: Icons.receipt_long_outlined, // Better icon for transactions
                     title: 'Transaction History',
-                    onTap: () => Get.toNamed(Routes.WALLET),
+                    onTap: () {
+                      Get.delete<WalletController>();
+                      Get.toNamed(Routes.WALLET);
+                    },
                   ),
 
                   // 3. Reserved Stations
@@ -101,9 +120,11 @@ class SideMenu extends StatelessWidget {
                     () => _buildMenuItem(
                       icon: Icons.calendar_today_outlined,
                       title: 'Reserved Stations',
-                      onTap: () =>
+                      onTap: () {
+                          Get.delete<ReservationController>();
                           Get.toNamed(Routes.RESERVATIONS) ??
-                          Get.to(() => const ReservationView()),
+                          Get.to(() => const ReservationView());
+                      },
                       badgeText: controller
                           .upcomingReservationText
                           .value, // Dynamic text
@@ -121,14 +142,17 @@ class SideMenu extends StatelessWidget {
                   _buildMenuItem(
                     icon: Icons.support_agent_outlined,
                     title: 'Support',
-                    onTap: () => Get.toNamed(Routes.SUPPORT),
+                    onTap: () {
+                        Get.delete<SupportController>();
+                        Get.toNamed(Routes.SUPPORT);
+                    },
                   ),
 
                   // 6. About
                   _buildMenuItem(
                     icon: Icons.info_outline,
                     title: 'About',
-                    onTap: () {},
+                    onTap: () => Get.to(() => const AboutView()),
                   ),
 
                   const Padding(
