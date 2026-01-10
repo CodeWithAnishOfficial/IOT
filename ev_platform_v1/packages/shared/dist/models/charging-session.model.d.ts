@@ -1,0 +1,50 @@
+import mongoose, { Document } from 'mongoose';
+export interface IChargingSession extends Document {
+    charger_id: string;
+    connector_id: number;
+    connector_type?: number;
+    session_id: number;
+    transaction_id?: number;
+    start_time: Date;
+    stop_time?: Date;
+    start_meter_value: number;
+    current_meter_value?: number;
+    meter_stop?: number;
+    unit_consumed: number;
+    price: number;
+    unit_price: number;
+    error_code: string;
+    vendor_error_code: string;
+    location?: string;
+    user_id: string | number;
+    email_id?: string;
+    created_date: Date;
+    modified_date: Date;
+    status: boolean;
+    charger_status: string;
+    amount_to_charge?: number;
+    consumed_amount: number;
+    remaining_amount?: number;
+    EB_fee?: string;
+    association_commission?: string;
+    client_commission?: string;
+    convenience_fee?: string;
+    gst_amount?: string;
+    gst_percentage?: string;
+    parking_fee?: string;
+    processing_fee?: string;
+    reseller_commission?: string;
+    service_fee?: string;
+    station_fee?: string;
+    stopPending: boolean;
+    wsActive: boolean;
+    lastWsPing?: Date;
+    transactionState?: string;
+    stop_reason?: string;
+    auth_tag?: string;
+}
+export declare const ChargingSession: mongoose.Model<IChargingSession, {}, {}, {}, mongoose.Document<unknown, {}, IChargingSession, {}, mongoose.DefaultSchemaOptions> & IChargingSession & Required<{
+    _id: mongoose.Types.ObjectId;
+}> & {
+    __v: number;
+}, any, IChargingSession>;

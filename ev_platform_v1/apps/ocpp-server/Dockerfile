@@ -16,9 +16,6 @@ RUN npm install
 # Build shared package first
 RUN npm run build -w packages/shared
 
-# Debug shared package
-RUN ls -la packages/shared/dist && cat packages/shared/package.json
-
 # Build application
 RUN npm run build -w apps/ocpp-server
 

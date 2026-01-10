@@ -1,0 +1,1 @@
+{"version":3,"file":"heartbeat.handler.js","sourceRoot":"","sources":["../../../../src/versions/v16/handlers/heartbeat.handler.ts"],"names":[],"mappings":";;AAEA,0CAIC;AAJM,KAAK,UAAU,eAAe,CAAC,UAA0B,EAAE,OAAY;IAC5E,OAAO;QACL,WAAW,EAAE,IAAI,IAAI,EAAE,CAAC,WAAW,EAAE;KACtC,CAAC;AACJ,CAAC"}
