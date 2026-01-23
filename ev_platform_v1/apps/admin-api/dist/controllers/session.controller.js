@@ -11,8 +11,16 @@ class AdminSessionController {
             const skip = (page - 1) * limit;
             const { user_id, charger_id, status, start_date, end_date } = req.query;
             const query = {};
-            if (user_id)
-                query.user_id = user_id;
+            if (user_id) {
+                const numId = Number(user_id);
+                if (!isNaN(numId)) {
+                    // Support both string and number for Mixed type user_id
+                    query.user_id = { $in: [user_id, numId] };
+                }
+                else {
+                    query.user_id = user_id;
+                }
+            }
             if (charger_id)
                 query.charger_id = charger_id;
             if (status)

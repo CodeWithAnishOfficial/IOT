@@ -1,9 +1,10 @@
 // assets
-import { Money } from 'iconsax-reactjs';
+import { Money, Receipt } from 'iconsax-reactjs';
 
 // icons
 const icons = {
-  tariffs: Money
+  tariffs: Money,
+  history: Receipt
 };
 
 // ==============================|| MENU ITEMS - BILLING ||============================== //
@@ -19,6 +20,13 @@ const billing = {
       type: 'item',
       url: '/tariffs',
       icon: icons.tariffs
+    },
+    {
+      id: 'payment-history',
+      title: 'Payment History',
+      type: 'item',
+      url: '/payment-history',
+      icon: icons.history
     }
   ]
 };

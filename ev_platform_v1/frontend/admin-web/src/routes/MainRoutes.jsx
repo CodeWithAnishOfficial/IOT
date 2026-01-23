@@ -17,6 +17,9 @@ const SessionsList = Loadable(lazy(() => import('pages/operations/SessionsList')
 const RemoteCommands = Loadable(lazy(() => import('pages/operations/RemoteCommands')));
 const SystemMonitor = Loadable(lazy(() => import('pages/operations/SystemMonitor')));
 const TariffsList = Loadable(lazy(() => import('pages/billing/TariffsList')));
+const PaymentHistory = Loadable(lazy(() => import('pages/billing/PaymentHistory')));
+const UserAnalytics = Loadable(lazy(() => import('pages/analytics/UserAnalytics')));
+const ChargerAnalytics = Loadable(lazy(() => import('pages/analytics/ChargerAnalytics')));
 const SupportTickets = Loadable(lazy(() => import('pages/support/SupportTickets')));
 const UserProfile = Loadable(lazy(() => import('pages/users/Profile')));
 
@@ -98,6 +101,18 @@ const MainRoutes = {
     {
       path: 'tariffs',
       element: <TariffsList />
+    },
+    {
+      path: 'payment-history',
+      element: <PaymentHistory />
+    },
+    {
+      path: 'analytics/users',
+      element: <UserAnalytics />
+    },
+    {
+      path: 'analytics/chargers',
+      element: <ChargerAnalytics />
     },
     {
       path: 'support',

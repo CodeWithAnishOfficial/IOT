@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosServices = axios.create({
-  baseURL: import.meta.env.VITE_APP_API_URL || 'http://64.227.181.90:3000'
+  baseURL: import.meta.env.VITE_APP_API_URL || 'http://192.168.0.25:3000'
 });
 
 // interceptor for http

@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npx tsc",
     "clean": "rimraf dist"
   },
   "dependencies": {

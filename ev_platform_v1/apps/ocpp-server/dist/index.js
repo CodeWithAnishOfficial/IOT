@@ -14,7 +14,7 @@ dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../.env') });
 const logger = new shared_2.Logger('OCPP-Server');
 logger.info(`Environment loaded. HEARTBEAT_INTERVAL=${process.env.HEARTBEAT_INTERVAL || 'undefined'}`);
 const PORT = process.env.OCPP_PORT ? parseInt(process.env.OCPP_PORT) : 9220;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.0.25:27017/ev_platform';
 const server = new server_1.OCPPServer(PORT);
 const start = async () => {
     try {

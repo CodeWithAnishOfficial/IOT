@@ -666,7 +666,7 @@ class HomeController extends GetxController {
       if (token.isEmpty) return;
 
       // Using User API Port 3001
-      // Use 192.168.0.57 for Android Emulator, 64.227.181.90 for iOS/Web
+      // Use 192.168.0.57 for Android Emulator, 192.168.0.25 for iOS/Web
       final wsUrl = Platform.isAndroid
           ? "ws://192.168.0.57:3001?token=$token"
           : "ws://192.168.0.57:3001?token=$token";

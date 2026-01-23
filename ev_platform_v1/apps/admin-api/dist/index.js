@@ -19,6 +19,9 @@ const session_routes_1 = __importDefault(require("./routes/session.routes"));
 const site_routes_1 = __importDefault(require("./routes/site.routes"));
 const role_routes_1 = __importDefault(require("./routes/role.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const saved_trip_routes_1 = __importDefault(require("./routes/saved_trip.routes"));
+const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
+const analytics_routes_1 = __importDefault(require("./routes/analytics.routes"));
 const seeder_service_1 = require("./services/seeder.service");
 const prom_client_1 = __importDefault(require("prom-client"));
 const path_1 = __importDefault(require("path"));
@@ -26,7 +29,7 @@ dotenv_1.default.config();
 const logger = new shared_2.Logger('Admin-API');
 const app = (0, express_1.default)();
 const PORT = process.env.ADMIN_API_PORT ? parseInt(process.env.ADMIN_API_PORT) : 3002;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.0.25:27017/ev_platform';
 // Prometheus Metrics
 const collectDefaultMetrics = prom_client_1.default.collectDefaultMetrics;
 collectDefaultMetrics({ register: prom_client_1.default.register });
@@ -44,6 +47,9 @@ app.use('/dashboard', dashboard_routes_1.default);
 app.use('/support', support_routes_1.default);
 app.use('/sessions', session_routes_1.default);
 app.use('/auth', auth_routes_1.default);
+app.use('/admin-saved-trips', saved_trip_routes_1.default);
+app.use('/payments', payment_routes_1.default);
+app.use('/analytics', analytics_routes_1.default);
 app.get('/metrics', async (req, res) => {
     res.set('Content-Type', prom_client_1.default.register.contentType);
     res.end(await prom_client_1.default.register.metrics());

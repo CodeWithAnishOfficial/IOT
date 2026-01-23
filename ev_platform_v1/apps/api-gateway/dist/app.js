@@ -40,7 +40,7 @@ class App {
         // Gateway Routes
         this.app.use('/', gateway_routes_1.default);
         // Proxy to User API
-        const userApiUrl = process.env.USER_API_URL || 'http://64.227.181.90:3001';
+        const userApiUrl = process.env.USER_API_URL || 'http://192.168.0.25:3001';
         const userServices = [
             '/auth', '/wallet', '/profile', '/search',
             '/reservations', '/events', '/vehicles', '/support', '/charging',
@@ -57,7 +57,7 @@ class App {
             }));
         });
         // Proxy to Admin API
-        const adminApiUrl = process.env.ADMIN_API_URL || 'http://64.227.181.90:3002';
+        const adminApiUrl = process.env.ADMIN_API_URL || 'http://192.168.0.25:3002';
         // Explicitly proxy admin services if accessed without /admin prefix
         const adminServices = [
             '/chargers', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard', '/users'

@@ -16,6 +16,8 @@ import siteRoutes from './routes/site.routes';
 import roleRoutes from './routes/role.routes';
 import authRoutes from './routes/auth.routes';
 import savedTripRoutes from './routes/saved_trip.routes';
+import paymentRoutes from './routes/payment.routes';
+import analyticsRoutes from './routes/analytics.routes';
 import { SeederService } from './services/seeder.service';
 import client from 'prom-client';
 import path from 'path';
@@ -25,7 +27,7 @@ dotenv.config();
 const logger = new Logger('Admin-API');
 const app = express();
 const PORT = process.env.ADMIN_API_PORT ? parseInt(process.env.ADMIN_API_PORT) : 3002;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.0.25:27017/ev_platform';
 
 // Prometheus Metrics
 const collectDefaultMetrics = client.collectDefaultMetrics;
@@ -47,6 +49,8 @@ app.use('/support', supportRoutes);
 app.use('/sessions', sessionRoutes);
 app.use('/auth', authRoutes);
 app.use('/admin-saved-trips', savedTripRoutes);
+app.use('/payments', paymentRoutes);
+app.use('/analytics', analyticsRoutes);
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
