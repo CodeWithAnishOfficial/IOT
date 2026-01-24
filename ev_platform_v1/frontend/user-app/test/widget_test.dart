@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
-import 'package:user_app/utils/theme/theme_controller.dart';
+import 'package:user_app/core/controllers/theme_controller.dart';
 import 'package:user_app/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,11 +15,11 @@ void main() {
 
     // Initialize services
     Get.testMode = true;
-    
+
     // Initialize ThemeController
     final themeController = ThemeController(prefs: prefs);
     Get.put(themeController);
-    
+
     // Initialize SessionController
     Get.put(SessionController(), permanent: true);
 

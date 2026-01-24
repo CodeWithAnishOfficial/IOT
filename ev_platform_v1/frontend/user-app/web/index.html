@@ -118,6 +118,21 @@
   
   
   <script src="flutter_bootstrap.js" async=""></script>
+  
+  <!-- Google Maps -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDdBinCjuyocru7Lgi6YT3FZ1P6_xi0tco&callback=initMap" async defer></script>
+  <script>
+    function initMap() {
+        console.log("Google Maps Initialized via Callback");
+        window.isGoogleMapsLoaded = true;
+    }
+    
+    // Check for missing API Key (Cleanup if key is present)
+    window.addEventListener('load', function() {
+        // No-op now that key is added
+    });
+  </script>
 
-
+  <!-- Razorpay for Web -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body></html>
