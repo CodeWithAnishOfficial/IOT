@@ -10,10 +10,7 @@ import 'package:user_app/core/theme/app_colors.dart';
 class ChargingView extends StatefulWidget {
   final ChargingController controller;
 
-  const ChargingView({
-    super.key,
-    required this.controller,
-  });
+  const ChargingView({super.key, required this.controller});
 
   @override
   State<ChargingView> createState() => _ChargingViewState();
@@ -38,9 +35,11 @@ class _ChargingViewState extends State<ChargingView> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
+    if (_scrollController.position.userScrollDirection ==
+        ScrollDirection.reverse) {
       if (_isBottomBarVisible.value) _isBottomBarVisible.value = false;
-    } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
+    } else if (_scrollController.position.userScrollDirection ==
+        ScrollDirection.forward) {
       if (!_isBottomBarVisible.value) _isBottomBarVisible.value = true;
     }
   }
@@ -62,7 +61,9 @@ class _ChargingViewState extends State<ChargingView> {
                 height: 300,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.success.withOpacity(0.2), // Green glow for charging
+                  color: AppColors.success.withOpacity(
+                    0.2,
+                  ), // Green glow for charging
                   backgroundBlendMode: BlendMode.screen,
                 ),
               ),
@@ -91,24 +92,45 @@ class _ChargingViewState extends State<ChargingView> {
               controller: _scrollController,
               physics: const BouncingScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20.0, 80.0, 20.0, 100.0), // Added padding for fixed header and bottom bar
+                padding: const EdgeInsets.fromLTRB(
+                  20.0,
+                  0, // Removed top padding from here to control it better
+                  20.0,
+                  80.0,
+                ), 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Header removed from here
+                    // Spacing for Fixed Header
+                    const SizedBox(height: 80), 
                     
                     // Top Stats Row (Connector, Power, ID)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildTopStatItem(Icons.electrical_services, "CCS 2", "Connector"),
-                        _buildTopStatItem(Icons.flash_on, "120 kW", "Max Speed"),
-                        _buildTopStatItem(Icons.ev_station, "ID: 402", "Station"),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10.0), // Added top padding for stats
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildTopStatItem(
+                            Icons.electrical_services,
+                            "CCS 2",
+                            "Connector",
+                          ),
+                          _buildTopStatItem(
+                            Icons.flash_on,
+                            "120 kW",
+                            "Max Speed",
+                          ),
+                          _buildTopStatItem(
+                            Icons.ev_station,
+                            "ID: 402",
+                            "Station",
+                          ),
+                        ],
+                      ),
                     ),
-                    
+
                     const SizedBox(height: 40),
-              
+
                     // Hero Car Image (Centered)
                     SizedBox(
                       height: 180,
@@ -118,12 +140,12 @@ class _ChargingViewState extends State<ChargingView> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 40),
-              
+
                     // Bento Grid Layout
                     SizedBox(
-                      height: 220, 
+                      height: 220,
                       child: Row(
                         children: [
                           // Large Battery Card (Left)
@@ -136,7 +158,11 @@ class _ChargingViewState extends State<ChargingView> {
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.battery_charging_full, color: AppColors.success, size: 20),
+                                      Icon(
+                                        Icons.battery_charging_full,
+                                        color: AppColors.success,
+                                        size: 20,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         "Battery",
@@ -149,31 +175,36 @@ class _ChargingViewState extends State<ChargingView> {
                                     ],
                                   ),
                                   const Spacer(),
-                                  Obx(() => Text(
-                                    "${widget.controller.soc.value.toInt()}%",
-                                    style: GoogleFonts.orbitron(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 48,
-                                      shadows: [
-                                        BoxShadow(
-                                          color: AppColors.success.withOpacity(0.5),
-                                          blurRadius: 20,
-                                        ),
-                                      ],
+                                  Obx(
+                                    () => Text(
+                                      "${widget.controller.soc.value.toInt()}%",
+                                      style: GoogleFonts.orbitron(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 48,
+                                        shadows: [
+                                          BoxShadow(
+                                            color: AppColors.success
+                                                .withOpacity(0.5),
+                                            blurRadius: 20,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  )),
+                                  ),
                                   const SizedBox(height: 10),
-                                  
+
                                   // Visual Battery Bars (Animated)
-                                  _AnimatedBatteryBars(controller: widget.controller),
+                                  _AnimatedBatteryBars(
+                                    controller: widget.controller,
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(width: 16),
-                          
+
                           // Right Column Cards
                           Expanded(
                             flex: 2,
@@ -184,30 +215,45 @@ class _ChargingViewState extends State<ChargingView> {
                                   child: _buildGlassyCard(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                         Row(
-                                           children: [
-                                              Icon(Icons.timelapse, size: 16, color: Colors.white60),
-                                              const SizedBox(width: 6),
-                                              Text("Status", style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12)),
-                                           ],
-                                         ),
-                                         const SizedBox(height: 8),
-                                         Obx(() => Text(
-                                           widget.controller.status.value,
-                                           style: GoogleFonts.poppins(
-                                             color: AppColors.success,
-                                             fontWeight: FontWeight.bold,
-                                             fontSize: 16,
-                                           ),
-                                           maxLines: 1,
-                                           overflow: TextOverflow.ellipsis,
-                                         )),
-                                         const SizedBox(height: 4),
-                                         if(widget.controller.status.value == "Charging")
-                                          _BlinkingDot()
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.timelapse,
+                                              size: 16,
+                                              color: Colors.white60,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              "Status",
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.white60,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Obx(
+                                          () => Text(
+                                            widget.controller.status.value,
+                                            style: GoogleFonts.poppins(
+                                              color: AppColors.success,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        if (widget.controller.status.value ==
+                                            "Charging")
+                                          _ThreeBlinkingDots(),
                                       ],
                                     ),
                                   ),
@@ -218,25 +264,39 @@ class _ChargingViewState extends State<ChargingView> {
                                   child: _buildGlassyCard(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                         Row(
-                                           children: [
-                                              Icon(Icons.bolt, size: 16, color: Colors.white60),
-                                              const SizedBox(width: 6),
-                                              Text("Energy", style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12)),
-                                           ],
-                                         ),
-                                         const SizedBox(height: 8),
-                                         Obx(() => Text(
-                                           "${widget.controller.energyDelivered.value.toStringAsFixed(1)} kWh",
-                                           style: GoogleFonts.orbitron(
-                                             color: Colors.white,
-                                             fontWeight: FontWeight.bold,
-                                             fontSize: 16, 
-                                           ),
-                                         )),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.bolt,
+                                              size: 16,
+                                              color: Colors.white60,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              "Energy",
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.white60,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Obx(
+                                          () => Text(
+                                            "${widget.controller.energyDelivered.value.toStringAsFixed(1)} kWh",
+                                            style: GoogleFonts.orbitron(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -247,33 +307,33 @@ class _ChargingViewState extends State<ChargingView> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Additional Info Row (Cost & Power)
                     Row(
                       children: [
-                         Expanded(
-                           child: _buildBottomInfoCard(
-                             "Current Cost", 
-                             widget.controller.currentCost, 
-                             "₹", 
-                             Icons.currency_rupee,
-                             isCurrency: true
-                           ),
-                         ),
-                         const SizedBox(width: 16),
-                         Expanded(
-                           child: _buildBottomInfoCard(
-                             "Current Power", 
-                             widget.controller.currentPower, 
-                             "kW", 
-                             Icons.flash_on
-                           ),
-                         ),
+                        Expanded(
+                          child: _buildBottomInfoCard(
+                            "Current Cost",
+                            widget.controller.currentCost,
+                            "₹",
+                            Icons.currency_rupee,
+                            isCurrency: true,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildBottomInfoCard(
+                            "Current Power",
+                            widget.controller.currentPower,
+                            "kW",
+                            Icons.flash_on,
+                          ),
+                        ),
                       ],
                     ),
-              
+
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -309,8 +369,11 @@ class _ChargingViewState extends State<ChargingView> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        onPressed: () => Get.back(), 
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                        onPressed: () => Get.back(),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.white,
+                        ),
                       ),
                       Text(
                         "Active Session",
@@ -328,7 +391,11 @@ class _ChargingViewState extends State<ChargingView> {
                           shape: BoxShape.circle,
                           color: Colors.white.withOpacity(0.1),
                         ),
-                        child: const Icon(Icons.person_outline, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.person_outline,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -338,27 +405,32 @@ class _ChargingViewState extends State<ChargingView> {
           ),
 
           // 4. Floating Swipe to Stop (Bottom)
-          Obx(() => AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            bottom: _isBottomBarVisible.value ? 30 : -100,
-            left: 20,
-            right: 20,
-            child: SwipeButton(
-              onSwipe: widget.controller.stopCharging,
-              text: "Swipe to Stop Charging",
-              backgroundColor: AppColors.error.withOpacity(0.8), 
-              foregroundColor: Colors.white,
-              icon: Icons.power_settings_new_rounded,
-              height: 64,
+          Obx(
+            () => AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              bottom: _isBottomBarVisible.value ? 30 : -100,
+              left: 20,
+              right: 20,
+              child: SwipeButton(
+                onSwipe: widget.controller.stopCharging,
+                text: "Swipe to Stop Charging",
+                backgroundColor: AppColors.error.withOpacity(0.8),
+                foregroundColor: Colors.white,
+                icon: Icons.power_settings_new_rounded,
+                height: 64,
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildGlassyCard({required Widget child, EdgeInsetsGeometry? padding}) {
+  Widget _buildGlassyCard({
+    required Widget child,
+    EdgeInsetsGeometry? padding,
+  }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -386,11 +458,8 @@ class _ChargingViewState extends State<ChargingView> {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withOpacity(0.1)),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-              )
-            ]
+              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10),
+            ],
           ),
           child: Icon(icon, color: AppColors.success, size: 24),
         ),
@@ -405,49 +474,57 @@ class _ChargingViewState extends State<ChargingView> {
         ),
         Text(
           label,
-          style: GoogleFonts.poppins(
-            color: Colors.white54,
-            fontSize: 10,
-          ),
+          style: GoogleFonts.poppins(color: Colors.white54, fontSize: 10),
         ),
       ],
     );
   }
-  
-  Widget _buildBottomInfoCard(String label, RxDouble valueObx, String unit, IconData icon, {bool isCurrency = false}) {
-     return _buildGlassyCard(
-       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-       child: Row(
-         children: [
-           Container(
-             padding: const EdgeInsets.all(10),
-             decoration: BoxDecoration(
-               color: Colors.white.withOpacity(0.1),
-               shape: BoxShape.circle,
-             ),
-             child: Icon(icon, color: Colors.white, size: 20),
-           ),
-           const SizedBox(width: 16),
-           Column(
-             crossAxisAlignment: CrossAxisAlignment.start,
-             children: [
-               Text(label, style: GoogleFonts.poppins(color: Colors.white54, fontSize: 10)),
-               const SizedBox(height: 4),
-               Obx(() => Text(
-                 isCurrency 
-                   ? "$unit${valueObx.value.toStringAsFixed(2)}"
-                   : "${valueObx.value.toStringAsFixed(2)} $unit",
-                 style: GoogleFonts.orbitron(
-                   color: Colors.white,
-                   fontWeight: FontWeight.bold,
-                   fontSize: 16,
-                 ),
-               )),
-             ],
-           )
-         ],
-       ),
-     );
+
+  Widget _buildBottomInfoCard(
+    String label,
+    RxDouble valueObx,
+    String unit,
+    IconData icon, {
+    bool isCurrency = false,
+  }) {
+    return _buildGlassyCard(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.poppins(color: Colors.white54, fontSize: 10),
+              ),
+              const SizedBox(height: 4),
+              Obx(
+                () => Text(
+                  isCurrency
+                      ? "$unit${valueObx.value.toStringAsFixed(2)}"
+                      : "${valueObx.value.toStringAsFixed(2)} $unit",
+                  style: GoogleFonts.orbitron(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -459,16 +536,36 @@ class _AnimatedBatteryBars extends StatefulWidget {
   State<_AnimatedBatteryBars> createState() => _AnimatedBatteryBarsState();
 }
 
-class _AnimatedBatteryBarsState extends State<_AnimatedBatteryBars> with SingleTickerProviderStateMixin {
+class _AnimatedBatteryBarsState extends State<_AnimatedBatteryBars>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
+  late Animation<int> _chargingAnimation;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
+      duration: const Duration(milliseconds: 3000), // Slower animation
+    );
+
+    _chargingAnimation = IntTween(begin: 0, end: 10).animate(_animController);
+
+    // Start animation if charging
+    if (widget.controller.status.value == "Charging") {
+      _animController.repeat();
+    }
+
+    // Listen to status changes to start/stop animation
+    ever(widget.controller.status, (status) {
+      if (status == "Charging") {
+        _animController.repeat();
+      } else {
+        _animController.stop();
+        _animController
+            .reset(); // Show full static when not charging (or just current SOC)
+      }
+    });
   }
 
   @override
@@ -477,53 +574,93 @@ class _AnimatedBatteryBarsState extends State<_AnimatedBatteryBars> with SingleT
     super.dispose();
   }
 
+  Color _getBarColor(int index) {
+    if (index < 2) return AppColors.error; // Red
+    if (index < 5) return Colors.orange;
+    if (index < 8) return Colors.yellow;
+    return AppColors.success; // Green
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(10, (index) {
-        return Expanded(
-          child: Obx(() {
-            final soc = widget.controller.soc.value;
-            final isActive = index < (soc / 10);
-            
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              height: 6,
-              decoration: BoxDecoration(
-                color: isActive 
-                    ? AppColors.success 
-                    : Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: isActive 
-                  ? [BoxShadow(color: AppColors.success.withOpacity(0.5), blurRadius: 4)]
-                  : null
-              ),
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(10, (index) {
+            return Expanded(
+              child: Obx(() {
+                final soc = widget.controller.soc.value;
+                
+                // If charging, we animate
+                // If soc == 0, we assume indeterminate/starting, so we fill all bars 0-10
+                // If soc > 0, we fill up to SOC
+                bool isActive;
+                if (widget.controller.status.value == "Charging") {
+                  final animValue = _chargingAnimation.value;
+
+                  if (soc <= 0) {
+                    // Indeterminate animation: fill up 0-10
+                    isActive = index <= animValue;
+                  } else {
+                    // Realistic animation: fill up to SOC
+                    final maxActiveIndex = (soc / 10).ceil();
+                    isActive = index < maxActiveIndex && index <= animValue;
+                  }
+                } else {
+                  // Not charging, static display
+                  final maxActiveIndex = (soc / 10).ceil();
+                  isActive = index < maxActiveIndex;
+                }
+
+                final color = _getBarColor(index);
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  height: 50, // Significantly increased height again
+                  decoration: BoxDecoration(
+                    color: isActive ? color : Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(
+                      6,
+                    ), // Rounded pill shape
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: color.withOpacity(0.6),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                );
+              }),
             );
           }),
         );
-      }),
+      },
     );
   }
 }
 
-class _BlinkingDot extends StatefulWidget {
+class _ThreeBlinkingDots extends StatefulWidget {
   @override
-  State<_BlinkingDot> createState() => _BlinkingDotState();
+  State<_ThreeBlinkingDots> createState() => _ThreeBlinkingDotsState();
 }
 
-class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderStateMixin {
+class _ThreeBlinkingDotsState extends State<_ThreeBlinkingDots>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _opacity;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.2, end: 1.0).animate(_controller);
+      duration: const Duration(milliseconds: 2000), // Slower animation
+    )..repeat();
   }
 
   @override
@@ -534,19 +671,39 @@ class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: const BoxDecoration(
-          color: AppColors.success,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: AppColors.success, blurRadius: 6)
-          ]
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          children: List.generate(3, (index) {
+            final opacity = _getOpacity(index);
+            return Container(
+              margin: const EdgeInsets.only(right: 4),
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(opacity),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.success.withOpacity(opacity * 0.5),
+                    blurRadius: 4,
+                  )
+                ],
+              ),
+            );
+          }),
+        );
+      },
     );
+  }
+
+  double _getOpacity(int index) {
+    final value = _controller.value * 3; // 0 to 3
+    // Sequential blinking: 0, 1, 2
+    if (value >= index && value < index + 1) {
+      return 1.0;
+    }
+    return 0.2;
   }
 }
