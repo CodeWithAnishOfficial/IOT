@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:user_app/app/modules/home/controllers/home_controller.dart';
 import 'package:user_app/app/modules/home/domain/models/charger.dart';
 import 'package:user_app/app/modules/home/widgets/swipe_button.dart';
+import 'package:user_app/core/theme/app_colors.dart';
 
 class StationDetailsView extends StatefulWidget {
   final Charger station;
@@ -34,7 +35,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
   void initState() {
     super.initState();
     // Initialize initial state
-    _polylines = widget.controller.polylines.toSet();
+    _polylines = widget.controller.stationPolylines.toSet();
     
     if (widget.controller.currentLocation.value != null) {
       _currentLoc = LatLng(
@@ -48,7 +49,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
     }
 
     // Listen for changes
-    _polylineSub = widget.controller.polylines.listen((polylines) {
+    _polylineSub = widget.controller.stationPolylines.listen((polylines) {
       if (mounted) {
         setState(() {
           _polylines = polylines.toSet();
@@ -115,13 +116,13 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                  Marker(
                    markerId: MarkerId(widget.station.chargerId),
                    position: LatLng(widget.station.location?.lat ?? 0, widget.station.location?.lng ?? 0),
-                   icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                   icon: widget.controller.getMarkerIcon(widget.station),
                  ),
                  if (_currentLoc != null)
                    Marker(
                       markerId: const MarkerId("current"),
                       position: _currentLoc!,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                      icon: widget.controller.getSourceIcon(),
                    ),
                  if (_sourceLoc != null && (_currentLoc == null || 
                      (_sourceLoc!.latitude != _currentLoc!.latitude || 
@@ -129,7 +130,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                    Marker(
                       markerId: const MarkerId("route_start"),
                       position: _sourceLoc!,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                      icon: widget.controller.getSourceIcon(),
                       infoWindow: const InfoWindow(title: "Start"),
                    )
               },
@@ -239,7 +240,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                   height: 160,
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF1A1F2B), // Dark Navy/Black
+                  color: AppColors.primary, // Dark Navy/Black
                   borderRadius: BorderRadius.vertical(top: Radius.circular(30), bottom: Radius.circular(30)), 
                 ),
                 child: Column(
@@ -389,10 +390,10 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                                             width: 100,
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
-                                              color: isSelected ? const Color(0xFF1A1F2B) : Colors.white,
+                                              color: isSelected ? AppColors.primary : Colors.white,
                                               borderRadius: BorderRadius.circular(16),
                                               border: Border.all(
-                                                color: isSelected ? const Color(0xFF1A1F2B) : Colors.grey[300]!,
+                                                color: isSelected ? AppColors.primary : Colors.grey[300]!,
                                                 width: 1.5,
                                               ),
                                               boxShadow: isSelected ? [
@@ -497,7 +498,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                                       widget.controller.initiateCharging();
                                     },
                                     text: "Swipe to Start",
-                                    backgroundColor: const Color(0xFF1A1F2B),
+                                    backgroundColor: AppColors.primary,
                                     foregroundColor: Colors.white,
                                     icon: Icons.bolt,
                                     height: 60,

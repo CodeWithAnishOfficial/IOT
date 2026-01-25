@@ -19,6 +19,7 @@ class ChargingController extends GetxController {
   final energyDelivered = 0.0.obs;
   final currentCost = 0.0.obs;
   final currentPower = 0.0.obs; // kW
+  final soc = 0.0.obs; // Battery %
   final status = "Charging".obs;
   
   // Full session details for Bill Summary
@@ -95,6 +96,10 @@ class ChargingController extends GetxController {
 
             if (payload['power'] != null) {
               currentPower.value = (payload['power'] / 1000.0); // W -> kW
+            }
+
+            if (payload['soc'] != null) {
+              soc.value = (payload['soc'] as num).toDouble();
             }
 
             if (payload['energyConsumed'] != null) {

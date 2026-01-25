@@ -11,9 +11,6 @@ import 'package:user_app/app/modules/session_history/controllers/session_history
 import 'package:user_app/app/modules/reservation/controllers/reservation_controller.dart';
 import 'package:user_app/app/routes/app_routes.dart';
 
-import 'package:user_app/core/theme/app_theme.dart';
-import 'package:user_app/core/theme/app_colors.dart';
-
 class SideMenu extends StatelessWidget {
   const SideMenu({super.key});
 

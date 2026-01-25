@@ -13,7 +13,7 @@ class AppColors {
   static const Color gray900 = Color(0xFF212529);
   
   // App Specific (Mapped to Jobzon)
-  static const Color primary = Color(0xFF093FB4);
+  static const Color primary = Color(0xFF1A1F2B);
   static const Color background = white;
   static const Color surface = white;
   static const Color error = Color(0xFFFA3E3E);

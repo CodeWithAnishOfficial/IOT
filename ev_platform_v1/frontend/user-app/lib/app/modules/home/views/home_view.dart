@@ -13,6 +13,8 @@ import 'package:user_app/core/widgets/shimmer/shimmer_box.dart'; // Import Shimm
 
 import 'package:user_app/app/modules/home/widgets/location_pill.dart';
 import 'package:user_app/app/modules/home/widgets/station_card_new.dart';
+import 'package:user_app/app/modules/home/widgets/active_session_card.dart';
+import 'package:user_app/app/modules/charging/views/active_session_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -234,22 +236,25 @@ class _HomeViewState extends State<HomeView> {
                 : const SizedBox.shrink(),
           ),
 
-          // 5. Fixed Bottom Section (Floating Cards or Detail Sheet)
+          // 6. Station Cards (Always Visible at bottom)
           Obx(() {
             final isNavBarVisible = dashboardController?.isNavBarVisible.value ?? true;
             final bottomPadding = isNavBarVisible ? 100.0 : 30.0;
+            
+            // Only hide station cards if they interfere, but user asked to keep them.
+            // Let's keep them visible.
             
             return AnimatedPositioned(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               left: 0,
               right: 0,
-              bottom: bottomPadding, // Floating above bottom
+              bottom: bottomPadding, 
               child: SizedBox(
-                  height: 180, // Height for StationCard + Padding
+                  height: 180, 
                   child: Obx(() {
                     if (controller.isLoading.value && controller.stations.isEmpty) {
-                      return ListView.separated(
+                       return ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         scrollDirection: Axis.horizontal,
                         itemCount: 3,
@@ -263,37 +268,39 @@ class _HomeViewState extends State<HomeView> {
                     }
                     
                     if (controller.stations.isEmpty) {
-                      return Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                          margin: const EdgeInsets.symmetric(horizontal: 32),
-                          decoration: BoxDecoration(
-                            color: theme.cardTheme.color,
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
+                       return Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 16),
+                              margin: const EdgeInsets.symmetric(horizontal: 32),
+                              decoration: BoxDecoration(
+                                color: theme.cardTheme.color,
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.info_outline, color: AppColors.primary),
-                              const SizedBox(width: 12),
-                              Text(
-                                "No chargers found nearby",
-                                style: TextStyle(
-                                  color: theme.textTheme.bodyMedium?.color,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.info_outline,
+                                      color: AppColors.primary),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    "No chargers found nearby",
+                                    style: TextStyle(
+                                      color: theme.textTheme.bodyMedium?.color,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
+                            ),
+                          );
                     }
 
                     return PageView.builder(
@@ -308,7 +315,7 @@ class _HomeViewState extends State<HomeView> {
                       itemBuilder: (context, index) {
                         final station = controller.stations[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10), // Shadow space
+                          padding: const EdgeInsets.symmetric(vertical: 10), 
                           child: StationCard(
                             station: station,
                             onTap: () => controller.navigateToStationDetails(station),
@@ -320,6 +327,35 @@ class _HomeViewState extends State<HomeView> {
                   }),
                 ),
             );
+          }),
+
+          // 7. Active Session Overlay (Top of Screen, Below Search)
+          Obx(() {
+             final isNavBarVisible = dashboardController?.isNavBarVisible.value ?? true;
+             
+             // Calculate top padding dynamically based on Search Bar visibility
+             final double basePadding = MediaQuery.of(context).padding.top + 16;
+             final double searchBarHeight = 50 + 12; // Height + Margin
+             final double locationPillHeight = 50 + 16; // Height + Margin
+             
+             final topPadding = isNavBarVisible 
+                ? basePadding + searchBarHeight + locationPillHeight
+                : basePadding;
+             
+             final hasSession = controller.currentSession.value != null;
+             
+             return AnimatedPositioned(
+               duration: const Duration(milliseconds: 300),
+               curve: Curves.easeOutBack,
+               top: hasSession ? topPadding : -200, // Slide down from top
+               left: 20, 
+               right: 20,
+               child: hasSession 
+                 ? ActiveSessionCard(
+                      controller: controller.currentSession.value!,
+                   )
+                 : const SizedBox.shrink(),
+             );
           }),
         ],
       ),

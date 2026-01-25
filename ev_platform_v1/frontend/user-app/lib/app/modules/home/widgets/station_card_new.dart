@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:get/get.dart';
 import 'package:user_app/app/modules/home/domain/models/charger.dart';
 import 'package:user_app/core/theme/app_colors.dart';
 

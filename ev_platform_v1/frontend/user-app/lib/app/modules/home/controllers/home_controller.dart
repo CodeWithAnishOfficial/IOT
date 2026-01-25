@@ -14,15 +14,16 @@ import 'package:url_launcher/url_launcher.dart'; // Add url_launcher import
 import 'package:user_app/core/network/api_provider.dart';
 
 import 'package:user_app/app/modules/home/views/station_details_view.dart';
+import 'package:user_app/app/modules/home/widgets/start_charging_sheet.dart';
 import 'package:user_app/app/modules/home/domain/models/charger.dart';
 import 'package:user_app/app/modules/home/domain/models/saved_trip.dart'; // Import SavedTrip
 import 'package:user_app/app/modules/home/views/search_location_view.dart';
 import 'package:user_app/app/modules/home/views/qr_scanner_view.dart';
 import 'package:user_app/app/modules/charging/views/active_session_view.dart';
+import 'package:user_app/app/modules/charging/controllers/charging_controller.dart';
 import 'package:user_app/core/network/websocket_service.dart';
 import 'package:user_app/core/controllers/session_controller.dart';
 import 'package:user_app/app/modules/dashboard/controllers/dashboard_controller.dart';
-import 'package:user_app/core/theme/app_theme.dart';
 import 'package:user_app/core/theme/app_colors.dart';
 
 class HomeController extends GetxController {
@@ -76,6 +77,8 @@ class HomeController extends GetxController {
 
   final markers = <Marker>{}.obs;
   final polylines = <Polyline>{}.obs;
+  final stationPolylines = <Polyline>{}.obs; // Separate polyline for station details
+  int _routeRequestId = 0;
 
   // Trip Map State
   final tripMarkers = <Marker>{}.obs;
@@ -121,6 +124,9 @@ class HomeController extends GetxController {
   // Selected Connector IDs (Multiple Selection)
   final selectedConnectorIds = <String>{}.obs;
 
+  // Active Session State
+  final currentSession = Rxn<ChargingController>();
+
   late Razorpay _razorpay;
   // Temp vars for pending session start
   String? _pendingConnectorId;
@@ -128,7 +134,8 @@ class HomeController extends GetxController {
   bool _isRequestingPermission = false;
 
   void clearRoute() {
-    polylines.clear();
+    _routeRequestId++;
+    stationPolylines.clear();
   }
 
   void showStationDetails(String chargerId) async {
@@ -259,10 +266,22 @@ class HomeController extends GetxController {
         return;
       }
 
-      // Release lock when user returns (cancels or moves on)
-      _releaseConnectorLock(connectorId);
+      // Open Bottom Sheet
+      await Get.bottomSheet(
+        StartChargingSheet(
+          controller: this,
+          connectorId: connectorId,
+        ),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+      );
+
+      // Release lock if user cancelled (pending vars will be null)
+      if (_pendingConnectorId == null) {
+        _releaseConnectorLock(connectorId);
+      }
     } catch (e) {
-      Get.back(); // Close loading
+      if (Get.isDialogOpen == true) Get.back(); // Close loading
       _handleError(e);
     }
   }
@@ -282,10 +301,10 @@ class HomeController extends GetxController {
   }
 
   Future<void> startChargingSession(String connectorId, double amount) async {
-    Get.back(); // Close sheet
-
     _pendingConnectorId = connectorId;
     _pendingAmount = amount;
+
+    Get.back(); // Close sheet
 
     // Show loading
     Get.dialog(
@@ -403,11 +422,34 @@ class HomeController extends GetxController {
           colorText: Colors.white,
         );
 
-        Get.off(
+        // 1. Initialize Controller & State
+        // Ensure we don't have a stale controller registered
+        if (Get.isRegistered<ChargingController>()) {
+          Get.delete<ChargingController>(force: true);
+        }
+
+        final chargingController = ChargingController(
+          connectorId: connectorId,
+          initialAmount: amount,
+          sessionId: sessionId,
+        );
+        
+        // Register permanently so it survives navigation
+        Get.put(chargingController, permanent: true);
+        currentSession.value = chargingController;
+
+        // Auto-cleanup overlay when done
+        ever(chargingController.status, (status) {
+           if (status == "Completed") {
+             // Hide overlay, but controller stays for Bill Summary
+             currentSession.value = null;
+           }
+        });
+
+        // 2. Navigate to View (Push, don't replace, so Back works)
+        Get.to(
           () => ChargingView(
-            connectorId: connectorId,
-            initialAmount: amount,
-            sessionId: sessionId,
+            controller: chargingController,
           ),
         );
       } else {
@@ -578,8 +620,63 @@ class HomeController extends GetxController {
     Future.delayed(const Duration(seconds: 2), () {
       _initializeLocation();
       loadRecentSearches();
+      checkActiveSession(); // Check for existing session on startup
     });
   }
+
+  Future<void> checkActiveSession() async {
+    try {
+      final response = await _apiProvider.get('/charging/active-session');
+      if (response['error'] == false && response['data'] != null) {
+        final data = response['data'];
+        final sessionId = data['session_id'];
+        final connectorId = data['connector_id'] ?? 'UNKNOWN';
+        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+        
+        print("Found active session: $sessionId");
+
+        // Initialize Controller
+        if (Get.isRegistered<ChargingController>()) {
+          Get.delete<ChargingController>(force: true);
+        }
+
+        final chargingController = ChargingController(
+          connectorId: connectorId,
+          initialAmount: amount,
+          sessionId: sessionId,
+        );
+        
+        Get.put(chargingController, permanent: true);
+        currentSession.value = chargingController;
+
+        // Auto-cleanup overlay when done
+        ever(chargingController.status, (status) {
+           if (status == "Completed") {
+             currentSession.value = null;
+           }
+        });
+      }
+    } catch (e) {
+      print("Error checking active session: $e");
+    }
+  }
+
+  BitmapDescriptor getMarkerIcon(Charger station) {
+    final isOnline = station.status.toLowerCase() == 'online';
+    return isOnline
+        ? (_iconGreen ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen))
+        : (_iconOrange ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange));
+  }
+
+  BitmapDescriptor getSourceIcon() =>
+      _iconBlue ??
+      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+
+  BitmapDescriptor getDestinationIcon() =>
+      _iconRed ??
+      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
 
   void _initializeMarkerIcons() async {
     try {
@@ -683,9 +780,10 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _razorpay.clear(); // Clear listeners
-    searchController.dispose();
-    sourceController.dispose();
-    destinationController.dispose();
+    // Don't dispose TextEditingControllers here to avoid race conditions with UI
+    // searchController.dispose();
+    // sourceController.dispose();
+    // destinationController.dispose();
     _debounce?.cancel();
     _googleMapController?.dispose();
     _googleMapController = null;
@@ -2152,6 +2250,7 @@ class HomeController extends GetxController {
   }
 
   Future<LatLngBounds?> prepareRoute(Charger station) async {
+    final int requestId = ++_routeRequestId;
     if (station.location == null) return null;
 
     LatLng? startPosition;
@@ -2189,8 +2288,11 @@ class HomeController extends GetxController {
         end,
       );
 
-      polylines.clear();
-      polylines.add(
+      // Check if request is still valid
+      if (requestId != _routeRequestId) return null;
+
+      stationPolylines.clear();
+      stationPolylines.add(
         Polyline(
           polylineId: const PolylineId("route"),
           points: polylineCoordinates,
@@ -2203,7 +2305,7 @@ class HomeController extends GetxController {
           geodesic: true,
         ),
       );
-      polylines.refresh();
+      stationPolylines.refresh();
 
       return _boundsFromLatLngList(polylineCoordinates);
     } catch (e) {
