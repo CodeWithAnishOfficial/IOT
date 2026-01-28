@@ -60,6 +60,35 @@ class BillingService {
                 reference_id: sessionId || transactionId.toString(),
                 status: 'success'
             });
+            // Commercialization Logic: Credit Owner if applicable
+            try {
+                const charger = await shared_1.Charger.findOne({ charger_id: chargerId });
+                if (charger && charger.owner_id) {
+                    // Determine share. Simple Logic: Owner gets energy cost. Platform keeps service fees.
+                    const ownerShare = energyCost;
+                    if (ownerShare > 0) {
+                        const owner = await shared_1.User.findOne({ user_id: charger.owner_id });
+                        if (owner) {
+                            owner.wallet_bal += ownerShare;
+                            await owner.save();
+                            await shared_1.WalletTransaction.create({
+                                transaction_id: `earn_${transactionId}`,
+                                user_id: charger.owner_id.toString(), // Ensure string if model requires it
+                                amount: ownerShare,
+                                type: 'credit',
+                                source: 'earnings',
+                                reference_id: sessionId || transactionId.toString(),
+                                status: 'success'
+                            });
+                            logger.info(`Credited ${ownerShare} to owner ${charger.owner_id} for session ${sessionId}`);
+                        }
+                    }
+                }
+            }
+            catch (err) {
+                logger.error(`Error crediting charger owner for session ${sessionId}`, err);
+                // Don't fail the main process just because owner credit failed
+            }
             // Update Session with cost
             if (sessionId) {
                 await shared_1.ChargingSession.updateOne({ session_id: sessionId }, {

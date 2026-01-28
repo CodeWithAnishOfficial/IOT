@@ -77,12 +77,14 @@ class HomeController extends GetxController {
 
   final markers = <Marker>{}.obs;
   final polylines = <Polyline>{}.obs;
-  final stationPolylines = <Polyline>{}.obs; // Separate polyline for station details
+  final stationPolylines =
+      <Polyline>{}.obs; // Separate polyline for station details
   int _routeRequestId = 0;
 
   // Trip Map State
   final tripMarkers = <Marker>{}.obs;
   final tripPolylines = <Polyline>{}.obs;
+  final isTripMapDragging = false.obs; // Track trip map interaction
 
   // Hold the selected nearby Charger location marker separately or as part of state
   Marker? _selectedLocationMarker;
@@ -136,6 +138,24 @@ class HomeController extends GetxController {
   void clearRoute() {
     _routeRequestId++;
     stationPolylines.clear();
+  }
+
+  void focusOnLocation(double lat, double lng) {
+    if (_googleMapController != null) {
+      _googleMapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15),
+      );
+      // Refresh stations around this new location
+      fetchNearbyStations(lat: lat, lng: lng);
+    } else {
+      // If map is not ready yet, set as initial position (fallback)
+      initialCameraPosition.value = CameraPosition(
+        target: LatLng(lat, lng),
+        zoom: 15,
+      );
+      // And fetch
+      fetchNearbyStations(lat: lat, lng: lng);
+    }
   }
 
   void showStationDetails(String chargerId) async {
@@ -268,10 +288,7 @@ class HomeController extends GetxController {
 
       // Open Bottom Sheet
       await Get.bottomSheet(
-        StartChargingSheet(
-          controller: this,
-          connectorId: connectorId,
-        ),
+        StartChargingSheet(controller: this, connectorId: connectorId),
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
       );
@@ -433,25 +450,21 @@ class HomeController extends GetxController {
           initialAmount: amount,
           sessionId: sessionId,
         );
-        
+
         // Register permanently so it survives navigation
         Get.put(chargingController, permanent: true);
         currentSession.value = chargingController;
 
         // Auto-cleanup overlay when done
         ever(chargingController.status, (status) {
-           if (status == "Completed") {
-             // Hide overlay, but controller stays for Bill Summary
-             currentSession.value = null;
-           }
+          if (status == "Completed") {
+            // Hide overlay, but controller stays for Bill Summary
+            currentSession.value = null;
+          }
         });
 
         // 2. Navigate to View (Push, don't replace, so Back works)
-        Get.to(
-          () => ChargingView(
-            controller: chargingController,
-          ),
-        );
+        Get.to(() => ChargingView(controller: chargingController));
       } else {
         throw Exception(res['message'] ?? "Failed to start session");
       }
@@ -599,22 +612,21 @@ class HomeController extends GetxController {
       }
     });
 
+    // Listen for trip input clearing
+    sourceController.addListener(() {
+      if (sourceController.text.isEmpty) {
+        sourceLatLng.value = null;
+      }
+    });
+
+    destinationController.addListener(() {
+      if (destinationController.text.isEmpty) {
+        destinationLatLng.value = null;
+      }
+    });
+
     // Auto-update trip markers when stops change
     ever(tripStops, (_) => _updateTripMarkers());
-
-    // Initialize source with current location when available
-    ever(currentAddress, (address) {
-      if (sourceController.text.isEmpty ||
-          sourceController.text == "Locating...") {
-        sourceController.text = address;
-      }
-    });
-
-    ever(currentLocation, (position) {
-      if (position != null && sourceLatLng.value == null) {
-        sourceLatLng.value = LatLng(position.latitude, position.longitude);
-      }
-    });
 
     // Initialize Location & Data after a delay to avoid permission conflicts with NotificationService
     Future.delayed(const Duration(seconds: 2), () {
@@ -632,7 +644,7 @@ class HomeController extends GetxController {
         final sessionId = data['session_id'];
         final connectorId = data['connector_id'] ?? 'UNKNOWN';
         final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-        
+
         print("Found active session: $sessionId");
 
         // Initialize Controller
@@ -645,15 +657,15 @@ class HomeController extends GetxController {
           initialAmount: amount,
           sessionId: sessionId,
         );
-        
+
         Get.put(chargingController, permanent: true);
         currentSession.value = chargingController;
 
         // Auto-cleanup overlay when done
         ever(chargingController.status, (status) {
-           if (status == "Completed") {
-             currentSession.value = null;
-           }
+          if (status == "Completed") {
+            currentSession.value = null;
+          }
         });
       }
     } catch (e) {
@@ -665,9 +677,11 @@ class HomeController extends GetxController {
     final isOnline = station.status.toLowerCase() == 'online';
     return isOnline
         ? (_iconGreen ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen))
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen))
         : (_iconOrange ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange));
+              BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueOrange,
+              ));
   }
 
   BitmapDescriptor getSourceIcon() =>
@@ -1480,10 +1494,19 @@ class HomeController extends GetxController {
     isLoading.value = true;
 
     try {
+      // Collect waypoints from tripStops
+      List<LatLng> waypoints = [];
+      for (var stop in tripStops) {
+        if (stop.location != null) {
+          waypoints.add(LatLng(stop.location!.lat, stop.location!.lng));
+        }
+      }
+
       // 1. Fetch Route using Directions API
       final routePoints = await _getPolylineCoordinates(
         sourceLatLng.value!,
         destinationLatLng.value!,
+        waypoints: waypoints,
       );
 
       // 2. Animate Camera to fit bounds
@@ -1686,6 +1709,26 @@ class HomeController extends GetxController {
       print("Delete Trip Error: $e");
       Get.snackbar("Error", "Failed to delete trip");
     }
+  }
+
+  void cancelSavedTrip() {
+    currentSavedTripId.value = null;
+    sourceController.clear();
+    destinationController.clear();
+    searchController.clear();
+    searchResults.clear();
+    _selectedLocationMarker = null;
+    selectedStation.value = null;
+
+    sourceLatLng.value = null;
+    destinationLatLng.value = null;
+    polylines.clear();
+    tripPolylines.clear();
+    tripMarkers.clear();
+    tripStops.clear();
+
+    searchMode.value = 'explore'; // Reset to explore mode
+    _updateMarkers();
   }
 
   void loadSavedTrip(SavedTrip trip) {
@@ -2327,14 +2370,26 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<List<LatLng>> _getPolylineCoordinates(LatLng start, LatLng end) async {
+  Future<List<LatLng>> _getPolylineCoordinates(
+    LatLng start,
+    LatLng end, {
+    List<LatLng>? waypoints,
+  }) async {
     // REAL IMPLEMENTATION using Google Directions API
     // Ensure you have enabled 'Directions API' in Google Cloud Console
 
     const apiKey = "AIzaSyDdBinCjuyocru7Lgi6YT3FZ1P6_xi0tco";
-    final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=$apiKey',
-    );
+    String urlString =
+        'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=$apiKey';
+
+    if (waypoints != null && waypoints.isNotEmpty) {
+      final waypointString = waypoints
+          .map((e) => '${e.latitude},${e.longitude}')
+          .join('|');
+      urlString += '&waypoints=$waypointString';
+    }
+
+    final url = Uri.parse(urlString);
 
     try {
       final response = await _apiProvider.getDirect(url);
@@ -2344,13 +2399,15 @@ class HomeController extends GetxController {
         if (routes.isNotEmpty) {
           final legs = routes[0]['legs'] as List;
           if (legs.isNotEmpty) {
-            final steps = legs[0]['steps'] as List;
             List<LatLng> detailedPoints = [];
 
-            // Decode polyline for each step for higher resolution
-            for (var step in steps) {
-              final points = _decodePolyline(step['polyline']['points']);
-              detailedPoints.addAll(points);
+            // Iterate through all legs
+            for (var leg in legs) {
+              final steps = leg['steps'] as List;
+              for (var step in steps) {
+                final points = _decodePolyline(step['polyline']['points']);
+                detailedPoints.addAll(points);
+              }
             }
 
             return detailedPoints;

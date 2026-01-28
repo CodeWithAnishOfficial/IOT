@@ -11,4 +11,7 @@ abstract class Routes {
   static const CHARGING_SESSIONS = '/charging-sessions';
   static const SUPPORT = '/support';
   static const RESERVATIONS = '/reservations';
+  static const TRIP_PLANNER = '/trip-planner';
+  static const SAVED_TRIPS = '/saved-trips';
+  static const COMMERCIALIZATION = '/commercialization';
 }

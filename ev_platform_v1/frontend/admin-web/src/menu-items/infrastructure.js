@@ -27,6 +27,13 @@ const infrastructure = {
       type: 'item',
       url: '/chargers',
       icon: icons.stations
+    },
+    {
+      id: 'commercial-chargers',
+      title: 'Commercial Chargers',
+      type: 'item',
+      url: '/commercial-chargers',
+      icon: icons.stations
     }
   ]
 };

@@ -14,6 +14,7 @@ import reservationRoutes from './routes/reservation.routes';
 import vehicleRoutes from './routes/vehicle.routes';
 import supportRoutes from './routes/support.routes';
 import chargingRoutes from './routes/charging.routes';
+import commercialRoutes from './routes/commercial.routes';
 import savedTripsRoutes from './routes/saved_trips.routes';
 import { BillingService } from './services/billing.service';
 import { SseService } from './services/sse.service';
@@ -29,7 +30,7 @@ dotenv.config();
 const logger = new Logger('User-API');
 const app = express();
 const PORT = process.env.USER_API_PORT ? parseInt(process.env.USER_API_PORT) : 3001;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.0.25:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
 const JWT_SECRET = process.env.JWT_SECRET || 'ev-platform-secret-key';
 
 // Prometheus Metrics
@@ -49,6 +50,7 @@ app.use('/reservations', reservationRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/support', supportRoutes);
 app.use('/charging', chargingRoutes);
+app.use('/commercial', commercialRoutes);
 app.use('/saved-trips', savedTripsRoutes);
 
 app.get('/metrics', async (req, res) => {

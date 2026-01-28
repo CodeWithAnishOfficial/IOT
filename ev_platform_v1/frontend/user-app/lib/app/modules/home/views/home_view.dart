@@ -4,14 +4,13 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:user_app/app/modules/home/controllers/home_controller.dart';
 import 'package:user_app/app/modules/dashboard/controllers/dashboard_controller.dart';
-import 'package:user_app/app/modules/home/widgets/side_menu.dart';
+import 'package:user_app/app/modules/home/views/drawer_view.dart';
 import 'package:user_app/app/modules/home/widgets/station_detail_sheet.dart';
 import 'package:user_app/core/theme/app_colors.dart';
 import 'package:user_app/core/theme/app_theme.dart';
 
 import 'package:user_app/core/widgets/shimmer/shimmer_box.dart'; // Import ShimmerBox
 
-import 'package:user_app/app/modules/home/widgets/location_pill.dart';
 import 'package:user_app/app/modules/home/widgets/station_card_new.dart';
 import 'package:user_app/app/modules/home/widgets/active_session_card.dart';
 import 'package:user_app/app/modules/charging/views/active_session_view.dart';
@@ -55,7 +54,6 @@ class _HomeViewState extends State<HomeView> {
       extendBody: true,
       backgroundColor: theme.scaffoldBackgroundColor, // Theme background
       resizeToAvoidBottomInset: false,
-      drawer: const SideMenu(),
       body: Stack(
         children: [
           // 1. Full Screen Map
@@ -73,6 +71,10 @@ class _HomeViewState extends State<HomeView> {
                     myLocationEnabled: controller.isLocationGranted.value,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
+                    zoomGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: true,
                     mapToolbarEnabled: false,
                     padding: EdgeInsets.zero, // Remove padding
                     onCameraMoveStarted: () {
@@ -128,7 +130,11 @@ class _HomeViewState extends State<HomeView> {
                       _buildFloatingButton(
                         theme,
                         icon: Icons.menu,
-                        onTap: () => scaffoldKey.currentState?.openDrawer(),
+                        onTap: () => Get.to(
+                          () => const DrawerView(),
+                          transition: Transition.leftToRight,
+                          duration: const Duration(milliseconds: 300),
+                        ),
                       ),
                       const SizedBox(width: 12),
 
@@ -157,12 +163,22 @@ class _HomeViewState extends State<HomeView> {
                                   color: theme.iconTheme.color?.withOpacity(0.6),
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  "Search chargers...",
-                                  style: TextStyle(
-                                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-                                    fontSize: 15,
-                                  ),
+                                Expanded(
+                                  child: Obx(() {
+                                    final address = controller.currentAddress.value;
+                                    return Text(
+                                      (address != null && address.isNotEmpty)
+                                          ? address
+                                          : "Search chargers...",
+                                      style: TextStyle(
+                                        color: theme.textTheme.bodyMedium?.color
+                                            ?.withOpacity(0.6),
+                                        fontSize: 15,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    );
+                                  }),
                                 ),
                               ],
                             ),
@@ -179,14 +195,6 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ],
                   ),
-                  
-                  const SizedBox(height: 12),
-
-                  // Location Pill (Centered or Floating below)
-                  Obx(() => LocationPill(
-                    location: controller.currentAddress.value,
-                    onTap: () => controller.openSearch(mode: 'explore'), // Or toggle current location
-                  )),
                 ],
               ),
             );
@@ -336,10 +344,9 @@ class _HomeViewState extends State<HomeView> {
              // Calculate top padding dynamically based on Search Bar visibility
              final double basePadding = MediaQuery.of(context).padding.top + 16;
              final double searchBarHeight = 50 + 12; // Height + Margin
-             final double locationPillHeight = 50 + 16; // Height + Margin
              
              final topPadding = isNavBarVisible 
-                ? basePadding + searchBarHeight + locationPillHeight
+                ? basePadding + searchBarHeight
                 : basePadding;
              
              final hasSession = controller.currentSession.value != null;

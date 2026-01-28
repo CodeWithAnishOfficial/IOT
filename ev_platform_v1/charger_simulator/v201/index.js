@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 // Configuration
 const CHARGER_ID = 'CH001';
 // Note: Backend URL for 2.0.1
-const BACKEND_URL = process.env.OCPP_SERVER_URL || `ws://192.168.0.25:9220/Quantum/OCPP/2.0.1/${CHARGER_ID}`;
+const BACKEND_URL = process.env.OCPP_SERVER_URL || `ws://64.227.181.90:9220/Quantum/OCPP/2.0.1/${CHARGER_ID}`;
 
 console.log(`Connecting to ${BACKEND_URL}...`);
 

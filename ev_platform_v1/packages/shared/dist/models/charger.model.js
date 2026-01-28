@@ -56,6 +56,10 @@ const ChargerSchema = new mongoose_1.Schema({
     ip_address: { type: String },
     ocpp_username: { type: String },
     ocpp_password: { type: String }, // Should be hashed in prod, but keeping plain for display if requested
+    // Commercialization
+    owner_id: { type: Number }, // Matches User.user_id
+    is_public: { type: Boolean, default: false },
+    price_per_kwh: { type: Number },
     connectors: [{
             connector_id: { type: Number, required: true },
             status: { type: String, default: 'Available' },

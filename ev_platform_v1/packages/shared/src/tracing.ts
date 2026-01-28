@@ -6,7 +6,7 @@ export const initTracing = (serviceName: string) => {
   const sdk = new NodeSDK({
     serviceName,
     traceExporter: new OTLPTraceExporter({
-      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://192.168.0.25:4318/v1/traces',
+      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://64.227.181.90:4318/v1/traces',
     }),
     instrumentations: [getNodeAutoInstrumentations()],
   });

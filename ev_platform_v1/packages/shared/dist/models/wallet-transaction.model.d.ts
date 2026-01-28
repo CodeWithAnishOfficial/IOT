@@ -4,7 +4,7 @@ export interface IWalletTransaction extends Document {
     user_id: string;
     amount: number;
     type: 'credit' | 'debit';
-    source: 'razorpay' | 'refund' | 'charging_session';
+    source: 'razorpay' | 'refund' | 'charging_session' | 'earnings';
     reference_id?: string;
     status: 'success' | 'failed' | 'pending';
     created_at: Date;

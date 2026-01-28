@@ -10,7 +10,7 @@ export class RabbitMQService {
 
   private constructor() {
     this.logger = new Logger('RabbitMQService');
-    this.url = process.env.RABBITMQ_URL || 'amqp://user:password@192.168.0.25:5672';
+    this.url = process.env.RABBITMQ_URL || 'amqp://user:password@64.227.181.90:5672';
   }
 
   public static getInstance(): RabbitMQService {

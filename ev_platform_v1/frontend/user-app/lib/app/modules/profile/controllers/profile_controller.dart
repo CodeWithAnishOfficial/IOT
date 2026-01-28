@@ -79,6 +79,13 @@ class ProfileController extends GetxController {
 
       if (response['data'] != null) {
         user.value = User.fromJson(response['data']);
+        
+        // Update session
+        await _sessionController.updateUserInfo(
+          username: user.value?.username,
+          // email: user.value?.email, // If email is updatable
+        );
+
         Get.back();
         Get.snackbar('Success', 'Profile updated');
       }

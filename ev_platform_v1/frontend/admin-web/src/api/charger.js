@@ -1,8 +1,8 @@
 import axios from 'utils/axios';
 
 const ChargerService = {
-  getAllChargers: () => {
-    return axios.get('/chargers/list');
+  getAllChargers: (params) => {
+    return axios.get('/chargers/list', { params });
   },
 
   getChargerDetails: (id) => {

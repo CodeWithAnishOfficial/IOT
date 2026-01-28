@@ -9,7 +9,7 @@ export class RedisService {
 
   private constructor() {
     this.logger = new Logger('RedisService');
-    const redisUrl = process.env.REDIS_URL || 'redis://192.168.0.25:6379';
+    const redisUrl = process.env.REDIS_URL || 'redis://64.227.181.90:6379';
     this.pub = new Redis(redisUrl);
     this.sub = new Redis(redisUrl);
   }

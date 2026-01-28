@@ -11,9 +11,9 @@ import 'package:user_app/core/theme/app_colors.dart';
 class StationDetailsView extends StatefulWidget {
   final Charger station;
   final HomeController controller;
-  
+
   const StationDetailsView({
-    super.key, 
+    super.key,
     required this.station,
     required this.controller,
   });
@@ -36,11 +36,11 @@ class _StationDetailsViewState extends State<StationDetailsView> {
     super.initState();
     // Initialize initial state
     _polylines = widget.controller.stationPolylines.toSet();
-    
+
     if (widget.controller.currentLocation.value != null) {
       _currentLoc = LatLng(
-        widget.controller.currentLocation.value!.latitude, 
-        widget.controller.currentLocation.value!.longitude
+        widget.controller.currentLocation.value!.latitude,
+        widget.controller.currentLocation.value!.longitude,
       );
     }
 
@@ -63,7 +63,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
           if (position != null) {
             _currentLoc = LatLng(position.latitude, position.longitude);
           } else {
-             _currentLoc = null;
+            _currentLoc = null;
           }
         });
       }
@@ -92,7 +92,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
     final screenHeight = MediaQuery.of(context).size.height;
     final double defaultTop = screenHeight * 0.40;
     final double collapsedTop = screenHeight - 140; // Only show part of header
-    
+
     return Scaffold(
       body: Stack(
         children: [
@@ -101,38 +101,52 @@ class _StationDetailsViewState extends State<StationDetailsView> {
             top: 0,
             left: 0,
             right: 0,
-            height: screenHeight, // Full height to allow map to be visible when sheet collapses
+            height:
+                screenHeight, // Full height to allow map to be visible when sheet collapses
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
-                target: LatLng(widget.station.location?.lat ?? 0, widget.station.location?.lng ?? 0),
+                target: LatLng(
+                  widget.station.location?.lat ?? 0,
+                  widget.station.location?.lng ?? 0,
+                ),
                 zoom: 13,
               ),
               zoomControlsEnabled: false,
+              zoomGesturesEnabled: true,
+              scrollGesturesEnabled: true,
+              rotateGesturesEnabled: true,
+              tiltGesturesEnabled: true,
               myLocationButtonEnabled: false,
               myLocationEnabled: true,
               mapToolbarEnabled: false,
-              padding: EdgeInsets.only(bottom: _isMapInteracting ? 140 : screenHeight * 0.60), // Adjust attribution
+              padding: EdgeInsets.only(
+                bottom: _isMapInteracting ? 140 : screenHeight * 0.60,
+              ), // Adjust attribution
               markers: {
-                 Marker(
-                   markerId: MarkerId(widget.station.chargerId),
-                   position: LatLng(widget.station.location?.lat ?? 0, widget.station.location?.lng ?? 0),
-                   icon: widget.controller.getMarkerIcon(widget.station),
-                 ),
-                 if (_currentLoc != null)
-                   Marker(
-                      markerId: const MarkerId("current"),
-                      position: _currentLoc!,
-                      icon: widget.controller.getSourceIcon(),
-                   ),
-                 if (_sourceLoc != null && (_currentLoc == null || 
-                     (_sourceLoc!.latitude != _currentLoc!.latitude || 
-                      _sourceLoc!.longitude != _currentLoc!.longitude)))
-                   Marker(
-                      markerId: const MarkerId("route_start"),
-                      position: _sourceLoc!,
-                      icon: widget.controller.getSourceIcon(),
-                      infoWindow: const InfoWindow(title: "Start"),
-                   )
+                Marker(
+                  markerId: MarkerId(widget.station.chargerId),
+                  position: LatLng(
+                    widget.station.location?.lat ?? 0,
+                    widget.station.location?.lng ?? 0,
+                  ),
+                  icon: widget.controller.getMarkerIcon(widget.station),
+                ),
+                if (_currentLoc != null)
+                  Marker(
+                    markerId: const MarkerId("current"),
+                    position: _currentLoc!,
+                    icon: widget.controller.getSourceIcon(),
+                  ),
+                if (_sourceLoc != null &&
+                    (_currentLoc == null ||
+                        (_sourceLoc!.latitude != _currentLoc!.latitude ||
+                            _sourceLoc!.longitude != _currentLoc!.longitude)))
+                  Marker(
+                    markerId: const MarkerId("route_start"),
+                    position: _sourceLoc!,
+                    icon: widget.controller.getSourceIcon(),
+                    infoWindow: const InfoWindow(title: "Start"),
+                  ),
               },
               polylines: _polylines,
               onCameraMoveStarted: () {
@@ -147,11 +161,15 @@ class _StationDetailsViewState extends State<StationDetailsView> {
               },
               onMapCreated: (mapController) async {
                 // Calculate route when map is created
-                final bounds = await widget.controller.prepareRoute(widget.station);
+                final bounds = await widget.controller.prepareRoute(
+                  widget.station,
+                );
                 if (bounds != null) {
                   try {
-                     mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
-                  } catch(e) {
+                    mapController.animateCamera(
+                      CameraUpdate.newLatLngBounds(bounds, 50),
+                    );
+                  } catch (e) {
                     debugPrint("Error animating local map: $e");
                   }
                 }
@@ -176,7 +194,10 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                   ),
                   Row(
                     children: [
-                      _buildCircleButton(icon: Icons.favorite_border, onTap: () {}),
+                      _buildCircleButton(
+                        icon: Icons.favorite_border,
+                        onTap: () {},
+                      ),
                       const SizedBox(width: 12),
                       _buildCircleButton(icon: Icons.more_horiz, onTap: () {}),
                     ],
@@ -193,7 +214,10 @@ class _StationDetailsViewState extends State<StationDetailsView> {
             top: _isMapInteracting ? collapsedTop : defaultTop,
             left: 0,
             right: 0,
-            height: screenHeight - defaultTop + 50, // Ensure enough height to cover bottom area + buffer
+            height:
+                screenHeight -
+                defaultTop +
+                50, // Ensure enough height to cover bottom area + buffer
             child: _buildBottomContent(context),
           ),
         ],
@@ -201,7 +225,10 @@ class _StationDetailsViewState extends State<StationDetailsView> {
     );
   }
 
-  Widget _buildCircleButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildCircleButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -222,7 +249,6 @@ class _StationDetailsViewState extends State<StationDetailsView> {
   }
 
   Widget _buildBottomContent(BuildContext context) {
-    
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -238,286 +264,384 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                 // Dark Header Section
                 Container(
                   height: 160,
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  color: AppColors.primary, // Dark Navy/Black
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(30), bottom: Radius.circular(30)), 
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.station.name ?? "EV Station",
-                            style: GoogleFonts.poppins(
+                  padding: const EdgeInsets.all(24),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary, // Dark Navy/Black
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(30),
+                      bottom: Radius.circular(30),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
                               color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              shape: BoxShape.circle,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        // Battery % Mock
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.battery_charging_full, color: Colors.blueAccent, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                "14.4%",
-                                style: GoogleFonts.poppins(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        _buildDarkInfoItem("${widget.station.distance?.toStringAsFixed(1) ?? '--'} km", "Distance"),
-                        const SizedBox(width: 24),
-                        _buildDarkInfoItem("25 Mins", "Avg. Time"), // Mock time
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // White Body Section
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  color: Colors.transparent, // Background of parent is white
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "Overview",
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.station.name ?? "EV Station",
                               style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Address Card
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.location_on, color: Colors.black54),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      widget.station.location?.address ?? "Address Not Available",
-                                      style: GoogleFonts.poppins(color: Colors.black87, fontSize: 13),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            
-                            // Stats Grid
-                            Row(
-                              children: [
-                                 Expanded(child: _buildStatCard(Icons.bolt, "Super charge", "${widget.station.maxPowerKw} KW")),
-                                 const SizedBox(width: 12),
-                                 Expanded(child: _buildStatCard(Icons.local_parking, "Parking", "Free parking")),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 20),
-                            Text(
-                              "Connectors",
-                              style: GoogleFonts.poppins(
+                                color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 12),
-                            
-                            // Connector Selection List
-                            SizedBox(
-                              height: 90,
-                              child: widget.station.connectors.isEmpty 
-                                ? Center(child: Text("No connectors available", style: GoogleFonts.poppins(color: Colors.grey)))
-                                : ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: widget.station.connectors.length,
-                                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                                    itemBuilder: (context, index) {
-                                      final connector = widget.station.connectors[index];
-                                      return Obx(() {
-                                        final isSelected = widget.controller.selectedConnectorIds.contains(connector.connectorId.toString());
-                                        return GestureDetector(
-                                          onTap: () {
-                                            if (connector.connectorId != null) {
-                                              widget.controller.selectConnector(connector.connectorId.toString());
-                                            }
-                                          },
-                                          child: Container(
-                                            width: 100,
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? AppColors.primary : Colors.white,
-                                              borderRadius: BorderRadius.circular(16),
-                                              border: Border.all(
-                                                color: isSelected ? AppColors.primary : Colors.grey[300]!,
-                                                width: 1.5,
-                                              ),
-                                              boxShadow: isSelected ? [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.2),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 4),
-                                                )
-                                              ] : null,
-                                            ),
-                                            child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.electrical_services, 
-                                                  color: isSelected ? Colors.white : Colors.black54,
-                                                  size: 24,
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  connector.type ?? "Type 2",
-                                                  style: GoogleFonts.poppins(
-                                                    color: isSelected ? Colors.white : Colors.black87,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                Text(
-                                                  "${connector.maxPowerKw} kW",
-                                                  style: GoogleFonts.poppins(
-                                                    color: isSelected ? Colors.white70 : Colors.grey,
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      });
-                                    },
-                                  ),
+                          ),
+                          // Battery % Mock
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
-                      
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, -5),
-                                ),
-                              ],
+                              color: Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Row(
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          "\$${widget.station.costPerUnit ?? '0.0'}",
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        Text(
-                                          "/kwh",
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                const Icon(
+                                  Icons.battery_charging_full,
+                                  color: Colors.blueAccent,
+                                  size: 14,
                                 ),
-                                const SizedBox(height: 20),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 60,
-                                  child: SwipeButton(
-                                    onSwipe: () {
-                                      widget.controller.initiateCharging();
-                                    },
-                                    text: "Swipe to Start",
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                    icon: Icons.bolt,
-                                    height: 60,
+                                const SizedBox(width: 4),
+                                Text(
+                                  "14.4%",
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
                               ],
                             ),
                           ),
-                        ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          _buildDarkInfoItem(
+                            "${widget.station.distance?.toStringAsFixed(1) ?? '--'} km",
+                            "Distance",
+                          ),
+                          const SizedBox(width: 24),
+                          _buildDarkInfoItem(
+                            "25 Mins",
+                            "Avg. Time",
+                          ), // Mock time
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // White Body Section
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    color: Colors.transparent, // Background of parent is white
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 20,
+                    ),
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "Overview",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Address Card
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on,
+                                      color: Colors.black54,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        widget.station.location?.address ??
+                                            "Address Not Available",
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.black87,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Stats Grid
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      Icons.bolt,
+                                      "Super charge",
+                                      "${widget.station.maxPowerKw} KW",
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      Icons.local_parking,
+                                      "Parking",
+                                      "Free parking",
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+                              Text(
+                                "Connectors",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Connector Selection List
+                              SizedBox(
+                                height: 90,
+                                child: widget.station.connectors.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          "No connectors available",
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount:
+                                            widget.station.connectors.length,
+                                        separatorBuilder: (_, __) =>
+                                            const SizedBox(width: 12),
+                                        itemBuilder: (context, index) {
+                                          final connector =
+                                              widget.station.connectors[index];
+                                          return Obx(() {
+                                            final isSelected = widget
+                                                .controller
+                                                .selectedConnectorIds
+                                                .contains(
+                                                  connector.connectorId
+                                                      .toString(),
+                                                );
+                                            return GestureDetector(
+                                              onTap: () {
+                                                if (connector.connectorId !=
+                                                    null) {
+                                                  widget.controller
+                                                      .selectConnector(
+                                                        connector.connectorId
+                                                            .toString(),
+                                                      );
+                                                }
+                                              },
+                                              child: Container(
+                                                width: 100,
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected
+                                                      ? AppColors.primary
+                                                      : Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  border: Border.all(
+                                                    color: isSelected
+                                                        ? AppColors.primary
+                                                        : Colors.grey[300]!,
+                                                    width: 1.5,
+                                                  ),
+                                                  boxShadow: isSelected
+                                                      ? [
+                                                          BoxShadow(
+                                                            color: Colors.black
+                                                                .withValues(
+                                                                  alpha: 0.2,
+                                                                ),
+                                                            blurRadius: 8,
+                                                            offset:
+                                                                const Offset(
+                                                                  0,
+                                                                  4,
+                                                                ),
+                                                          ),
+                                                        ]
+                                                      : null,
+                                                ),
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.electrical_services,
+                                                      color: isSelected
+                                                          ? Colors.white
+                                                          : Colors.black54,
+                                                      size: 24,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      connector.type ??
+                                                          "Type 2",
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            color: isSelected
+                                                                ? Colors.white
+                                                                : Colors
+                                                                      .black87,
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    Text(
+                                                      "${connector.maxPowerKw} kW",
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            color: isSelected
+                                                                ? Colors.white70
+                                                                : Colors.grey,
+                                                            fontSize: 10,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          });
+                                        },
+                                      ),
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, -5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            "\$${widget.station.costPerUnit ?? '0.0'}",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          Text(
+                                            "/kwh",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 60,
+                                    child: SwipeButton(
+                                      onSwipe: () {
+                                        widget.controller.initiateCharging();
+                                      },
+                                      text: "Swipe to Start",
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      icon: Icons.bolt,
+                                      height: 60,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height:
+                                        MediaQuery.of(context).padding.bottom +
+                                        20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
 
         // Floating Car Image
         Positioned(
@@ -527,7 +651,8 @@ class _StationDetailsViewState extends State<StationDetailsView> {
           child: Image.asset(
             "assets/images/station_detaile_ev_station_img.png",
             fit: BoxFit.contain,
-            errorBuilder: (_,__,___) => const SizedBox.shrink(), // Hide if error
+            errorBuilder: (_, __, ___) =>
+                const SizedBox.shrink(), // Hide if error
           ),
         ),
       ],
@@ -548,10 +673,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
         ),
         Text(
           label,
-          style: GoogleFonts.poppins(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
@@ -582,11 +704,8 @@ class _StationDetailsViewState extends State<StationDetailsView> {
           ),
           Text(
             subtitle,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              color: Colors.grey[600],
-            ),
-             maxLines: 1,
+            style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey[600]),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ],

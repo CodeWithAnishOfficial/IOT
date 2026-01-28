@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:user_app/app/modules/home/controllers/home_controller.dart';
 import 'package:user_app/core/theme/app_colors.dart';
 
@@ -20,9 +21,24 @@ class StartChargingSheet extends StatefulWidget {
 class _StartChargingSheetState extends State<StartChargingSheet> {
   final TextEditingController amountController = TextEditingController();
   final List<double> quickAmounts = [100, 200, 500, 1000];
+  double? _selectedAmount;
+
+  @override
+  void initState() {
+    super.initState();
+    amountController.addListener(_onAmountChanged);
+  }
+
+  void _onAmountChanged() {
+    final val = double.tryParse(amountController.text);
+    setState(() {
+      _selectedAmount = val;
+    });
+  }
 
   @override
   void dispose() {
+    amountController.removeListener(_onAmountChanged);
     amountController.dispose();
     super.dispose();
   }
@@ -34,155 +50,199 @@ class _StartChargingSheetState extends State<StartChargingSheet> {
     final isDark = theme.brightness == Brightness.dark;
     
     // Define modern colors
-    final backgroundColor = isDark ? const Color(0xFF1E1E1E) : theme.cardColor;
-    final surfaceColor = isDark ? const Color(0xFF2C2C2C) : theme.cardColor; // Slightly lighter for inputs
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final backgroundColor = theme.scaffoldBackgroundColor;
+    final surfaceColor = theme.cardColor;
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final hintColor = theme.disabledColor;
     
     return Material(
       color: Colors.transparent, 
       child: Container(
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: surfaceColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
              BoxShadow(
-               color: Colors.black.withOpacity(0.3),
+               color: Colors.black.withOpacity(0.2),
                blurRadius: 20,
                offset: const Offset(0, -5),
              )
           ],
-          border: Border(
-            top: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-          ),
         ),
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             24,
-            24,
+            16,
             24,
             MediaQuery.of(context).viewInsets.bottom + 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+              // Drag Handle
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.dividerColor.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 24),
+              
+              // Header
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.bolt_rounded,
-                      color: AppColors.primary,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      "Start Charging",
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.bolt_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Start Charging",
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
                           ),
-                    ),
+                          Text(
+                            "Connector ID: ${widget.connectorId}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: textColor.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   IconButton(
                     onPressed: () => Get.back(),
-                    icon: Icon(Icons.close, color: theme.iconTheme.color),
+                    icon: Icon(Icons.close, color: textColor.withOpacity(0.6)),
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.dividerColor.withOpacity(0.1),
+                      padding: const EdgeInsets.all(8),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.only(left: 56), // Align with title text
-                child: Text(
-                  "Connector ID: ${widget.connectorId}",
-                  style: TextStyle(color: textColor.withOpacity(0.6)),
-                ),
-              ),
+              
               const SizedBox(height: 32),
 
+              // Input Label
               Text(
                 "Enter Amount",
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: textColor,
+                  color: textColor.withOpacity(0.8),
                 ),
               ),
               const SizedBox(height: 16),
+              
+              // Amount Input Field
               Container(
                 decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  color: theme.scaffoldBackgroundColor, // Slightly different background
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.3),
+                    width: 1.5,
+                  ),
                 ),
-                child: TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                  cursorColor: AppColors.primary,
-                  decoration: InputDecoration(
-                    prefixText: "₹ ",
-                    prefixStyle: TextStyle(
-                      color: textColor.withOpacity(0.7),
-                      fontSize: 28,
-                      fontWeight: FontWeight.w500,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "₹",
+                      style: GoogleFonts.poppins(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
                     ),
-                    hintText: "0",
-                    hintStyle: TextStyle(color: theme.hintColor.withOpacity(0.5)),
-                    filled: true,
-                    fillColor: Colors.transparent, // Handled by Container
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
+                    const SizedBox(width: 4),
+                    IntrinsicWidth(
+                      child: TextField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                        cursorColor: AppColors.primary,
+                        decoration: InputDecoration(
+                          hintText: "0",
+                          hintStyle: GoogleFonts.poppins(
+                            color: hintColor.withOpacity(0.3),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
+                      ),
                     ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+              const SizedBox(height: 24),
+              
+              // Quick Amount Chips
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
                 children: quickAmounts.map((amount) {
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ActionChip(
-                        label: Text("₹${amount.toInt()}"),
-                        labelStyle: TextStyle(
-                            color: textColor.withOpacity(0.9),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
+                  final isSelected = _selectedAmount == amount;
+                  return InkWell(
+                    onTap: () {
+                      amountController.text = amount.toInt().toString();
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : theme.scaffoldBackgroundColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : theme.dividerColor,
                         ),
-                        onPressed: () {
-                          amountController.text = amount.toInt().toString();
-                        },
-                        backgroundColor: surfaceColor,
-                        padding: const EdgeInsets.symmetric(vertical: 8), 
-                        side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
+                        boxShadow: isSelected ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ] : [],
+                      ),
+                      child: Text(
+                        "₹${amount.toInt()}",
+                        style: GoogleFonts.poppins(
+                          color: isSelected ? Colors.white : textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -191,6 +251,8 @@ class _StartChargingSheetState extends State<StartChargingSheet> {
               ),
 
               const SizedBox(height: 40),
+              
+              // Action Button
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -216,15 +278,19 @@ class _StartChargingSheetState extends State<StartChargingSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28), // Fully rounded
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    elevation: 8,
                     shadowColor: AppColors.primary.withOpacity(0.4),
                   ),
-                  child: const Text(
+                  child: Text(
                     "Pay & Start Session",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    style: GoogleFonts.poppins(
+                      fontSize: 16, 
+                      fontWeight: FontWeight.w600, 
+                      letterSpacing: 0.5
+                    ),
                   ),
                 ),
               ),

@@ -34,6 +34,10 @@ class LocateOnMapView extends GetView<HomeController> {
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
+            zoomGesturesEnabled: true,
+            scrollGesturesEnabled: true,
+            rotateGesturesEnabled: true,
+            tiltGesturesEnabled: true,
             onCameraMove: (position) {
               currentCenter.value = position.target;
             },
@@ -41,12 +45,7 @@ class LocateOnMapView extends GetView<HomeController> {
               controller.updatePickerAddress(currentCenter.value);
             },
             onMapCreated: (GoogleMapController mapController) {
-              // Load Dark Map Style
-              DefaultAssetBundle.of(context)
-                  .loadString('assets/map_styles/dark_map_style.json')
-                  .then((style) {
-                    mapController.setMapStyle(style);
-                  });
+              // Light Map Style (Default) - No custom style needed
             },
           ),
 
@@ -67,7 +66,7 @@ class LocateOnMapView extends GetView<HomeController> {
               width: 4,
               height: 4,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: Colors.black,
                 shape: BoxShape.circle,
               ),
             ),
@@ -81,12 +80,12 @@ class LocateOnMapView extends GetView<HomeController> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.black.withOpacity(0.1)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -96,7 +95,7 @@ class LocateOnMapView extends GetView<HomeController> {
                 children: [
                   GestureDetector(
                     onTap: () => Get.back(),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
+                    child: const Icon(Icons.arrow_back, color: Colors.black),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -111,7 +110,7 @@ class LocateOnMapView extends GetView<HomeController> {
                               width: 8,
                               height: 8,
                               decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                                color: AppColors.success,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -123,7 +122,7 @@ class LocateOnMapView extends GetView<HomeController> {
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 16,
-                                    color: Colors.white,
+                                    color: Colors.black,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -138,7 +137,7 @@ class LocateOnMapView extends GetView<HomeController> {
                               ? const LinearProgressIndicator(
                                   minHeight: 2,
                                   color: AppColors.primary,
-                                  backgroundColor: Colors.white10,
+                                  backgroundColor: Colors.black12,
                                 )
                               : const SizedBox(height: 2),
                         ),
@@ -168,13 +167,14 @@ class LocateOnMapView extends GetView<HomeController> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: 5,
                 ),
                 child: const Text(
                   "Confirm Location",
                   style: TextStyle(
-                    color: Colors.black,
+                    color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),

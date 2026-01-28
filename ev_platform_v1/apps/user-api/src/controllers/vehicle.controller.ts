@@ -9,12 +9,13 @@ export class VehicleController {
     try {
       // @ts-ignore
       const userId = req.user.email_id;
-      const { make, model, year, vin, plate_no, connector_type } = req.body;
+      // Support both model and modelName from frontend
+      const { make, model, modelName, year, vin, plate_no, connector_type } = req.body;
 
       const vehicle = await Vehicle.create({
         user_id: userId,
         make,
-        modelName: model,
+        modelName: modelName || model, // Use whichever is provided
         year,
         vin,
         plate_no,
@@ -24,7 +25,7 @@ export class VehicleController {
       res.status(201).json({ error: false, message: 'Vehicle added', data: vehicle });
     } catch (error: any) {
       logger.error('Error adding vehicle', error);
-      res.status(500).json({ error: true, message: error.message });
+      res.status(400).json({ error: true, message: error.message }); // Changed 500 to 400 for validation errors
     }
   }
 

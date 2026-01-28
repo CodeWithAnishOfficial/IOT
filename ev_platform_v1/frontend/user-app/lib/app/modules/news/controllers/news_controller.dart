@@ -1,97 +1,132 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class NewsController extends GetxController {
   final ScrollController scrollController = ScrollController();
-  final posts = <Map<String, dynamic>>[].obs;
-  final isLoading = false.obs;
-  final isMoreLoading = false.obs;
-  final hasMore = true.obs;
   
-  int _page = 1;
-  final int _limit = 5;
+  // Carousel Control
+  final PageController pageController = PageController(viewportFraction: 0.85);
+  final currentPage = 0.obs;
+  Timer? _carouselTimer;
+
+  // Data
+  final featuredNews = <Map<String, dynamic>>[].obs;
+  final latestNews = <Map<String, dynamic>>[].obs;
+  final isLoading = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchPosts();
-    scrollController.addListener(_scrollListener);
+    fetchNews();
+    _startAutoScroll();
   }
 
   @override
   void onClose() {
+    _carouselTimer?.cancel();
+    pageController.dispose();
     scrollController.dispose();
     super.dispose();
   }
 
-  void _scrollListener() {
-    if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 200) {
-      if (!isMoreLoading.value && hasMore.value) {
-        loadMorePosts();
+  void _startAutoScroll() {
+    _carouselTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (pageController.hasClients && featuredNews.isNotEmpty) {
+        int nextPage = currentPage.value + 1;
+        if (nextPage >= featuredNews.length) {
+          nextPage = 0;
+        }
+        pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+        );
+        currentPage.value = nextPage;
       }
-    }
+    });
   }
 
-  Future<void> fetchPosts() async {
+  Future<void> fetchNews() async {
     try {
       isLoading.value = true;
-      await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
-      
-      // Mock Data
-      final newPosts = List.generate(_limit, (index) => _generateMockPost(index));
-      posts.assignAll(newPosts);
-      
-      _page++;
+      await Future.delayed(const Duration(seconds: 1)); // Simulate delay
+
+      // Mock Featured News (Carousel)
+      featuredNews.assignAll([
+        {
+          "id": 1,
+          "title": "Temperature stable TS vs LFP: Social safe, prompted income response in whole body",
+          "category": "Science",
+          "image": "assets/images/ev-car-charging-screen-img.png", // Use placeholder or existing asset
+          "author": "Dr. Smith",
+          "time": "4h ago"
+        },
+        {
+          "id": 2,
+          "title": "New Solid State Batteries promise 1000km range",
+          "category": "Technology",
+          "image": "assets/images/ev-car-charging-screen-img.png",
+          "author": "Tech Daily",
+          "time": "6h ago"
+        },
+        {
+          "id": 3,
+          "title": "EV Sales hit record high in Q1 2024",
+          "category": "Business",
+          "image": "assets/images/ev-car-charging-screen-img.png",
+          "author": "Market Watch",
+          "time": "12h ago"
+        },
+      ]);
+
+      // Mock Latest News (List)
+      latestNews.assignAll([
+        {
+          "id": 4,
+          "title": "IND vs AUS: Green top or rank turner?",
+          "time": "14m ago",
+          "read_time": "3m read",
+          "image": "assets/images/logo.png", // Placeholder
+        },
+        {
+          "id": 5,
+          "title": "Scream VI Has the Jumps and Star Quality Cast But...",
+          "time": "21m ago",
+          "read_time": "5m read",
+          "image": "assets/images/logo.png",
+        },
+        {
+          "id": 6,
+          "title": "Dutch historian finds medieval treasure using metal detector",
+          "time": "1h ago",
+          "read_time": "4m read",
+          "image": "assets/images/logo.png",
+        },
+        {
+          "id": 7,
+          "title": "NASA's Artemis II mission to moon announces crew",
+          "time": "2h ago",
+          "read_time": "6m read",
+          "image": "assets/images/logo.png",
+        },
+        {
+          "id": 8,
+          "title": "Top 10 EV charging stations in Bangalore",
+          "time": "3h ago",
+          "read_time": "5m read",
+          "image": "assets/images/logo.png",
+        },
+      ]);
+
     } catch (e) {
-      print("Error fetching posts: $e");
+      print("Error fetching news: $e");
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> loadMorePosts() async {
-    try {
-      isMoreLoading.value = true;
-      await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
-
-      // Mock Data
-      final newPosts = List.generate(_limit, (index) => _generateMockPost(posts.length + index));
-      
-      if (newPosts.isEmpty) {
-        hasMore.value = false;
-      } else {
-        posts.addAll(newPosts);
-        _page++;
-      }
-      
-      // Stop infinite scroll for demo after 20 posts
-      if (posts.length >= 20) {
-        hasMore.value = false;
-      }
-
-    } catch (e) {
-      print("Error loading more posts: $e");
-    } finally {
-      isMoreLoading.value = false;
-    }
-  }
-
-  Map<String, dynamic> _generateMockPost(int index) {
-    return {
-      "id": index,
-      "username": "Quan EV Official",
-      "time": "${index + 2}h ago",
-      "likes": (index + 1) * 150,
-      "comments": (index + 1) * 12,
-      "caption": index % 2 == 0 
-          ? "Experience the thrill of silent power! ⚡ #EV #Future"
-          : "New fast charging stations live in your city. Check the map now! 🗺️",
-      "image_gradient": index % 3 == 0 
-          ? [const Color(0xFF2C3E50), const Color(0xFF000000)] // Dark Blue
-          : index % 3 == 1
-              ? [const Color(0xFF16222A), const Color(0xFF3A6073)] // Slate
-              : [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)], // Deep Space
-      "headline": index % 2 == 0 ? "THE FUTURE IS\nELECTRIC" : "CHARGE FASTER\nGO FURTHER",
-    };
+  void onPageChanged(int index) {
+    currentPage.value = index;
   }
 }

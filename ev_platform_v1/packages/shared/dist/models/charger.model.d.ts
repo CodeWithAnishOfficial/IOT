@@ -18,6 +18,9 @@ export interface ICharger extends Document {
     ip_address?: string;
     ocpp_username?: string;
     ocpp_password?: string;
+    owner_id?: number;
+    is_public?: boolean;
+    price_per_kwh?: number;
     connectors: Array<{
         connector_id: number;
         status: string;

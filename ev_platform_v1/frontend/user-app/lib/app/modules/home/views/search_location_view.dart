@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart'; // Add GoogleFonts
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:user_app/app/modules/home/controllers/home_controller.dart';
+import 'package:user_app/app/modules/dashboard/controllers/dashboard_controller.dart';
 import 'package:user_app/app/modules/home/views/locate_on_map_view.dart';
 import 'package:user_app/core/theme/app_theme.dart';
 import 'package:user_app/core/theme/app_colors.dart';
@@ -35,6 +36,12 @@ class SearchLocationView extends GetView<HomeController> {
   }
 
   Widget _buildTripPlannerLayout(BuildContext context, ThemeData theme, bool isDark, Color textColor, Color? cardColor, Color scaffoldColor) {
+    // Attempt to find DashboardController to toggle navbar visibility
+    DashboardController? dashboardController;
+    if (Get.isRegistered<DashboardController>()) {
+      dashboardController = Get.find<DashboardController>();
+    }
+
     // Initial position (Bangalore/India fallback)
     final initialPos = controller.currentLocation.value != null
         ? LatLng(
@@ -64,6 +71,14 @@ class SearchLocationView extends GetView<HomeController> {
             onMapCreated: (GoogleMapController mapController) {
               controller.onTripMapCreated(mapController);
             },
+            onCameraMoveStarted: () {
+              controller.isTripMapDragging.value = true;
+              dashboardController?.isNavBarVisible.value = false;
+            },
+            onCameraIdle: () {
+              controller.isTripMapDragging.value = false;
+              dashboardController?.isNavBarVisible.value = true;
+            },
           )),
 
           // Back Button Area - Only show if from Saved Trips
@@ -75,32 +90,41 @@ class SearchLocationView extends GetView<HomeController> {
                 backgroundColor: isDark ? Colors.black54 : Colors.white,
                 child: IconButton(
                   icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
-                  onPressed: () => Get.back(),
+                  onPressed: () {
+                    if (isSavedTripMode) {
+                      controller.cancelSavedTrip();
+                    }
+                    Get.back();
+                  },
                 ),
               ),
             ),
 
           // 2. Bottom Sheet Card
-          Positioned(
+          Obx(() => AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             left: 0,
             right: 0,
-            bottom: 0,
-            child: Obx(() {
-               if (controller.selectedStation.value != null) {
-                 return _buildStationDetailCard(context, theme, isDark);
-               }
-               if (controller.tripPolylines.isNotEmpty) {
-                 return _buildTripItinerarySheet(context, theme, isDark);
-               }
-               return _buildPlanningSheet(context, theme, isDark);
+            bottom: controller.isTripMapDragging.value ? -600 : -20,
+            child: Builder(builder: (context) {
+              if (controller.selectedStation.value != null) {
+                return _buildStationDetailCard(context, theme, isDark);
+              }
+              if (controller.tripPolylines.isNotEmpty) {
+                return _buildTripItinerarySheet(context, theme, isDark);
+              }
+              return _buildPlanningSheet(context, theme, isDark);
             }),
-          ),
+          )),
 
           // Current Location Button (Flexible Positioning)
           Obx(() {
             double bottomPos = 480; // Default for planning sheet
 
-            if (controller.tripPolylines.isNotEmpty) {
+            if (controller.isTripMapDragging.value) {
+              bottomPos = -100; // Hide to bottom when dragging
+            } else if (controller.tripPolylines.isNotEmpty) {
               // Itinerary Sheet (Minimized/Expanded)
               // Minimized: 120 (height) + 110 (margin) + 20 (padding) = 250
               // Expanded: 450 (height) + 110 (margin) + 20 (padding) = 580
@@ -108,7 +132,12 @@ class SearchLocationView extends GetView<HomeController> {
             } else if (controller.selectedStation.value != null) {
               // Station Detail Card
               // Margin 120 + Content ~180 + Padding 20 = 320
-              bottomPos = 320;
+              // Increased to 380 to be safely above the larger station card
+              bottomPos = 380;
+            } else {
+              // Planning Sheet (Initial State)
+              // Sheet height ~400 + 100 margin -> bottomPos ~500
+              bottomPos = 520; 
             }
 
             return AnimatedPositioned(
@@ -140,92 +169,146 @@ class SearchLocationView extends GetView<HomeController> {
     final isAdded = controller.tripStops.any((s) => s.chargerId == station.chargerId);
     
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: EdgeInsets.fromLTRB(16, 16, 16, isSavedTripMode ? 16 : 120), // Increased bottom margin for footer only if embedded
+      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.fromLTRB(16, 16, 16, isSavedTripMode ? 16 : 120), // Float above nav bar
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
-           BoxShadow(color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.1), blurRadius: 10),
+           BoxShadow(
+             color: Colors.black.withOpacity(0.1),
+             blurRadius: 20,
+             offset: const Offset(0, 10),
+           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+           // Header Row
            Row(
+             crossAxisAlignment: CrossAxisAlignment.start,
              children: [
                Expanded(
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
+                 child: Text(
+                   station.name ?? "Unknown Station",
+                   style: GoogleFonts.poppins(
+                     fontSize: 18,
+                     fontWeight: FontWeight.w600,
+                     color: theme.colorScheme.onSurface,
+                   ),
+                   maxLines: 2,
+                   overflow: TextOverflow.ellipsis,
+                 ),
+               ),
+               const SizedBox(width: 8),
+               InkWell(
+                 onTap: () => controller.deselectStation(),
+                 child: Container(
+                   padding: const EdgeInsets.all(4),
+                   decoration: BoxDecoration(
+                     color: theme.dividerColor.withOpacity(0.1),
+                     shape: BoxShape.circle,
+                   ),
+                   child: Icon(Icons.close, size: 20, color: theme.iconTheme.color),
+                 ),
+               ),
+             ],
+           ),
+           const SizedBox(height: 4),
+           // Address
+           Text(
+             station.location?.address ?? "Address not available",
+             style: GoogleFonts.poppins(
+               fontSize: 13,
+               color: Colors.grey,
+             ),
+             maxLines: 2,
+             overflow: TextOverflow.ellipsis,
+           ),
+           const SizedBox(height: 20),
+           
+           // Status & Distance
+           Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+               Container(
+                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                 decoration: BoxDecoration(
+                   color: Colors.green.withOpacity(0.1),
+                   borderRadius: BorderRadius.circular(20),
+                 ),
+                 child: Row(
                    children: [
+                     const Icon(Icons.check_circle, color: Colors.green, size: 14),
+                     const SizedBox(width: 6),
                      Text(
-                       station.name ?? "Unknown Station",
-                       style: TextStyle(
-                         fontSize: 16,
-                         fontWeight: FontWeight.bold,
-                         color: theme.colorScheme.onSurface,
-                       ),
-                       maxLines: 1,
-                       overflow: TextOverflow.ellipsis,
-                     ),
-                     const SizedBox(height: 4),
-                     Text(
-                       station.location?.address ?? "",
-                       style: TextStyle(
+                       "Available",
+                       style: GoogleFonts.poppins(
+                         color: Colors.green,
+                         fontWeight: FontWeight.w600,
                          fontSize: 12,
-                         color: theme.textTheme.bodySmall?.color,
                        ),
-                       maxLines: 1,
-                       overflow: TextOverflow.ellipsis,
                      ),
                    ],
                  ),
                ),
-               IconButton(
-                 icon: Icon(Icons.close, color: theme.iconTheme.color?.withOpacity(0.5)),
-                 onPressed: () => controller.deselectStation(),
+               Text(
+                 "${station.distance?.toStringAsFixed(1) ?? '--'} kms",
+                 style: GoogleFonts.poppins(
+                   color: Colors.grey,
+                   fontSize: 13,
+                   fontWeight: FontWeight.w500
+                 ),
                ),
              ],
            ),
-           Divider(color: theme.dividerColor),
-           Row(
-             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-             children: [
-               // Status
-               Row(
-                 children: [
-                   const Icon(Icons.check_circle, color: Colors.green, size: 16),
-                   const SizedBox(width: 4),
-                   const Text("Available", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
-                 ],
-               ),
-               // Distance (Mock)
-               Text("${station.distance?.toStringAsFixed(1) ?? '--'} kms", style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 12)),
-             ],
-           ),
-           const SizedBox(height: 16),
+           const SizedBox(height: 20),
+           
+           // Action Button
            SizedBox(
              width: double.infinity,
+             height: 52,
              child: ElevatedButton(
                onPressed: () {
                  if (isAdded) {
                    controller.tripStops.removeWhere((s) => s.chargerId == station.chargerId);
-                   Get.snackbar("Removed", "Station removed from trip", colorText: Colors.white, backgroundColor: Colors.red);
+                   Get.snackbar(
+                      "Removed", 
+                      "Station removed from trip",
+                      colorText: Colors.white, 
+                      backgroundColor: Colors.red,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 12,
+                      snackPosition: SnackPosition.TOP
+                   );
                  } else {
                    controller.tripStops.add(station);
-                   Get.snackbar("Added", "Station added to trip", colorText: Colors.white, backgroundColor: Colors.green);
+                   Get.snackbar(
+                      "Added", 
+                      "Station added to trip", 
+                      colorText: Colors.white, 
+                      backgroundColor: Colors.green,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 12,
+                      snackPosition: SnackPosition.TOP
+                   );
                  }
                  controller.deselectStation(); // Close card
                },
                style: ElevatedButton.styleFrom(
-                 backgroundColor: isAdded ? Colors.red : Colors.deepOrange,
-                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                 backgroundColor: isAdded ? Colors.redAccent : const Color(0xFFFF6B00),
+                 elevation: 0,
+                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                ),
                child: Text(
                  isAdded ? "Remove station" : "Add station",
-                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                 style: GoogleFonts.poppins(
+                   color: Colors.white,
+                   fontSize: 16,
+                   fontWeight: FontWeight.w600,
+                 ),
                ),
              ),
            ),
@@ -284,6 +367,15 @@ class SearchLocationView extends GetView<HomeController> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                   onPressed: controller.currentSavedTripId.value != null 
+                     ? null 
+                     : () => _showSaveTripDialog(context),
+                   icon: Icon(
+                     controller.currentSavedTripId.value != null ? Icons.bookmark : Icons.bookmark_border,
+                     color: theme.iconTheme.color,
+                   ),
                 ),
                 IconButton(
                   icon: Icon(
@@ -386,9 +478,15 @@ class SearchLocationView extends GetView<HomeController> {
                               child: SizedBox(
                                 height: 50,
                                 child: OutlinedButton(
-                                  onPressed: controller.clearSearch,
+                                  onPressed: () {
+                                    if (isSavedTripMode) {
+                                      controller.cancelSavedTrip();
+                                      Get.back();
+                                    } else {
+                                      controller.clearSearch();
+                                    }
+                                  },
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.red, 
                                     side: const BorderSide(color: Colors.red),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -397,7 +495,7 @@ class SearchLocationView extends GetView<HomeController> {
                                   child: const Text(
                                     "Cancel",
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.red,
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -405,26 +503,7 @@ class SearchLocationView extends GetView<HomeController> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            // SAVE BUTTON
-                            SizedBox(
-                                height: 50,
-                                width: 50,
-                                child: IconButton(
-                                   onPressed: controller.currentSavedTripId.value != null 
-                                     ? null // Disable if already saved (loaded from saved)
-                                     : () => _showSaveTripDialog(context),
-                                   icon: Icon(
-                                     controller.currentSavedTripId.value != null ? Icons.bookmark : Icons.bookmark_border,
-                                     color: Colors.white,
-                                   ),
-                                   style: IconButton.styleFrom(
-                                     backgroundColor: const Color(0xFF333333),
-                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                   ),
-                                ),
-                            ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: SizedBox(
                                 height: 50,
@@ -441,7 +520,7 @@ class SearchLocationView extends GetView<HomeController> {
                                   child: const Text(
                                     "Start",
                                     style: TextStyle(
-                                      color: Colors.black,
+                                      color: Colors.white,
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -463,49 +542,87 @@ class SearchLocationView extends GetView<HomeController> {
 
   void _showSaveTripDialog(BuildContext context) {
       final textController = TextEditingController();
-      Get.dialog(
-         Dialog(
-            backgroundColor: const Color(0xFF1E1E1E),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-               padding: const EdgeInsets.all(20),
-               child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                      Text("Save Trip", style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
-                      TextField(
-                          controller: textController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                              hintText: "Enter trip name",
-                              hintStyle: const TextStyle(color: Colors.white30),
-                              filled: true,
-                              fillColor: Colors.black12,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                          ),
+      final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
+
+      Get.bottomSheet(
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: theme.dividerColor)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black26,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Save Trip",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: textController,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Trip Name',
+                    hintText: "Enter trip name",
+                    prefixIcon: const Icon(Icons.bookmark_border),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (textController.text.isNotEmpty) {
+                        Get.back();
+                        controller.saveCurrentTrip(textController.text);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 24),
-                      Row(
-                          children: [
-                              Expanded(child: OutlinedButton(onPressed: () => Get.back(), child: const Text("Cancel", style: TextStyle(color: Colors.white)))),
-                              const SizedBox(width: 16),
-                              Expanded(child: ElevatedButton(
-                                  onPressed: () {
-                                      if (textController.text.isNotEmpty) {
-                                          Get.back();
-                                          controller.saveCurrentTrip(textController.text);
-                                      }
-                                  },
-                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                                  child: const Text("Save", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                              )),
-                          ]
-                      )
-                  ],
-               ),
+                    ),
+                    child: Text(
+                      "Save Trip",
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-         ),
+          ),
+        ),
+        isScrollControlled: true,
       );
   }
 
@@ -661,18 +778,25 @@ class SearchLocationView extends GetView<HomeController> {
                                         child: ValueListenableBuilder<TextEditingValue>(
                                           valueListenable: controller.sourceController,
                                           builder: (context, value, child) {
-                                            return Text(
-                                              value.text.isEmpty 
-                                                  ? "Current Location" 
-                                                  : value.text,
-                                              style: TextStyle(
-                                                color: theme.colorScheme.onSurface,
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            );
+                                            return Obx(() {
+                                              final currentAddr = controller.currentAddress.value;
+                                              final displayText = value.text.isEmpty
+                                                  ? (currentAddr.isNotEmpty && currentAddr != "Locating..."
+                                                      ? currentAddr
+                                                      : "Current Location")
+                                                  : value.text;
+
+                                              return Text(
+                                                displayText,
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.onSurface,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              );
+                                            });
                                           },
                                         ),
                                       ),
@@ -894,7 +1018,10 @@ class SearchLocationView extends GetView<HomeController> {
                             _buildInputRow(
                               context: context,
                               controller: controller.sourceController,
-                              hint: "Current Location",
+                              hint: controller.currentAddress.value.isNotEmpty &&
+                                      controller.currentAddress.value != "Locating..."
+                                  ? controller.currentAddress.value
+                                  : "Current Location",
                               icon: Icons.my_location,
                               iconColor: Colors.blue,
                               isSource: true,

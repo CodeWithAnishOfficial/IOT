@@ -23,6 +23,11 @@ export interface ICharger extends Document {
   ip_address?: string;
   ocpp_username?: string; // Usually same as charger_id
   ocpp_password?: string; // Basic Auth Password / Secret Key
+
+  // Commercialization
+  owner_id?: number; // Reference to User (owner)
+  is_public?: boolean; // Available for public use
+  price_per_kwh?: number; // Price set by owner
   
   connectors: Array<{
     connector_id: number;
@@ -57,6 +62,11 @@ const ChargerSchema: Schema = new Schema({
   ip_address: { type: String },
   ocpp_username: { type: String },
   ocpp_password: { type: String }, // Should be hashed in prod, but keeping plain for display if requested
+
+  // Commercialization
+  owner_id: { type: Number }, // Matches User.user_id
+  is_public: { type: Boolean, default: false },
+  price_per_kwh: { type: Number },
 
   connectors: [{
     connector_id: { type: Number, required: true },

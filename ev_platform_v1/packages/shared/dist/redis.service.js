@@ -13,7 +13,7 @@ class RedisService {
     logger;
     constructor() {
         this.logger = new logger_1.Logger('RedisService');
-        const redisUrl = process.env.REDIS_URL || 'redis://192.168.0.25:6379';
+        const redisUrl = process.env.REDIS_URL || 'redis://64.227.181.90:6379';
         this.pub = new ioredis_1.default(redisUrl);
         this.sub = new ioredis_1.default(redisUrl);
     }

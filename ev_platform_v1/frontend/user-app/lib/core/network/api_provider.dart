@@ -199,9 +199,17 @@ class ApiProvider {
         errorMessage = body['error'];
       }
     } catch (_) {
+      debugPrint(
+        'ApiProvider: Failed to decode error response (Status ${response.statusCode}). Body: ${response.body}',
+      );
       if (response.body.isNotEmpty) {
-        // Don't show raw HTML or code to user
-        errorMessage = 'An unexpected error occurred.';
+        // If it's a 404 and not JSON, it's likely a wrong route
+        if (response.statusCode == 404) {
+          errorMessage = '404: Endpoint not found';
+        } else {
+          errorMessage =
+              'An unexpected error occurred (Status ${response.statusCode})';
+        }
       }
     }
 

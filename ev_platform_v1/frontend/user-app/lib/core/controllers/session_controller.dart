@@ -59,6 +59,18 @@ class SessionController extends GetxController {
     isLoggedIn.value = true;
   }
 
+  // Update specific user info
+  Future<void> updateUserInfo({String? username, String? email}) async {
+    if (username != null) {
+      this.username.value = username;
+      await prefs.setString('username', username);
+    }
+    if (email != null) {
+      this.emailId.value = email;
+      await prefs.setString('emailId', email);
+    }
+  }
+
   // Clear session data
   Future<void> clearSession() async {
     await prefs.clear();

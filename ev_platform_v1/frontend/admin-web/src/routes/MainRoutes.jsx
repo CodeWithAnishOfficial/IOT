@@ -13,6 +13,7 @@ const SavedTripsList = Loadable(lazy(() => import('pages/users/SavedTripsList'))
 const RolesList = Loadable(lazy(() => import('pages/users/RolesList')));
 const SitesList = Loadable(lazy(() => import('pages/infrastructure/SitesList')));
 const ChargersList = Loadable(lazy(() => import('pages/infrastructure/ChargersList')));
+const CommercialChargers = Loadable(lazy(() => import('pages/infrastructure/CommercialChargers')));
 const SessionsList = Loadable(lazy(() => import('pages/operations/SessionsList')));
 const RemoteCommands = Loadable(lazy(() => import('pages/operations/RemoteCommands')));
 const SystemMonitor = Loadable(lazy(() => import('pages/operations/SystemMonitor')));
@@ -81,6 +82,10 @@ const MainRoutes = {
     {
       path: 'chargers',
       element: <ChargersList />
+    },
+    {
+      path: 'commercial-chargers',
+      element: <CommercialChargers />
     },
     {
       path: 'chargers/sessions',

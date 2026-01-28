@@ -14,6 +14,9 @@ import 'package:user_app/app/modules/vehicles/views/vehicles_view.dart';
 import 'package:user_app/app/modules/session_history/views/session_view.dart';
 import 'package:user_app/app/modules/support/views/support_view.dart';
 import 'package:user_app/app/modules/reservation/views/reservation_view.dart';
+import 'package:user_app/app/modules/trip/views/saved_trips_view.dart';
+import 'package:user_app/app/modules/commercial/views/commercial_view.dart';
+import 'package:user_app/app/modules/commercial/controllers/commercial_controller.dart';
 
 // Controllers
 import 'package:user_app/app/modules/auth/controllers/auth_controller.dart';
@@ -24,7 +27,8 @@ import 'package:user_app/app/modules/wallet/controllers/wallet_controller.dart';
 import 'package:user_app/app/modules/vehicles/controllers/vehicles_controller.dart';
 import 'package:user_app/app/modules/session_history/controllers/session_history_controller.dart';
 import 'package:user_app/app/modules/support/controllers/support_controller.dart';
-
+import 'package:user_app/app/modules/trip/views/trip_view.dart';
+import 'package:user_app/app/modules/trip/bindings/trip_binding.dart';
 
 class AppPages {
   static const INITIAL = Routes.INITIAL;
@@ -113,6 +117,26 @@ class AppPages {
       name: Routes.RESERVATIONS,
       page: () => const ReservationView(),
       // ReservationController?
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: Routes.TRIP_PLANNER,
+      page: () => const TripView(),
+      binding: TripBinding(),
+      transition: Transition.downToUp,
+    ),
+    GetPage(
+      name: Routes.SAVED_TRIPS,
+      page: () => const SavedTripsView(),
+      binding: TripBinding(), 
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: Routes.COMMERCIALIZATION,
+      page: () => const CommercialView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut(() => CommercialController());
+      }),
       transition: Transition.rightToLeft,
     ),
   ];

@@ -40,7 +40,7 @@ const WalletTransactionSchema = new mongoose_1.Schema({
     user_id: { type: String, required: true },
     amount: { type: Number, required: true },
     type: { type: String, enum: ['credit', 'debit'], required: true },
-    source: { type: String, enum: ['razorpay', 'refund', 'charging_session'], required: true },
+    source: { type: String, enum: ['razorpay', 'refund', 'charging_session', 'earnings'], required: true },
     reference_id: { type: String },
     status: { type: String, enum: ['success', 'failed', 'pending'], default: 'pending' },
     created_at: { type: Date, default: Date.now }

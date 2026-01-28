@@ -18,6 +18,7 @@ const reservation_routes_1 = __importDefault(require("./routes/reservation.route
 const vehicle_routes_1 = __importDefault(require("./routes/vehicle.routes"));
 const support_routes_1 = __importDefault(require("./routes/support.routes"));
 const charging_routes_1 = __importDefault(require("./routes/charging.routes"));
+const commercial_routes_1 = __importDefault(require("./routes/commercial.routes"));
 const saved_trips_routes_1 = __importDefault(require("./routes/saved_trips.routes"));
 const billing_service_1 = require("./services/billing.service");
 const sse_service_1 = require("./services/sse.service");
@@ -30,7 +31,7 @@ dotenv_1.default.config();
 const logger = new shared_2.Logger('User-API');
 const app = (0, express_1.default)();
 const PORT = process.env.USER_API_PORT ? parseInt(process.env.USER_API_PORT) : 3001;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.0.25:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
 const JWT_SECRET = process.env.JWT_SECRET || 'ev-platform-secret-key';
 // Prometheus Metrics
 const collectDefaultMetrics = prom_client_1.default.collectDefaultMetrics;
@@ -47,6 +48,7 @@ app.use('/reservations', reservation_routes_1.default);
 app.use('/vehicles', vehicle_routes_1.default);
 app.use('/support', support_routes_1.default);
 app.use('/charging', charging_routes_1.default);
+app.use('/commercial', commercial_routes_1.default);
 app.use('/saved-trips', saved_trips_routes_1.default);
 app.get('/metrics', async (req, res) => {
     res.set('Content-Type', prom_client_1.default.register.contentType);

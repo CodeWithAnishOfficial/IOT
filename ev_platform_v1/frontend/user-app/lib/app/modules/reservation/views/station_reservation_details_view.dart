@@ -51,6 +51,10 @@ class _StationReservationDetailsViewState extends State<StationReservationDetail
                 zoom: 15,
               ),
               zoomControlsEnabled: false,
+              zoomGesturesEnabled: true,
+              scrollGesturesEnabled: true,
+              rotateGesturesEnabled: true,
+              tiltGesturesEnabled: true,
               myLocationButtonEnabled: false,
               // Adjusted padding to center marker optically in the top space
               padding: EdgeInsets.only(bottom: _isMapInteracting ? 140 : screenHeight * 0.50),

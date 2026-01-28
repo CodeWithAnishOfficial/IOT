@@ -6,7 +6,16 @@ const logger = new Logger('ChargerController');
 export class ChargerController {
   static async getAllChargers(req: Request, res: Response) {
     try {
-      const chargers = await Charger.find();
+      const { type } = req.query;
+      let query = {};
+      
+      if (type === 'commercial') {
+        query = { owner_id: { $exists: true, $ne: null } };
+      } else if (type === 'platform') {
+        query = { owner_id: { $in: [null, undefined] } };
+      }
+
+      const chargers = await Charger.find(query).populate('site_id');
       res.json({ error: false, data: chargers });
     } catch (error: any) {
       logger.error('Error fetching chargers', error);

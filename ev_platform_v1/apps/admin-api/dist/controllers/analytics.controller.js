@@ -175,6 +175,8 @@ class AnalyticsController {
                         email: user.email_id,
                         phone_no: user.phone_no,
                         wallet_bal: user.wallet_bal,
+                        role_id: user.role_id,
+                        rfid_tag: user.rfid_tag,
                         status: user.status,
                         created_at: user.created_at
                     },

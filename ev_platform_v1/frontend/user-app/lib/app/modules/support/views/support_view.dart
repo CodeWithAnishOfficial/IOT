@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:user_app/app/modules/support/domain/models/support_ticket.dart';
+import 'package:user_app/core/widgets/shimmer/shimmer_box.dart';
+import 'package:user_app/core/theme/app_colors.dart';
 import '../controllers/support_controller.dart';
 import 'create_ticket_sheet.dart';
 import 'ticket_chat_view.dart';
@@ -18,7 +22,11 @@ class SupportView extends GetView<SupportController> {
       appBar: AppBar(
         title: Text(
           'Help & Support',
-          style: TextStyle(color: theme.textTheme.titleLarge?.color),
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: theme.textTheme.titleLarge?.color,
+          ),
         ),
         centerTitle: true,
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -29,9 +37,9 @@ class SupportView extends GetView<SupportController> {
         onPressed: () {
           Get.bottomSheet(const CreateTicketSheet(), isScrollControlled: true);
         },
-        label: const Text(
+        label: Text(
           'New Ticket',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         icon: const Icon(Icons.add),
         backgroundColor: theme.primaryColor,
@@ -39,7 +47,11 @@ class SupportView extends GetView<SupportController> {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
+           return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: 5,
+            itemBuilder: (context, index) => _buildShimmerItem(context),
+          );
         }
 
         if (controller.tickets.isEmpty) {
@@ -51,7 +63,7 @@ class SupportView extends GetView<SupportController> {
                 const SizedBox(height: 16),
                 Text(
                   'No support tickets yet',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: theme.textTheme.bodyLarge?.color,
@@ -60,7 +72,7 @@ class SupportView extends GetView<SupportController> {
                 const SizedBox(height: 8),
                 Text(
                   'Need help? Create a new ticket below.',
-                  style: TextStyle(color: theme.textTheme.bodySmall?.color),
+                  style: GoogleFonts.poppins(color: theme.textTheme.bodySmall?.color),
                 ),
               ],
             ),
@@ -70,12 +82,7 @@ class SupportView extends GetView<SupportController> {
         return RefreshIndicator(
           onRefresh: () => controller.fetchTickets(),
           child: ListView.builder(
-            padding: const EdgeInsets.only(
-              bottom: 80,
-              top: 16,
-              left: 16,
-              right: 16,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             itemCount: controller.tickets.length,
             itemBuilder: (context, index) {
               final ticket = controller.tickets[index];
@@ -89,93 +96,129 @@ class SupportView extends GetView<SupportController> {
 
   Widget _buildTicketCard(BuildContext context, SupportTicket ticket) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isOpen = ticket.status.toLowerCase() == 'open';
     
-    return Card(
-      elevation: 2,
-      color: theme.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () {
-          Get.to(() => TicketChatView(ticketId: ticket.ticketId));
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return GestureDetector(
+      onTap: () {
+        Get.to(() => TicketChatView(ticketId: ticket.ticketId));
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Date Box
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isOpen 
+                    ? AppColors.success.withOpacity(0.1) 
+                    : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
                 children: [
-                  _buildStatusChip(context, ticket.status),
                   Text(
-                    _formatDate(ticket.createdAt),
-                    style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
+                    DateFormat('MMM').format(ticket.createdAt).toUpperCase(),
+                    style: GoogleFonts.orbitron(
+                      color: isOpen ? AppColors.success : Colors.grey,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('dd').format(ticket.createdAt),
+                    style: GoogleFonts.poppins(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                ticket.subject,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textTheme.titleMedium?.color,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                ticket.description,
-                style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 14),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              Divider(color: theme.dividerColor),
-              const SizedBox(height: 4),
-              Row(
+            ),
+            
+            const SizedBox(width: 16),
+            
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.folder_outlined,
-                    size: 16,
-                    color: theme.iconTheme.color?.withOpacity(0.5),
-                  ),
-                  const SizedBox(width: 4),
                   Text(
-                    ticket.category,
-                    style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 12),
+                    ticket.subject,
+                    style: GoogleFonts.poppins(
+                      color: theme.textTheme.titleMedium?.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
-                        Icons.chat_bubble_outline,
-                        size: 16,
-                        color: theme.iconTheme.color?.withOpacity(0.5),
-                      ),
+                      Icon(Icons.folder_outlined, size: 12, color: theme.textTheme.bodySmall?.color),
                       const SizedBox(width: 4),
-                      Text(
-                        '${ticket.responses.length} msg',
-                        style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color,
-                          fontSize: 12,
+                      Expanded(
+                        child: Text(
+                          "${ticket.category} • #${ticket.ticketId}",
+                          style: GoogleFonts.poppins(
+                            color: theme.textTheme.bodySmall?.color,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: theme.disabledColor,
-                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            
+            const SizedBox(width: 8),
+
+            // Status
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (ticket.responses.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.chat_bubble_outline, size: 12, color: theme.primaryColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${ticket.responses.length}",
+                          style: GoogleFonts.poppins(
+                            color: theme.primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                _buildStatusChip(context, ticket.status),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -187,15 +230,15 @@ class SupportView extends GetView<SupportController> {
 
     switch (status.toLowerCase()) {
       case 'open':
-        color = Colors.greenAccent[400]!;
-        bgColor = Colors.green.withOpacity(0.1);
+        color = AppColors.success;
+        bgColor = AppColors.success.withOpacity(0.1);
         break;
       case 'closed':
-        color = Colors.grey[400]!;
+        color = Colors.grey;
         bgColor = Colors.grey.withOpacity(0.1);
         break;
       default:
-        color = Colors.orangeAccent[400]!;
+        color = Colors.orange;
         bgColor = Colors.orange.withOpacity(0.1);
     }
 
@@ -203,22 +246,74 @@ class SupportView extends GetView<SupportController> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           color: color,
           fontSize: 10,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
         ),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  Widget _buildShimmerItem(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ShimmerBox(
+              width: 50,
+              height: 60,
+              borderRadius: 16,
+              baseColor: isDark ? Colors.white10 : Colors.grey[200],
+              highlightColor: isDark ? Colors.white24 : Colors.grey[100],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(
+                    width: 120,
+                    height: 16,
+                    baseColor: isDark ? Colors.white10 : Colors.grey[200],
+                    highlightColor: isDark ? Colors.white24 : Colors.grey[100],
+                  ),
+                  const SizedBox(height: 8),
+                  ShimmerBox(
+                    width: double.infinity,
+                    height: 12,
+                    baseColor: isDark ? Colors.white10 : Colors.grey[200],
+                    highlightColor: isDark ? Colors.white24 : Colors.grey[100],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            ShimmerBox(width: 50, height: 20, borderRadius: 8),
+          ],
+        ),
+      ),
+    );
   }
 }

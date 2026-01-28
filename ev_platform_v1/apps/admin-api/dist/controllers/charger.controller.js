@@ -6,7 +6,15 @@ const logger = new shared_1.Logger('ChargerController');
 class ChargerController {
     static async getAllChargers(req, res) {
         try {
-            const chargers = await shared_1.Charger.find();
+            const { type } = req.query;
+            let query = {};
+            if (type === 'commercial') {
+                query = { owner_id: { $exists: true, $ne: null } };
+            }
+            else if (type === 'platform') {
+                query = { owner_id: { $in: [null, undefined] } };
+            }
+            const chargers = await shared_1.Charger.find(query).populate('site_id');
             res.json({ error: false, data: chargers });
         }
         catch (error) {
