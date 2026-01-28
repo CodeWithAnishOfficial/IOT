@@ -6,6 +6,10 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Route: GET /charging/active-session
+// Description: Get current active session
+router.get('/active-session', ChargingController.getActiveSession);
+
 // Route: GET /charging/history
 // Description: Get charging history
 router.get('/history', ChargingController.getHistory);

@@ -17,6 +17,8 @@ const ws = new WebSocket(BACKEND_URL, 'ocpp1.6', options);
 
 let messageId = 1;
 let heartbeatInterval;
+let meterInterval;
+let currentMeterValue = 0;
 let transactionId = 0;
 const pendingRequests = new Map();
 
@@ -97,10 +99,16 @@ ws.on('message', function incoming(data) {
             sendStatusNotification(1, 'Charging');
             
             // Start Meter Values loop
-            setTimeout(() => sendMeterValues(transactionId), 5000);
+            currentMeterValue = 0;
+            if (meterInterval) clearInterval(meterInterval);
             
-            // Stop Transaction after 10s
-            setTimeout(() => sendStopTransaction(transactionId), 10000);
+            meterInterval = setInterval(() => {
+                currentMeterValue += 10; // Increment by 10Wh every 5s (~7.2kW)
+                sendMeterValues(transactionId, currentMeterValue);
+            }, 5000);
+            
+            // Stop Transaction after 1 hour (failsafe)
+            // setTimeout(() => sendStopTransaction(transactionId, 'TAG001', currentMeterValue), 3600000);
         } else if (action === 'Authorize' && payload.idTagInfo && payload.idTagInfo.status === 'Accepted') {
             console.log('Authorized! Starting Transaction...');
             sendStartTransaction();
@@ -228,8 +236,14 @@ function sendStartTransaction(idTag = 'TAG001') {
     ]);
 }
 
-function sendMeterValues(transId) {
-    console.log(`Sending MeterValues for transaction ${transId}...`);
+function sendMeterValues(transId, value) {
+    console.log(`Sending MeterValues for transaction ${transId}, value: ${value}...`);
+    
+    // Simulate slight fluctuations for realistic data
+    const voltage = 230 + (Math.random() * 4 - 2); // 228-232 V
+    const current = 32 + (Math.random() * 1 - 0.5); // 31.5-32.5 A
+    const power = voltage * current; // ~7360 W
+    
     send([
         2,
         getMessageId(),
@@ -241,7 +255,10 @@ function sendMeterValues(transId) {
                 {
                     "timestamp": new Date().toISOString(),
                     "sampledValue": [
-                        { "value": "100", "context": "Sample.Periodic", "format": "Raw", "measurand": "Energy.Active.Import.Register", "unit": "Wh" }
+                        { "value": value.toString(), "context": "Sample.Periodic", "format": "Raw", "measurand": "Energy.Active.Import.Register", "unit": "Wh" },
+                        { "value": power.toFixed(1), "context": "Sample.Periodic", "format": "Raw", "measurand": "Power.Active.Import", "unit": "W" },
+                        { "value": voltage.toFixed(1), "context": "Sample.Periodic", "format": "Raw", "measurand": "Voltage", "unit": "V" },
+                        { "value": current.toFixed(2), "context": "Sample.Periodic", "format": "Raw", "measurand": "Current.Import", "unit": "A" }
                     ]
                 }
             ]
@@ -249,7 +266,7 @@ function sendMeterValues(transId) {
     ]);
 }
 
-function sendStopTransaction(transId, idTag = 'TAG001') {
+function sendStopTransaction(transId, idTag = 'TAG001', finalMeter = 0) {
     console.log(`Sending StopTransaction for transaction ${transId}...`);
     send([
         2,
@@ -258,7 +275,7 @@ function sendStopTransaction(transId, idTag = 'TAG001') {
         {
             "transactionId": transId,
             "idTag": idTag,
-            "meterStop": 500,
+            "meterStop": finalMeter,
             "timestamp": new Date().toISOString(),
             "reason": "Local"
         }

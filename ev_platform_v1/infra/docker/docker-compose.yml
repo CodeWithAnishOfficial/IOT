@@ -139,6 +139,17 @@ services:
     networks:
       - ev-network
 
+  charger-simulator:
+    build:
+      context: ../../charger_simulator
+      dockerfile: Dockerfile
+    environment:
+      - OCPP_SERVER_URL=ws://ocpp-server:9220/Quantum/OCPP/1.6/CH001
+    depends_on:
+      - ocpp-server
+    networks:
+      - ev-network
+
 networks:
   ev-network:
     driver: bridge

@@ -76,8 +76,12 @@ class ChargingController extends GetxController {
       }
 
       // Using User API Port 3001 for WebSocket
-      // NOTE: Ensure device is on same network and IP is reachable
-      final wsUrl = "ws://192.168.0.57:3001?token=$token";
+      // Construct WS URL dynamically from ApiProvider base URL
+      final uri = Uri.parse(ApiProvider.baseUrl);
+      final host = uri.host;
+      final wsUrl = "ws://$host:3001?token=$token";
+      
+      print("Connecting to WS: $wsUrl");
 
       _wsService = WebSocketService(wsUrl);
       _wsService?.onConnected = () {

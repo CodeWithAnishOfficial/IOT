@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -57,71 +56,63 @@ class DashboardView extends GetView<DashboardController> {
     return Container(
       margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
       height: 64,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            decoration: BoxDecoration(
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? theme.cardColor : Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
               color: isDark
-                  ? theme.cardColor.withOpacity(0.8)
-                  : Colors.white.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.05),
+            width: 1.5,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Obx(() {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  0,
+                  Iconsax.map_1,
+                  Iconsax.map5,
+                  isDark,
+                  theme,
+                ),
+                _buildNavItem(
+                  1,
+                  Iconsax.routing,
+                  Iconsax.routing5,
+                  isDark,
+                  theme,
+                ), // or routing_2
+                _buildNavItem(
+                  2,
+                  Iconsax.calendar_1,
+                  Iconsax.calendar5,
+                  isDark,
+                  theme,
+                ),
+                _buildNavItem(
+                  3,
+                  Iconsax.global,
+                  Iconsax.global,
+                  isDark,
+                  theme,
                 ),
               ],
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.05),
-                width: 1.5,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Obx(() {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      0,
-                      Iconsax.map_1,
-                      Iconsax.map5,
-                      isDark,
-                      theme,
-                    ),
-                    _buildNavItem(
-                      1,
-                      Iconsax.routing,
-                      Iconsax.routing5,
-                      isDark,
-                      theme,
-                    ), // or routing_2
-                    _buildNavItem(
-                      2,
-                      Iconsax.calendar_1,
-                      Iconsax.calendar5,
-                      isDark,
-                      theme,
-                    ),
-                    _buildNavItem(
-                      3,
-                      Iconsax.global,
-                      Iconsax.global,
-                      isDark,
-                      theme,
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ),
+            );
+          }),
         ),
       ),
     );
@@ -148,8 +139,8 @@ class DashboardView extends GetView<DashboardController> {
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
-                    ? theme.colorScheme.onSurface.withOpacity(0.15)
-                    : Colors.black.withOpacity(0.08))
+                    ? theme.colorScheme.onSurface.withValues(alpha:0.15)
+                    : Colors.black.withValues(alpha:0.08))
               : Colors.transparent,
           shape: BoxShape.circle,
         ),
@@ -157,7 +148,7 @@ class DashboardView extends GetView<DashboardController> {
           isSelected ? activeIcon : icon,
           color: isSelected
               ? theme.colorScheme.onSurface
-              : theme.colorScheme.onSurface.withOpacity(0.4),
+              : theme.colorScheme.onSurface.withValues(alpha:0.4),
           size: 24,
         ),
       ),

@@ -241,6 +241,15 @@ export class ChargingService {
     return { released: false, reason: 'Lock not held by user' };
   }
 
+  static async getActiveSession(userId: string) {
+    const session = await ChargingSession.findOne({
+      email_id: userId,
+      charger_status: { $nin: ['completed', 'failed', 'stopped', 'Completed', 'Failed', 'Stopped'] } // Case insensitive safety or include both cases
+    }).sort({ created_date: -1 });
+    
+    return session;
+  }
+
   static async getHistory(userId: string) {
     // Find all sessions for this user, sorted by date desc
     const sessions = await ChargingSession.find({ email_id: userId })

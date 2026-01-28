@@ -10,6 +10,31 @@ const paymentService = new PaymentService();
 
 export class ChargingController {
   
+  static async getActiveSession(req: Request, res: Response) {
+    try {
+      // @ts-ignore
+      const userId = req.user?.email_id;
+      
+      const session = await ChargingService.getActiveSession(userId);
+      
+      if (session) {
+        res.json({
+          error: false,
+          data: session
+        });
+      } else {
+        res.json({
+          error: false,
+          data: null,
+          message: 'No active session found'
+        });
+      }
+    } catch (error: any) {
+      logger.error('Error fetching active session', error);
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
   static async getHistory(req: Request, res: Response) {
       try {
           // @ts-ignore
