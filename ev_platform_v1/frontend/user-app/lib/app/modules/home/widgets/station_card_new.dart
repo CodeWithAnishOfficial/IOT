@@ -18,8 +18,24 @@ class StationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Determine status color
-    final isOnline = station.status.toLowerCase() == 'online';
-    final statusColor = isOnline ? AppColors.success : AppColors.error;
+    final status = station.status.toLowerCase();
+    final isOnline = status == 'online';
+    final isCharging = status == 'charging' || status == 'busy' || status == 'occupied';
+    
+    Color statusColor = AppColors.error;
+    String statusText = "Unavailable";
+
+    if (isOnline) {
+      statusColor = AppColors.success;
+      statusText = "Available";
+    } else if (isCharging) {
+      statusColor = Colors.orange;
+      statusText = "Busy";
+    } else {
+        // Offline or Faulted
+        statusColor = Colors.grey;
+        statusText = "Offline";
+    }
 
     return GestureDetector(
       onTap: onTap,
@@ -42,19 +58,22 @@ class StationCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Image Section
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  color: Colors.grey[200],
-                  child: station.images.isNotEmpty
-                      ? Image.network(
-                          station.images.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholderIcon(),
-                        )
-                      : _buildPlaceholderIcon(),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0), // Move image down slightly
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    color: Colors.grey[200],
+                    child: station.images.isNotEmpty
+                        ? Image.network(
+                            station.images.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildPlaceholderIcon(),
+                          )
+                        : _buildPlaceholderIcon(),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -106,7 +125,7 @@ class StationCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          isOnline ? "Available" : "Busy",
+                          statusText,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: statusColor,
@@ -150,11 +169,15 @@ class StationCard extends StatelessWidget {
   }
 
   Widget _buildPlaceholderIcon() {
-    return Center(
-      child: Icon(
-        Icons.ev_station,
-        color: Colors.grey[400],
-        size: 32,
+    return Image.asset(
+      "assets/images/ev-charger-addcharger-img.png",
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Center(
+        child: Icon(
+          Icons.ev_station,
+          color: Colors.grey[400],
+          size: 32,
+        ),
       ),
     );
   }

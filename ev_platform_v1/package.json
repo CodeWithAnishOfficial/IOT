@@ -8,10 +8,19 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
+    "build:dev": "env-cmd -f .env npm run build",
+    "build:uat": "env-cmd -f uat.env npm run build",
+    "build:prod": "env-cmd -f production.env npm run build",
     "start": "npm start --workspaces",
+    "start:dev": "env-cmd -f .env npm run start",
+    "start:uat": "env-cmd -f uat.env npm run start",
+    "start:prod": "env-cmd -f production.env npm run start",
     "test": "npm test --workspaces",
     "lint": "eslint .",
-    "docker:up": "docker-compose -f infra/docker/docker-compose.yml up --build"
+    "docker:up": "docker-compose -f infra/docker/docker-compose.yml up --build",
+    "infra:dev": "docker-compose -f infra/docker/docker-compose.yml down && (docker rmi $(docker images -q) || true) && docker system prune -a --volumes -f && git pull origin main && COMPOSE_PROFILES=${BUILD_TARGET:-all} env-cmd -f .env docker-compose -f infra/docker/docker-compose.yml up --build -d",
+    "infra:uat": "docker-compose -f infra/docker/docker-compose.yml down && (docker rmi $(docker images -q) || true) && docker system prune -a --volumes -f && git pull origin main && COMPOSE_PROFILES=${BUILD_TARGET:-all} env-cmd -f uat.env docker-compose -f infra/docker/docker-compose.yml up --build -d",
+    "infra:prod": "docker-compose -f infra/docker/docker-compose.yml down && (docker rmi $(docker images -q) || true) && docker system prune -a --volumes -f && git pull origin main && COMPOSE_PROFILES=${BUILD_TARGET:-all} env-cmd -f production.env docker-compose -f infra/docker/docker-compose.yml up --build -d"
   },
   "devDependencies": {
     "@types/helmet": "^0.0.48",
@@ -19,6 +28,7 @@
     "@types/node": "^20.0.0",
     "@types/nodemailer": "^7.0.4",
     "@types/pdfkit": "^0.17.4",
+    "env-cmd": "^11.0.0",
     "eslint": "^8.0.0",
     "nodemon": "^3.0.0",
     "prettier": "^3.0.0",

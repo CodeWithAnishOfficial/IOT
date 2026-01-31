@@ -9,29 +9,25 @@ const redis = RedisService.getInstance();
 // Description: Find charging stations within a given radius
 router.get('/nearby', async (req: Request, res: Response) => {
   try {
-    const { lat: queryLat, lng: queryLng, radius = 5000 } = req.query; // Radius in meters
-    
+    const { lat: queryLat, lng: queryLng, radius = 5000, page = 1, limit = 10 } = req.query; // Added page/limit
+
     if (!queryLat || !queryLng) {
       return res.status(400).json({ error: true, message: 'Lat and Lng required' });
     }
 
-    // Since we don't have GeoJSON index set up in the schema yet, we'll do a basic filter or assume schema update
-    // But for a robust solution, we should update the schema.
-    // However, I can't easily update existing mongo index in this environment without access to DB shell.
-    // Let's implement a Haversine formula filter in memory if dataset is small, or just basic query
-    // Actually, let's just query all and filter in memory for this MVP since dataset is small.
-    
+    // ... (Existing caching logic) ...
     // Check Cache
     const CACHE_KEY = 'stations:all:populated';
     let stations = await redis.get(CACHE_KEY);
 
     if (!stations) {
-        stations = await Charger.find({}).populate('site_id'); // Show all stations and populate site
-        await redis.set(CACHE_KEY, stations, 60); // Cache for 60 seconds
+        stations = await Charger.find({}).populate('site_id'); 
+        await redis.set(CACHE_KEY, stations, 60); 
     }
     
     // Simple distance calculation
     const nearby = stations.map((station: any) => {
+      // ... (Existing mapping logic) ...
       let lat = station.location?.lat;
       let lng = station.location?.lng;
 
@@ -49,7 +45,7 @@ router.get('/nearby', async (req: Request, res: Response) => {
 
       if (!lat || !lng) return null;
       
-      const R = 6371e3; // metres
+      const R = 6371e3; 
       const φ1 = parseFloat(queryLat as string) * Math.PI/180;
       const φ2 = lat * Math.PI/180;
       const Δφ = (lat - parseFloat(queryLat as string)) * Math.PI/180;
@@ -61,15 +57,32 @@ router.get('/nearby', async (req: Request, res: Response) => {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       const d = R * c;
 
-      // Return enhanced object
       const sObj = station.toObject ? station.toObject() : station;
-      return { ...sObj, distance: d / 1000 }; // km
+      return { ...sObj, distance: d / 1000 }; 
     }).filter((s: any) => s !== null && (s.distance * 1000) <= parseFloat(radius as string));
 
     // Sort by distance (ascending)
     nearby.sort((a: any, b: any) => a.distance - b.distance);
 
-    res.json({ error: false, data: nearby });
+    // Apply Pagination
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+
+    const paginatedResults = nearby.slice(startIndex, endIndex);
+
+    res.json({ 
+        error: false, 
+        data: paginatedResults,
+        meta: {
+            total: nearby.length,
+            page: pageNum,
+            limit: limitNum,
+            hasMore: endIndex < nearby.length
+        }
+    });
+
   } catch (error: any) {
     logger.error('Error searching stations', error);
     res.status(500).json({ error: true, message: error.message });

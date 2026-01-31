@@ -16,8 +16,10 @@ COPY . .
 ARG VITE_APP_API_URL
 ENV VITE_APP_API_URL=$VITE_APP_API_URL
 
+ARG BUILD_COMMAND=build
+
 # Build the application
-RUN npm run build
+RUN npm run ${BUILD_COMMAND}
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine

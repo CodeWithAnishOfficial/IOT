@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 export declare class ChargingController {
+    static getActiveSession(req: Request, res: Response): Promise<void>;
     static getHistory(req: Request, res: Response): Promise<void>;
     static downloadInvoice(req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
     static initiatePayment(req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>;

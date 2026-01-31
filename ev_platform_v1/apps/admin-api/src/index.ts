@@ -27,7 +27,7 @@ dotenv.config();
 const logger = new Logger('Admin-API');
 const app = express();
 const PORT = process.env.ADMIN_API_PORT ? parseInt(process.env.ADMIN_API_PORT) : 3002;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.1.8:27017/ev_platform';
 
 // Prometheus Metrics
 const collectDefaultMetrics = client.collectDefaultMetrics;

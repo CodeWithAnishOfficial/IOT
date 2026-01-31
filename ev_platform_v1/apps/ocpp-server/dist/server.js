@@ -30,7 +30,7 @@ class OCPPServer {
         this.initializeRedisListeners();
     }
     initializeRedisListeners() {
-        this.redis.subscribe('ocpp:commands', (data) => {
+        this.redis.subscribe('ocpp:commands', async (data) => {
             const { chargerId, command, payload } = data;
             this.logger.info(`Received remote command ${command} for ${chargerId}`);
             const connection = this.connectionManager.getConnection(chargerId);
@@ -39,9 +39,21 @@ class OCPPServer {
                 const requestId = Date.now().toString();
                 // [2, UniqueId, Action, Payload]
                 connection.send([2, requestId, command, payload]);
+                // SELF-HEALING: If we can send a command, the charger is ONLINE.
+                // Ensure DB reflects this to prevent 'Station is offline' errors in User-API.
+                shared_1.Charger.updateOne({ charger_id: chargerId }, { $set: { status: 'online' } }).catch(err => {
+                    this.logger.error(`Failed to update status to online for ${chargerId}`, err);
+                });
             }
             else {
                 this.logger.warn(`Charger ${chargerId} not connected or offline. Cannot send ${command}`);
+                try {
+                    await shared_1.Charger.updateOne({ charger_id: chargerId }, { $set: { status: 'offline' } });
+                    this.logger.info(`Updated status to offline for ${chargerId}`);
+                }
+                catch (err) {
+                    this.logger.error(`Failed to update status for ${chargerId}`, err);
+                }
             }
         });
     }

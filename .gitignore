@@ -8,10 +8,10 @@ yarn.lock
 build/
 coverage/
 
-# Environment variables
-.env
-.env.*
-!.env.example
+# # Environment variables
+# .env
+# .env.*
+# !.env.example
 
 # System files
 .DS_Store

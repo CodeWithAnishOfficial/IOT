@@ -31,7 +31,7 @@ dotenv_1.default.config();
 const logger = new shared_2.Logger('User-API');
 const app = (0, express_1.default)();
 const PORT = process.env.USER_API_PORT ? parseInt(process.env.USER_API_PORT) : 3001;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.1.8:27017/ev_platform';
 const JWT_SECRET = process.env.JWT_SECRET || 'ev-platform-secret-key';
 // Prometheus Metrics
 const collectDefaultMetrics = prom_client_1.default.collectDefaultMetrics;

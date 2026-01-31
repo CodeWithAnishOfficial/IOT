@@ -18,14 +18,14 @@ class ApiException implements Exception {
 }
 
 class ApiProvider {
-  // Use 192.168.0.57 for Android emulator, 64.227.181.90 for iOS simulator
+  // Use 192.168.1.8 for Android emulator, 192.168.1.8 for iOS simulator
   static String get baseUrl {
     if (GetPlatform.isAndroid) {
-      // Android Emulator maps 192.168.0.57 to host 64.227.181.90
-      return 'http://64.227.181.90:3000';
+      // Android Emulator maps 192.168.1.8 to host 192.168.1.8
+      return 'http://192.168.1.8:3000';
     }
-    // iOS Simulator / Web uses 64.227.181.90 (or Cloud IP)
-    return 'http://64.227.181.90:3000';
+    // iOS Simulator / Web uses 192.168.1.8 (or Cloud IP)
+    return 'http://192.168.1.8:3000';
   }
 
   final SessionController _sessionController = Get.find<SessionController>();

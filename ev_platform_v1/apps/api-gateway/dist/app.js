@@ -40,11 +40,11 @@ class App {
         // Gateway Routes
         this.app.use('/', gateway_routes_1.default);
         // Proxy to User API
-        const userApiUrl = process.env.USER_API_URL || 'http://64.227.181.90:3001';
+        const userApiUrl = process.env.USER_API_URL || 'http://192.168.1.8:3001';
         const userServices = [
             '/auth', '/wallet', '/profile', '/search',
             '/reservations', '/events', '/vehicles', '/support', '/charging',
-            '/saved-trips'
+            '/saved-trips', '/commercial'
         ];
         userServices.forEach(service => {
             this.app.use(service, (0, http_proxy_middleware_1.createProxyMiddleware)({
@@ -57,10 +57,11 @@ class App {
             }));
         });
         // Proxy to Admin API
-        const adminApiUrl = process.env.ADMIN_API_URL || 'http://64.227.181.90:3002';
+        const adminApiUrl = process.env.ADMIN_API_URL || 'http://192.168.1.8:3002';
         // Explicitly proxy admin services if accessed without /admin prefix
         const adminServices = [
-            '/chargers', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard', '/users'
+            '/chargers', '/sites', '/roles', '/commands', '/sessions', '/tariffs', '/dashboard', '/users',
+            '/admin-saved-trips'
         ];
         adminServices.forEach(service => {
             this.app.use(service, (0, http_proxy_middleware_1.createProxyMiddleware)({

@@ -5,6 +5,9 @@ const charging_controller_1 = require("../controllers/charging.controller");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authMiddleware);
+// Route: GET /charging/active-session
+// Description: Get current active session
+router.get('/active-session', charging_controller_1.ChargingController.getActiveSession);
 // Route: GET /charging/history
 // Description: Get charging history
 router.get('/history', charging_controller_1.ChargingController.getHistory);

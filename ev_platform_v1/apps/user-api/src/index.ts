@@ -30,7 +30,7 @@ dotenv.config();
 const logger = new Logger('User-API');
 const app = express();
 const PORT = process.env.USER_API_PORT ? parseInt(process.env.USER_API_PORT) : 3001;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.1.8:27017/ev_platform';
 const JWT_SECRET = process.env.JWT_SECRET || 'ev-platform-secret-key';
 
 // Prometheus Metrics
@@ -101,6 +101,9 @@ const start = async () => {
     });
 
     logger.info('Started consuming events');
+    
+    // Start WebSocket Heartbeat
+    SseService.startHeartbeat(30000);
 
     // Create HTTP Server
     const httpServer = createServer(app);

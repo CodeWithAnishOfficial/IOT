@@ -13,6 +13,17 @@ async function handleAuthorize(connection, payload) {
     if (!user) {
         user = await shared_1.User.findOne({ rfid_tag: idTag });
     }
+    // Temporary Allow specific user as per request
+    if (!user && idTag === 'anish@semiconspace.c') {
+        logger.info(`Allowing specific tag ${idTag} temporarily despite user not found`);
+        return {
+            idTagInfo: {
+                status: 'Accepted',
+                expiryDate: new Date(Date.now() + 3600 * 1000 * 24 * 30).toISOString(),
+                parentIdTag: null
+            }
+        };
+    }
     if (!user) {
         logger.warn(`Authorization failed for tag ${idTag}: User not found`);
         return {

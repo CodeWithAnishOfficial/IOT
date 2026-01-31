@@ -591,7 +591,7 @@ class _StationDetailsViewState extends State<StationDetailsView> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            "\$${widget.station.costPerUnit ?? '0.0'}",
+                                            "₹${widget.station.costPerUnit ?? '0.0'}",
                                             style: GoogleFonts.poppins(
                                               fontSize: 24,
                                               fontWeight: FontWeight.bold,

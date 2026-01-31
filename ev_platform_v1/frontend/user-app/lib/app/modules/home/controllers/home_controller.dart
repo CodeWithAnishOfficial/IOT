@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart'; // Add url_launcher import
 import 'package:user_app/core/network/api_provider.dart';
 
 import 'package:user_app/app/modules/home/views/station_details_view.dart';
+import 'package:user_app/app/modules/home/views/all_stations_view.dart';
 import 'package:user_app/app/modules/home/widgets/start_charging_sheet.dart';
 import 'package:user_app/app/modules/home/domain/models/charger.dart';
 import 'package:user_app/app/modules/home/domain/models/saved_trip.dart'; // Import SavedTrip
@@ -42,6 +43,7 @@ class HomeController extends GetxController {
   // Location Caching
   static const String _lastLatKey = 'last_known_lat';
   static const String _lastLngKey = 'last_known_lng';
+  static const String _cachedStationsKey = 'cached_stations';
   final initialCameraPosition = Rxn<CameraPosition>();
   LatLng? _lastFetchLocation;
 
@@ -156,6 +158,14 @@ class HomeController extends GetxController {
       // And fetch
       fetchNearbyStations(lat: lat, lng: lng);
     }
+  }
+
+  void goToAllStations() {
+    Get.to(() => const AllStationsView());
+  }
+
+  void goToCurrentLocation() {
+    recenterMap();
   }
 
   void showStationDetails(String chargerId) async {
@@ -284,6 +294,38 @@ class HomeController extends GetxController {
       if (statusRes['error'] == true) {
         _handleError(statusRes['message']);
         return;
+      }
+
+      // Check if user already has an active session on this connector
+      if (statusRes['data'] != null &&
+          statusRes['data']['activeSession'] == true) {
+        print("Redirecting to active session...");
+        final sessionId = statusRes['data']['sessionId']?.toString();
+        if (sessionId != null) {
+          // Re-initialize session controller
+          if (Get.isRegistered<ChargingController>()) {
+            Get.delete<ChargingController>(force: true);
+          }
+
+          final chargingController = ChargingController(
+            connectorId: connectorId,
+            initialAmount: double.infinity, // Unknown amount, assume resume
+            sessionId: sessionId,
+          );
+
+          Get.put(chargingController, permanent: true);
+          currentSession.value = chargingController;
+
+          ever(chargingController.status, (status) {
+            if (status == "Completed") {
+              currentSession.value = null;
+            }
+          });
+
+          // Navigate directly
+          Get.to(() => ChargingView(controller: chargingController));
+          return;
+        }
       }
 
       // Open Bottom Sheet
@@ -567,6 +609,31 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> _cacheStations(List<dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cachedStationsKey, jsonEncode(data));
+    } catch (e) {
+      print("Error caching stations: $e");
+    }
+  }
+
+  Future<bool> _loadCachedStations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonString = prefs.getString(_cachedStationsKey);
+      if (jsonString != null) {
+        final List<dynamic> data = jsonDecode(jsonString);
+        stations.value = await compute(_parseStations, data);
+        _updateMarkers();
+        return true;
+      }
+    } catch (e) {
+      print("Error loading cached stations: $e");
+    }
+    return false;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -641,9 +708,10 @@ class HomeController extends GetxController {
       final response = await _apiProvider.get('/charging/active-session');
       if (response['error'] == false && response['data'] != null) {
         final data = response['data'];
-        final sessionId = data['session_id'];
-        final connectorId = data['connector_id'] ?? 'UNKNOWN';
-        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+        final sessionId = data['session_id']?.toString() ?? '';
+        final connectorId = data['connector_id']?.toString() ?? 'UNKNOWN';
+        // If amount is missing (restored session), use Infinity to prevent auto-stop
+        final amount = (data['amount'] as num?)?.toDouble() ?? double.infinity;
 
         print("Found active session: $sessionId");
 
@@ -814,7 +882,7 @@ class HomeController extends GetxController {
 
       // Using User API Port 3001
       // Use public IP for all platforms for consistency
-      final wsUrl = "ws://64.227.181.90:3001?token=$token";
+      final wsUrl = "ws://192.168.1.8:3001?token=$token";
 
       _wsService = WebSocketService(wsUrl);
 
@@ -827,6 +895,10 @@ class HomeController extends GetxController {
 
             if (event == 'station_status') {
               _handleStationStatusUpdate(payload);
+            } else if (event == 'session_started') {
+              _handleSessionStarted(payload);
+            } else if (event == 'session_completed') {
+              _handleSessionCompleted(payload);
             }
           } catch (e) {
             print("WS Error: $e");
@@ -865,6 +937,69 @@ class HomeController extends GetxController {
     );
   }
 
+  void _handleSessionStarted(dynamic payload) {
+    print("WS Session Started Event: $payload");
+
+    // If we already have a session, ignore (avoid overriding with duplicate event)
+    if (currentSession.value != null) return;
+
+    final sessionId = payload['sessionId']?.toString();
+    // Handle key variation (connector_id vs connectorId)
+    final connectorId = payload['connector_id']?.toString() ??
+        payload['connectorId']?.toString();
+
+    if (sessionId != null && connectorId != null) {
+      print("Starting ChargingController for session: $sessionId");
+
+      // Check if ChargingController exists and remove it to be safe
+      if (Get.isRegistered<ChargingController>()) {
+        Get.delete<ChargingController>(force: true);
+      }
+
+      final chargingController = ChargingController(
+        connectorId: connectorId,
+        initialAmount: double.infinity, // Unknown amount for external start
+        sessionId: sessionId,
+      );
+
+      Get.put(chargingController, permanent: true);
+      currentSession.value = chargingController;
+
+      // Auto-cleanup overlay when done
+      ever(chargingController.status, (status) {
+        if (status == "Completed") {
+          currentSession.value = null;
+        }
+      });
+
+      Get.snackbar(
+        "Session Started",
+        "Charging session started!",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+      );
+    }
+  }
+
+  void _handleSessionCompleted(dynamic payload) {
+    print("WS Session Completed Event: $payload");
+    // ChargingController's own WS listener handles the logic and view transition.
+    // This is just a fallback to ensure the Home View card is cleared.
+    
+    final sessionId = payload['sessionId']?.toString() ?? payload['session_id']?.toString();
+    
+    if (currentSession.value != null &&
+        currentSession.value?.sessionId == sessionId) {
+        
+       // Ensure status is marked completed so the 'ever' listener fires
+       if (currentSession.value?.status.value != "Completed") {
+           currentSession.value?.status.value = "Completed";
+       }
+       currentSession.value = null;
+    }
+  }
+
   void _processPendingUpdates() {
     if (_pendingStationUpdates.isEmpty) return;
 
@@ -899,6 +1034,23 @@ class HomeController extends GetxController {
           if (cIndex != -1) {
             connectors[cIndex] = connectors[cIndex].copyWith(status: status);
             station = station.copyWith(connectors: connectors);
+            
+            // Derive Station Status from Connectors
+            // If any connector is Available, station is Online
+            // Else if all are Faulted/Offline, station is Offline
+            // Else Busy/Charging
+            
+            bool anyAvailable = connectors.any((c) => c.status.toLowerCase() == 'available' || c.status.toLowerCase() == 'preparing');
+            bool allFaulted = connectors.every((c) => c.status.toLowerCase() == 'faulted' || c.status.toLowerCase() == 'unavailable');
+            
+            if (anyAvailable) {
+                station = station.copyWith(status: 'online');
+            } else if (allFaulted) {
+                station = station.copyWith(status: 'offline');
+            } else {
+                // All busy/charging
+                station = station.copyWith(status: 'busy');
+            }
           }
         }
 
@@ -2146,7 +2298,7 @@ class HomeController extends GetxController {
       }
 
       final response = await _apiProvider.get(
-        '/search/nearby?lat=$latitude&lng=$longitude&radius=$searchRadius',
+        '/search/nearby?lat=$latitude&lng=$longitude&radius=$searchRadius&limit=500', // Fetch all for map
       );
 
       if (response['data'] != null) {
@@ -2154,6 +2306,7 @@ class HomeController extends GetxController {
         // Use compute to parse JSON in background isolate
         stations.value = await compute(_parseStations, data);
         _updateMarkers();
+        _cacheStations(data);
 
         // Update Trip Markers if in Trip Mode
         if (searchMode.value == 'trip') {
@@ -2171,11 +2324,17 @@ class HomeController extends GetxController {
         message = 'Connection timed out';
       }
 
+      // Try loading cached data first
+      bool loadedFromCache = await _loadCachedStations();
+      if (!loadedFromCache) {
+         _loadMockData(latitude, longitude);
+      }
+
       // Only show snackbar if not silent
       if (!silent) {
         Get.snackbar(
           'Offline Mode',
-          '$message. Showing mock data.',
+          '$message. Showing ${loadedFromCache ? "cached" : "mock"} data.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange.withOpacity(0.9),
           colorText: Colors.white,
@@ -2184,8 +2343,6 @@ class HomeController extends GetxController {
           isDismissible: true,
         );
       }
-
-      _loadMockData(latitude, longitude);
     } finally {
       isLoading.value = false;
     }

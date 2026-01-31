@@ -1,5 +1,5 @@
 import WebSocket, { WebSocketServer } from 'ws';
-import { Logger, RedisService } from '@ev-platform-v1/shared';
+import { Logger, RedisService, Charger } from '@ev-platform-v1/shared';
 import { IncomingMessage } from 'http';
 import { ConnectionManager } from './core/connection.manager';
 import { MessageRouter } from './core/message.router';
@@ -31,7 +31,7 @@ export class OCPPServer {
   }
 
   private initializeRedisListeners() {
-    this.redis.subscribe('ocpp:commands', (data: any) => {
+    this.redis.subscribe('ocpp:commands', async (data: any) => {
       const { chargerId, command, payload } = data;
       this.logger.info(`Received remote command ${command} for ${chargerId}`);
       
@@ -41,8 +41,21 @@ export class OCPPServer {
         const requestId = Date.now().toString();
         // [2, UniqueId, Action, Payload]
         connection.send([2, requestId, command, payload]);
+        
+        // SELF-HEALING: If we can send a command, the charger is ONLINE.
+        // Ensure DB reflects this to prevent 'Station is offline' errors in User-API.
+        Charger.updateOne({ charger_id: chargerId }, { $set: { status: 'online' } }).catch(err => {
+            this.logger.error(`Failed to update status to online for ${chargerId}`, err);
+        });
+
       } else {
         this.logger.warn(`Charger ${chargerId} not connected or offline. Cannot send ${command}`);
+        try {
+            await Charger.updateOne({ charger_id: chargerId }, { $set: { status: 'offline' } });
+            this.logger.info(`Updated status to offline for ${chargerId}`);
+        } catch (err) {
+            this.logger.error(`Failed to update status for ${chargerId}`, err);
+        }
       }
     });
   }
@@ -162,6 +175,13 @@ export class OCPPServer {
   private processMessage(connection: any, message: string) {
       try {
         const msgString = message.toString();
+        
+        // Keep connection alive on any activity
+        if (connection) {
+            connection.isAlive = true;
+            connection.lastHeartbeat = new Date();
+        }
+
         try {
             const parsed = JSON.parse(msgString);
             this.logger.info(`[${connection.id}] >>`, parsed);

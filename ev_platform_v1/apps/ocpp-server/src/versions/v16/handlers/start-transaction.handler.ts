@@ -36,6 +36,7 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
       await pendingSession.save();
       
       sessionId = pendingSession.session_id;
+      userId = pendingSession.email_id; // Use email_id for WS targeting
       // userId = pendingSession.user_id; // Keep as is
   } else {
       logger.info(`No pending session found. Validating idTag ${idTag}...`);
@@ -59,6 +60,7 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
       }
 
       logger.info(`Authorized user ${user.email_id} for ad-hoc session`);
+      userId = user.email_id; // Use email_id for WS targeting
 
       // Create active session
       // Generate numeric ID
@@ -92,6 +94,7 @@ export async function handleStartTransaction(connection: OCPPConnection, payload
           sessionId,
           userId,
           chargerId: connection.id,
+          connectorId,
           transactionId,
           status: 'active',
           timestamp

@@ -13,7 +13,7 @@ const logger = new Logger('OCPP-Server');
 logger.info(`Environment loaded. HEARTBEAT_INTERVAL=${process.env.HEARTBEAT_INTERVAL || 'undefined'}`);
 
 const PORT = process.env.OCPP_PORT ? parseInt(process.env.OCPP_PORT) : 9220;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://64.227.181.90:27017/ev_platform';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://192.168.1.8:27017/ev_platform';
 
 const server = new OCPPServer(PORT);
 

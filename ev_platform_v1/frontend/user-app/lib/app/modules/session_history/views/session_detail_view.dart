@@ -62,12 +62,12 @@ class SessionDetailView extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
+                        color: _getStatusColor(session.status).withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.check_circle, 
-                        color: AppColors.success, 
+                      child: Icon(
+                        _getStatusIcon(session.status), 
+                        color: _getStatusColor(session.status), 
                         size: 24,
                       ),
                     ),
@@ -76,9 +76,9 @@ class SessionDetailView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Completed",
+                          session.status.capitalizeFirst ?? session.status,
                           style: GoogleFonts.poppins(
-                            color: AppColors.success,
+                            color: _getStatusColor(session.status),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -346,6 +346,42 @@ class SessionDetailView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+      case 'finished':
+        return AppColors.success;
+      case 'charging':
+      case 'active':
+        return Colors.blue;
+      case 'failed':
+      case 'faulted':
+        return Colors.red;
+      case 'stopped':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+     switch (status.toLowerCase()) {
+      case 'completed':
+      case 'finished':
+        return Icons.check_circle;
+      case 'charging':
+      case 'active':
+        return Icons.bolt;
+      case 'failed':
+      case 'faulted':
+        return Icons.error;
+      case 'stopped':
+        return Icons.stop_circle;
+      default:
+        return Icons.info;
+    }
   }
 
   Widget _buildSummaryRow(ThemeData theme, String label, String value) {

@@ -70,6 +70,18 @@ export class SseService {
       }
     });
   }
+
+  static startHeartbeat(intervalMs: number = 30000) {
+    setInterval(() => {
+      this.clients.forEach(client => {
+        if (client.type === 'ws') {
+             if (client.ws.readyState === WebSocket.OPEN) {
+                 client.ws.send(JSON.stringify({ event: 'ping', data: {} }));
+             }
+        }
+      });
+    }, intervalMs);
+  }
   
   // Backward compatibility
   static addClient(res: Response, userId: string) {

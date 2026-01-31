@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  # ---------- BACKEND ----------
+  ocpp-server:
+    build:
+      context: ../../
+      dockerfile: apps/ocpp-server/Dockerfile
+    ports:
+      - "9220:9220"
+    environment:
+      OCPP_PORT: 9220
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on: [redis, rabbitmq]
+    networks: [ev-network]
+    profiles: [backend, all]
+
+  user-api:
+    build:
+      context: ../../
+      dockerfile: apps/user-api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      USER_API_PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:-ev-platform-secret-key}
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on: [redis, rabbitmq]
+    networks: [ev-network]
+    profiles: [backend, all]
+
+  admin-api:
+    build:
+      context: ../../
+      dockerfile: apps/admin-api/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      ADMIN_API_PORT: 3002
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on: [redis, rabbitmq]
+    networks: [ev-network]
+    profiles: [backend, all]
+
+  api-gateway:
+    build:
+      context: ../../
+      dockerfile: apps/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      GATEWAY_PORT: 3000
+      REDIS_URL: ${REDIS_URL}
+      ADMIN_API_URL: ${ADMIN_API_URL:-http://admin-api:3002}
+      USER_API_URL: ${USER_API_URL:-http://user-api:3001}
+    depends_on:
+      - ocpp-server
+      - user-api
+      - admin-api
+    networks: [ev-network]
+    profiles: [backend, all]
+
+networks:
+  ev-network:
+    driver: bridge

@@ -1,6 +1,61 @@
-version: '3.8'
+version: "3.8"
 
 services:
+
+  # ---------- INFRA ----------
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks: [ev-network]
+    profiles: [infra, all]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-password}
+    networks: [ev-network]
+    profiles: [infra, all]
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks: [ev-network]
+    profiles: [infra, all]
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3003:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SAMESITE: none
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    depends_on: [prometheus]
+    networks: [ev-network]
+    profiles: [infra, all]
+
+  jaeger:
+    image: jaegertracing/all-in-one
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks: [ev-network]
+    profiles: [infra, all]
+
+  # ---------- BACKEND ----------
   ocpp-server:
     build:
       context: ../../
@@ -8,34 +63,13 @@ services:
     ports:
       - "9220:9220"
     environment:
-      - OCPP_PORT=9220
-      - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
-    depends_on:
-      - redis
-      - rabbitmq
-    networks:
-      - ev-network
-
-  api-gateway:
-    build:
-      context: ../../
-      dockerfile: apps/api-gateway/Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - GATEWAY_PORT=3000
-      - REDIS_URL=redis://redis:6379
-      - ADMIN_API_URL=http://admin-api:3002
-      - USER_API_URL=http://user-api:3001
-    depends_on:
-      - ocpp-server
-      - user-api
-      - admin-api
-      - redis
-    networks:
-      - ev-network
+      OCPP_PORT: 9220
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on: [redis, rabbitmq]
+    networks: [ev-network]
+    profiles: [backend, all]
 
   user-api:
     build:
@@ -44,16 +78,14 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - USER_API_PORT=3001
-      - JWT_SECRET=ev-platform-secret-key
-      - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
-    depends_on:
-      - redis
-      - rabbitmq
-    networks:
-      - ev-network
+      USER_API_PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:-ev-platform-secret-key}
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on: [redis, rabbitmq]
+    networks: [ev-network]
+    profiles: [backend, all]
 
   admin-api:
     build:
@@ -62,93 +94,46 @@ services:
     ports:
       - "3002:3002"
     environment:
-      - ADMIN_API_PORT=3002
-      - MONGODB_URI=mongodb+srv://cloud:eFtnSh3VyUxGMZbO@cluster0.y0hnvsx.mongodb.net/ev_platform
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
-    depends_on:
-      - redis
-      - rabbitmq
-    networks:
-      - ev-network
+      ADMIN_API_PORT: 3002
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on: [redis, rabbitmq]
+    networks: [ev-network]
+    profiles: [backend, all]
 
+  api-gateway:
+    build:
+      context: ../../
+      dockerfile: apps/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      GATEWAY_PORT: 3000
+      REDIS_URL: ${REDIS_URL}
+      ADMIN_API_URL: ${ADMIN_API_URL:-http://admin-api:3002}
+      USER_API_URL: ${USER_API_URL:-http://user-api:3001}
+    depends_on:
+      - ocpp-server
+      - user-api
+      - admin-api
+    networks: [ev-network]
+    profiles: [backend, all]
+
+  # ---------- FRONTEND ----------
   admin-web:
     build:
       context: ../../frontend/admin-web
       dockerfile: Dockerfile
       args:
-        - VITE_APP_API_URL=${VITE_APP_API_URL:-http://64.227.181.90:3000}
-        - VITE_APP_GRAFANA_URL=${VITE_APP_GRAFANA_URL:-http://64.227.181.90:3003/?orgId=1}
+        VITE_APP_API_URL: ${VITE_APP_API_URL:-http://localhost:3000}
+        VITE_APP_GRAFANA_URL: ${VITE_APP_GRAFANA_URL:-http://localhost:3003}
+        BUILD_COMMAND: ${WEB_BUILD_COMMAND:-build}
     ports:
       - "3004:80"
-    depends_on:
-      - api-gateway
-    networks:
-      - ev-network
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - ev-network
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
-    networks:
-      - ev-network
-
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    networks:
-      - ev-network
-
-  grafana:
-    image: grafana/grafana
-    ports:
-      - "3003:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SECURITY_ALLOW_EMBEDDING=true
-      - GF_SECURITY_COOKIE_SAMESITE=none
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-    depends_on:
-      - prometheus
-    networks:
-      - ev-network
-
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    ports:
-      - "16686:16686" # Web UI
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    networks:
-      - ev-network
-
-  charger-simulator:
-    build:
-      context: ../../charger_simulator
-      dockerfile: Dockerfile
-    environment:
-      - OCPP_SERVER_URL=ws://ocpp-server:9220/Quantum/OCPP/1.6/CH001
-    depends_on:
-      - ocpp-server
-    networks:
-      - ev-network
+    depends_on: [api-gateway]
+    networks: [ev-network]
+    profiles: [frontend, all]
 
 networks:
   ev-network:

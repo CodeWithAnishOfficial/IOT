@@ -337,6 +337,37 @@ class _HomeViewState extends State<HomeView> {
             );
           }),
 
+          // Buttons (Current Location + All Stations)
+          Obx(() {
+            final isNavBarVisible = dashboardController?.isNavBarVisible.value ?? true;
+            final bottomPadding = isNavBarVisible ? 100.0 : 30.0;
+            
+            return AnimatedPositioned(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              right: 16,
+              bottom: bottomPadding + 180 + 16, 
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildFloatingButton(
+                    theme,
+                    icon: Icons.list,
+                    onTap: controller.goToAllStations,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFloatingButton(
+                    theme,
+                    icon: Icons.my_location,
+                    onTap: controller.goToCurrentLocation,
+                    backgroundColor: AppColors.primary,
+                    iconColor: Colors.white,
+                  ),
+                ],
+              ),
+            );
+          }),
+
           // 7. Active Session Overlay (Top of Screen, Below Search)
           Obx(() {
              final isNavBarVisible = dashboardController?.isNavBarVisible.value ?? true;
@@ -369,14 +400,18 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildFloatingButton(ThemeData theme, {required IconData icon, required VoidCallback onTap}) {
+  Widget _buildFloatingButton(ThemeData theme,
+      {required IconData icon,
+      required VoidCallback onTap,
+      Color? backgroundColor,
+      Color? iconColor}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 50,
         height: 50,
         decoration: BoxDecoration(
-          color: theme.cardTheme.color,
+          color: backgroundColor ?? theme.cardTheme.color,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -388,7 +423,7 @@ class _HomeViewState extends State<HomeView> {
         ),
         child: Icon(
           icon,
-          color: theme.iconTheme.color,
+          color: iconColor ?? theme.iconTheme.color,
           size: 24,
         ),
       ),

@@ -9,6 +9,30 @@ const uuid_1 = require("uuid");
 const logger = new shared_1.Logger('ChargingController');
 const paymentService = new payment_service_1.PaymentService();
 class ChargingController {
+    static async getActiveSession(req, res) {
+        try {
+            // @ts-ignore
+            const userId = req.user?.email_id;
+            const session = await charging_service_1.ChargingService.getActiveSession(userId);
+            if (session) {
+                res.json({
+                    error: false,
+                    data: session
+                });
+            }
+            else {
+                res.json({
+                    error: false,
+                    data: null,
+                    message: 'No active session found'
+                });
+            }
+        }
+        catch (error) {
+            logger.error('Error fetching active session', error);
+            res.status(500).json({ error: true, message: error.message });
+        }
+    }
     static async getHistory(req, res) {
         try {
             // @ts-ignore

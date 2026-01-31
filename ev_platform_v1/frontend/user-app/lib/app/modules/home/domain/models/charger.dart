@@ -47,7 +47,7 @@ class Charger {
       vendor: json['vendor'] is Map ? null : json['vendor']?.toString(),
       modelName: json['modelName']?.toString(),
       distance: (json['distance'] as num?)?.toDouble(),
-      costPerUnit: (json['cost_per_unit'] as num?)?.toDouble(),
+      costPerUnit: _parsePrice(json['cost_per_unit']) ?? _parsePrice(json['price_per_kwh']),
       connectors: (json['connectors'] as List?)
               ?.map((e) => Connector.fromJson(e))
               .toList() ??
@@ -55,6 +55,15 @@ class Charger {
       images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
       facilities: (json['facilities'] as List?)?.map((e) => e.toString()).toList() ?? [],
     );
+  }
+
+  static double? _parsePrice(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    if (val is String) {
+       return double.tryParse(val);
+    }
+    return null;
   }
 
   Charger copyWith({

@@ -60,6 +60,9 @@ class ChargingService {
             if (!station) {
                 throw new Error('Station not found');
             }
+            if (station.status === 'offline') {
+                throw new Error('Station is offline');
+            }
             // 3. Create Session Record (Pending)
             // Generate 7-digit Session ID
             const sessionId = Math.floor(1000000 + Math.random() * 9000000);
@@ -180,6 +183,20 @@ class ChargingService {
         }
         // Set Lock (TTL 5 minutes)
         await redis.set(lockKey, userId, 300);
+        // Trigger DataTransfer "Preparing" as requested
+        // This sends [2, requestId, "DataTransfer", payload] to charger via OCPP Server
+        const commandPayload = {
+            chargerId: stationId,
+            command: 'DataTransfer',
+            payload: {
+                vendorId: 'Outdid',
+                messageId: 'TEST',
+                data: 'Preparing',
+                connectorId: Number(connectorId)
+            }
+        };
+        await redis.publish('ocpp:commands', commandPayload);
+        logger.info(`Triggered DataTransfer 'Preparing' for ${stationId}:${connectorId}`);
         return {
             allowed: true,
             status: connector.status,
@@ -194,6 +211,30 @@ class ChargingService {
             return { released: true };
         }
         return { released: false, reason: 'Lock not held by user' };
+    }
+    static async getActiveSession(userId) {
+        const session = await shared_1.ChargingSession.findOne({
+            email_id: userId,
+            charger_status: { $nin: ['completed', 'failed', 'stopped', 'Completed', 'Failed', 'Stopped'] } // Case insensitive safety or include both cases
+        }).sort({ created_date: -1 });
+        if (session) {
+            // Fetch Charger Details
+            const charger = await shared_1.Charger.findOne({ charger_id: session.charger_id });
+            if (charger) {
+                const connector = charger.connectors.find(c => c.connector_id === session.connector_id);
+                return {
+                    ...session.toObject(),
+                    chargerDetails: {
+                        charger_id: charger.charger_id,
+                        max_power_kw: connector ? connector.max_power_kw : charger.max_power_kw,
+                        connector_type: connector ? connector.type : 'Unknown',
+                        name: charger.name,
+                        address: charger.location?.address
+                    }
+                };
+            }
+        }
+        return session;
     }
     static async getHistory(userId) {
         // Find all sessions for this user, sorted by date desc

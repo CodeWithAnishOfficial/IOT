@@ -51,18 +51,27 @@ async function handleMeterValues(connection, payload) {
                         // Update unit_consumed and current_meter_value
                         session.unit_consumed = Math.max(0, currentEnergy - session.start_meter_value);
                         session.current_meter_value = currentEnergy;
+                        // Update Cost based on unit_price
+                        if (session.unit_price) {
+                            session.consumed_amount = session.unit_consumed * session.unit_price;
+                            session.price = session.consumed_amount;
+                        }
                         await session.save();
                     }
                 }
                 // Publish Progress
                 try {
                     const rabbit = shared_1.RabbitMQService.getInstance();
+                    // Use email_id as userId because User-API uses email for WS identification
                     await rabbit.publish('charging_progress', {
                         sessionId: session.session_id,
-                        userId: session.user_id,
+                        userId: session.email_id,
                         transactionId,
                         energyConsumed: session.unit_consumed,
                         power: powerImport ? parseFloat(powerImport) : 0,
+                        voltage: voltage ? parseFloat(voltage) : 0,
+                        current: currentImport ? parseFloat(currentImport) : 0,
+                        cost: session.consumed_amount || 0,
                         soc: soc ? parseFloat(soc) : null,
                         timestamp: new Date()
                     });

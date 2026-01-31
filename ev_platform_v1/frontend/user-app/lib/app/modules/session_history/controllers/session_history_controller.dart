@@ -30,7 +30,17 @@ class SessionHistoryController extends GetxController {
       final response = await _apiProvider.get('/charging/history');
       if (response['data'] != null) {
         final List<dynamic> data = response['data'];
-        sessions.value = data.map((e) => ChargingSession.fromJson(e)).toList();
+        final allSessions = data.map((e) => ChargingSession.fromJson(e)).toList();
+        
+        // Filter: Only show completed/stopped/failed sessions
+        // Exclude 'Charging', 'Pending', 'Started', etc.
+        sessions.value = allSessions.where((s) {
+           final st = s.status.toLowerCase();
+           return st == 'completed' || 
+                  st == 'finished' || 
+                  st == 'stopped' || 
+                  st == 'failed';
+        }).toList();
       }
     } catch (e) {
       print('Error fetching sessions: $e');

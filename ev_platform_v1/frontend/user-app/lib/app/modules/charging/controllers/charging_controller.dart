@@ -19,18 +19,25 @@ class ChargingController extends GetxController {
   final energyDelivered = 0.0.obs;
   final currentCost = 0.0.obs;
   final currentPower = 0.0.obs; // kW
+  final voltage = 0.0.obs; // V
+  final currentAmps = 0.0.obs; // A
   final soc = 0.0.obs; // Battery %
   final status = "Charging".obs;
+  
+  // Static Charger Details
+  final stationIdLabel = "ID: ...".obs;
+  final maxPowerLabel = "... kW".obs;
+  final connectorTypeLabel = "...".obs;
   
   // Full session details for Bill Summary
   final finalSessionData = <String, dynamic>{}.obs;
 
   Timer? _timer;
   WebSocketService? _wsService;
-  final DateTime _startTime = DateTime.now();
+  DateTime _startTime = DateTime.now();
 
   // Mock constants
-  final double ratePerKwh = 0.75; // $0.75 or ₹0.75 based on locale
+  double ratePerKwh = 0.75; // Fetched from session details
 
   ChargingController({
     required this.connectorId,
@@ -41,7 +48,48 @@ class ChargingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    fetchSessionDetails();
     startSession();
+  }
+
+  Future<void> fetchSessionDetails() async {
+      try {
+          final response = await _apiProvider.get('/charging/active-session');
+          if (response['error'] == false && response['data'] != null) {
+              final data = response['data'];
+              
+              // 1. Restore Start Time
+              if (data['start_time'] != null) {
+                  _startTime = DateTime.parse(data['start_time']);
+                  print("Restored session start time: $_startTime");
+              }
+              
+              // 2. Restore Rate
+              if (data['unit_price'] != null) {
+                  ratePerKwh = (data['unit_price'] as num).toDouble();
+              }
+
+              // Bind Charger Details
+              if (data['chargerDetails'] != null) {
+                  final details = data['chargerDetails'];
+                  stationIdLabel.value = "ID: ${details['charger_id'] ?? '...'}";
+                  maxPowerLabel.value = "${details['max_power_kw'] ?? 0} kW";
+                  connectorTypeLabel.value = details['connector_type']?.toString() ?? 'Unknown';
+              }
+              
+              // Bind Initial Session Values if any (e.g. resuming)
+              if (data['unit_consumed'] != null) {
+                  energyDelivered.value = (data['unit_consumed'] / 1000.0);
+              }
+              if (data['consumed_amount'] != null) {
+                  currentCost.value = (data['consumed_amount'] as num).toDouble();
+              }
+              
+              _calculateSoC();
+          }
+      } catch (e) {
+          print("Error fetching session details: $e");
+      }
   }
 
   @override
@@ -105,14 +153,29 @@ class ChargingController extends GetxController {
             if (payload['soc'] != null) {
               soc.value = (payload['soc'] as num).toDouble();
             }
+            
+            if (payload['voltage'] != null) {
+              voltage.value = (payload['voltage'] as num).toDouble();
+            }
+            
+            if (payload['current'] != null) {
+              currentAmps.value = (payload['current'] as num).toDouble();
+            }
 
             if (payload['energyConsumed'] != null) {
               energyDelivered.value =
                   (payload['energyConsumed'] / 1000.0); // Wh -> kWh
             }
 
-            // Update cost based on energy
-            currentCost.value = energyDelivered.value * ratePerKwh;
+            // Update cost from backend if available, else fallback to local calc
+            if (payload['cost'] != null) {
+               currentCost.value = (payload['cost'] as num).toDouble();
+            } else {
+               currentCost.value = energyDelivered.value * ratePerKwh;
+            }
+            
+            // Calculate simulated SoC based on payment progress
+            _calculateSoC();
 
             // Check limits
             if (currentCost.value >= initialAmount) {
@@ -120,6 +183,7 @@ class ChargingController extends GetxController {
             }
           } else if (event == 'session_completed') {
              // Handle completion
+             print("ChargingController: Received session_completed");
              final payload = decoded['data'];
              handleSessionCompleted(payload);
           }
@@ -134,10 +198,13 @@ class ChargingController extends GetxController {
     }
   }
 
-  void handleSessionCompleted(Map<String, dynamic> data) {
+  void handleSessionCompleted(dynamic data) {
+    print("Handling Session Completed: $data");
+    
+    // Safety check for status
     if (status.value == "Completed") return;
     
-    finalSessionData.value = data;
+    finalSessionData.value = Map<String, dynamic>.from(data);
     
     // Update display values if present
     if (data['unit_consumed'] != null) {
@@ -152,13 +219,34 @@ class ChargingController extends GetxController {
     finalizeSession();
   }
 
+  void _calculateSoC() {
+    if (initialAmount <= 0 || initialAmount == double.infinity) return;
+    
+    // Calculate total energy user can buy
+    final maxEnergy = initialAmount / ratePerKwh;
+    if (maxEnergy <= 0) return;
+    
+    // Calculate percentage
+    double percentage = (energyDelivered.value / maxEnergy) * 100;
+    
+    // Clamp to 0-100
+    if (percentage > 100) percentage = 100;
+    if (percentage < 0) percentage = 0;
+    
+    soc.value = percentage;
+  }
+
   void finalizeSession() {
+    print("Finalizing session...");
     status.value = "Completed";
     _timer?.cancel();
     _wsService?.disconnect();
     currentPower.value = 0;
     
-    Get.off(() => BillSummaryView(controller: this));
+    // Ensure we are on the main thread and navigation works
+    Future.delayed(const Duration(milliseconds: 100), () {
+        Get.off(() => BillSummaryView(controller: this));
+    });
   }
 
   Future<void> stopCharging() async {

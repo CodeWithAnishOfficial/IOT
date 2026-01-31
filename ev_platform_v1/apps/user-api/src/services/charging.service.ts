@@ -14,24 +14,30 @@ export class ChargingService {
     amount: number,
     paymentDetails?: { orderId: string, paymentId: string, signature: string }
   ) {
+    logger.info(`[StartSession] Request for User: ${userId}, Station: ${stationId}, Connector: ${connectorId}`);
     try {
       // 1. Validate User
       const user = await User.findOne({ email_id: userId });
       if (!user) {
+        logger.error(`[StartSession] User not found: ${userId}`);
         throw new Error('User not found');
       }
+      logger.info(`[StartSession] User found: ${user.user_id}`);
 
       // 1b. Verify Lock
       const lockKey = `lock:${stationId}:${connectorId}`;
       const existingLock = await redis.get(lockKey);
       if (existingLock && existingLock !== userId) {
+           logger.warn(`[StartSession] Connector ${stationId}:${connectorId} is reserved by ${existingLock}, not ${userId}`);
            throw new Error('Connector is reserved by another user');
       }
+      logger.info(`[StartSession] Lock verified (Held by user or free)`);
 
       // 2. Validate Payment OR Balance
       let isDirectPayment = false;
       
       if (paymentDetails) {
+        logger.info(`[StartSession] Verifying payment: ${paymentDetails.paymentId}`);
         // Verify Razorpay Payment
         const isValid = await paymentService.verifyPayment(
           paymentDetails.orderId,
@@ -40,6 +46,7 @@ export class ChargingService {
         );
         
         if (!isValid) {
+          logger.error(`[StartSession] Invalid payment signature`);
           throw new Error('Invalid payment signature');
         }
         
@@ -68,14 +75,24 @@ export class ChargingService {
       } else {
         // Fallback to Wallet Check
         if (user.wallet_bal < amount) {
+          logger.error(`[StartSession] Insufficient wallet balance: ${user.wallet_bal} < ${amount}`);
           throw new Error('Insufficient wallet balance');
         }
+        logger.info(`[StartSession] Wallet balance sufficient`);
       }
 
       // 3. Validate Station
       const station = await Charger.findOne({ charger_id: stationId });
       if (!station) {
+        logger.error(`[StartSession] Station not found: ${stationId}`);
         throw new Error('Station not found');
+      }
+      
+      logger.info(`[StartSession] Station found: ${stationId}, Status: ${station.status}`);
+
+      if (station.status === 'offline') {
+          logger.warn(`Station ${stationId} is marked offline in DB. Blocking startSession.`);
+          throw new Error('Station is offline');
       }
       
       // 3. Create Session Record (Pending)
@@ -100,7 +117,7 @@ export class ChargingService {
         unit_consumed: 0,
         consumed_amount: 0,
         price: 0,
-        unit_price: 0, // Should fetch from tariff?
+        unit_price: station.price_per_kwh || 15.0, // Default to 15 if not set
         created_date: new Date(),
         modified_date: new Date(),
         stopPending: false,
@@ -208,10 +225,6 @@ export class ChargingService {
       throw new Error('Connector not found');
     }
 
-    if (connector.status !== 'Available') {
-      throw new Error(`Connector is ${connector.status}`);
-    }
-
     // Check for Lock
     const lockKey = `lock:${stationId}:${connectorId}`;
     const existingLock = await redis.get(lockKey);
@@ -222,6 +235,50 @@ export class ChargingService {
 
     // Set Lock (TTL 5 minutes)
     await redis.set(lockKey, userId, 300);
+
+    // If locked by current user, we ALLOW 'Preparing' status.
+    // This handles the case where the user entered the page (triggering Preparing)
+    // and then swipes to start.
+    if (connector.status === 'Preparing' && existingLock === userId) {
+        logger.info(`Allowing 'Preparing' status for user ${userId} on ${stationId}:${connectorId} (Self-Locked)`);
+    } else if (connector.status === 'Charging') {
+        // Check if this user owns the active session on this connector
+        const activeSession = await ChargingSession.findOne({
+            charger_id: stationId,
+            connector_id: Number(connectorId),
+            email_id: userId,
+            charger_status: { $in: ['Charging', 'SuspendedEV', 'SuspendedEVSE'] }
+        });
+
+        if (activeSession) {
+            logger.info(`User ${userId} attempting to access own active session on ${stationId}:${connectorId}`);
+            return {
+                allowed: false,
+                activeSession: true,
+                sessionId: activeSession.session_id,
+                message: 'Active session found'
+            };
+        } else {
+             throw new Error(`Connector is ${connector.status}`);
+        }
+    } else if (connector.status !== 'Available') {
+        throw new Error(`Connector is ${connector.status}`);
+    }
+
+    // Trigger DataTransfer "Preparing" as requested
+    // This sends [2, requestId, "DataTransfer", payload] to charger via OCPP Server
+    const commandPayload = {
+        chargerId: stationId,
+        command: 'DataTransfer',
+        payload: {
+            vendorId: 'Outdid',
+            messageId: 'TEST',
+            data: 'Preparing',
+            connectorId: Number(connectorId)
+        }
+    };
+    await redis.publish('ocpp:commands', commandPayload);
+    logger.info(`Triggered DataTransfer 'Preparing' for ${stationId}:${connectorId}`);
 
     return {
       allowed: true,
@@ -247,6 +304,24 @@ export class ChargingService {
       charger_status: { $nin: ['completed', 'failed', 'stopped', 'Completed', 'Failed', 'Stopped'] } // Case insensitive safety or include both cases
     }).sort({ created_date: -1 });
     
+    if (session) {
+        // Fetch Charger Details
+        const charger = await Charger.findOne({ charger_id: session.charger_id });
+        if (charger) {
+            const connector = charger.connectors.find(c => c.connector_id === session.connector_id);
+            return {
+                ...session.toObject(),
+                chargerDetails: {
+                    charger_id: charger.charger_id,
+                    max_power_kw: connector ? connector.max_power_kw : charger.max_power_kw,
+                    connector_type: connector ? connector.type : 'Unknown',
+                    name: charger.name,
+                    address: charger.location?.address
+                }
+            };
+        }
+    }
+
     return session;
   }
 

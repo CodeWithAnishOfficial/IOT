@@ -67,14 +67,14 @@ class _ChargingViewState extends State<ChargingView> {
                     // Top Stats Row
                     Padding(
                       padding: const EdgeInsets.only(top: 10.0),
-                      child: Row(
+                      child: Obx(() => Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildTopStatItem(context, Icons.electrical_services, "CCS 2", "Connector"),
-                          _buildTopStatItem(context, Icons.flash_on, "120 kW", "Max Speed"),
-                          _buildTopStatItem(context, Icons.ev_station, "ID: 402", "Station"),
+                          _buildTopStatItem(context, Icons.electrical_services, widget.controller.connectorTypeLabel.value, "Connector"),
+                          _buildTopStatItem(context, Icons.flash_on, widget.controller.maxPowerLabel.value, "Max Speed"),
+                          _buildTopStatItem(context, Icons.ev_station, widget.controller.stationIdLabel.value, "Station"),
                         ],
-                      ),
+                      )),
                     ),
 
                     const SizedBox(height: 40),
@@ -417,6 +417,7 @@ class _AnimatedBatteryBars extends StatefulWidget {
 class _AnimatedBatteryBarsState extends State<_AnimatedBatteryBars> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<int> _chargingAnimation;
+  Worker? _statusWorker;
 
   @override
   void initState() {
@@ -431,7 +432,7 @@ class _AnimatedBatteryBarsState extends State<_AnimatedBatteryBars> with SingleT
       _animController.repeat();
     }
 
-    ever(widget.controller.status, (status) {
+    _statusWorker = ever(widget.controller.status, (status) {
       if (status == "Charging") {
         _animController.repeat();
       } else {
@@ -443,6 +444,7 @@ class _AnimatedBatteryBarsState extends State<_AnimatedBatteryBars> with SingleT
 
   @override
   void dispose() {
+    _statusWorker?.dispose();
     _animController.dispose();
     super.dispose();
   }
