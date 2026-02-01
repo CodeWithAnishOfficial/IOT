@@ -126,9 +126,19 @@ export class ChargingController {
 
     } catch (error: any) {
       logger.error('Error in start charging', error);
-      res.status(500).json({ 
+      
+      let statusCode = 500;
+      const msg = error.message || '';
+      
+      if (msg.includes('not found') || msg.includes('Missing')) {
+          statusCode = 404;
+      } else if (msg.includes('offline') || msg.includes('reserved') || msg.includes('balance')) {
+          statusCode = 400; // Business logic errors
+      }
+
+      res.status(statusCode).json({ 
         error: true, 
-        message: error.message || 'Failed to start charging session' 
+        message: msg || 'Failed to start charging session' 
       });
     }
   }

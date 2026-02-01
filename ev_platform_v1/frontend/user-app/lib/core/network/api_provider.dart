@@ -44,6 +44,7 @@ class ApiProvider {
     } on TimeoutException catch (_) {
       throw ApiException('Server is taking too long to respond.', 408);
     } catch (e) {
+      if (e is ApiException) rethrow; // Pass through specific API exceptions
       debugPrint('ApiProvider Error: $e');
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
@@ -96,6 +97,7 @@ class ApiProvider {
     } on TimeoutException catch (_) {
       throw ApiException('Server is taking too long to respond.', 408);
     } catch (e) {
+      if (e is ApiException) rethrow; // Pass through specific API exceptions
       debugPrint('ApiProvider Error: $e');
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
