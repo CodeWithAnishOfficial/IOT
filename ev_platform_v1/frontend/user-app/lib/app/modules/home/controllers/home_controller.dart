@@ -748,14 +748,21 @@ class HomeController extends GetxController {
   }
 
   BitmapDescriptor getMarkerIcon(Charger station) {
-    final isOnline = station.status.toLowerCase() == 'online';
-    return isOnline
-        ? (_iconGreen ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen))
-        : (_iconOrange ??
-              BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueOrange,
-              ));
+    final status = station.status.toLowerCase();
+
+    if (status == 'online') {
+      return _iconGreen ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    } else if (status == 'offline') {
+      return _iconRed ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+    } else {
+      // Busy/Unknown -> Orange
+      return _iconOrange ??
+          BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueOrange,
+          );
+    }
   }
 
   BitmapDescriptor getSourceIcon() =>
