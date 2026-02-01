@@ -285,18 +285,21 @@ export class ChargingService {
     // Set Lock (TTL 5 minutes)
     await redis.set(lockKey, userId, 300);
 
+    const status = connector.status.trim().toLowerCase();
+
     // If locked by current user, we ALLOW 'Preparing' status.
     // This handles the case where the user entered the page (triggering Preparing)
     // and then swipes to start.
-    if (connector.status.toLowerCase() === 'preparing' && existingLock === userId) {
-        logger.info(`Allowing 'Preparing' status for user ${userId} on ${stationId}:${connectorId} (Self-Locked)`);
-    } else if (connector.status.toLowerCase() === 'charging') {
+    // NOTE: existingLock might be null if we just acquired it, so we rely on the fact that we passed the lock check.
+    if (status === 'preparing') {
+        logger.info(`Allowing 'Preparing' status for user ${userId} on ${stationId}:${connectorId} (Lock Acquired)`);
+    } else if (status === 'charging' || status === 'suspendedev' || status === 'suspendedevse') {
         // Check if this user owns the active session on this connector
         const activeSession = await ChargingSession.findOne({
             charger_id: stationId,
             connector_id: Number(connectorId),
             email_id: userId,
-            charger_status: { $in: ['Charging', 'SuspendedEV', 'SuspendedEVSE'] }
+            charger_status: { $in: ['Charging', 'SuspendedEV', 'SuspendedEVSE', 'charging', 'suspendedev', 'suspendedevse'] } // Case insensitive safety
         });
 
         if (activeSession) {
@@ -310,7 +313,7 @@ export class ChargingService {
         } else {
              throw new Error(`Connector is ${connector.status}`);
         }
-    } else if (connector.status.toLowerCase() !== 'available') {
+    } else if (status !== 'available') {
         throw new Error(`Connector is ${connector.status}`);
     }
 
