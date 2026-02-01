@@ -39,23 +39,25 @@ export async function handleAuthorize(connection: OCPPConnection, payload: any) 
   }
 
   if (user.status === false) {
-      logger.warn(`Authorization failed for tag ${idTag}: User blocked`);
-      return {
-          idTagInfo: {
-              status: 'Blocked',
-              parentIdTag: null
-          }
-      };
+      logger.warn(`Authorization failed for tag ${idTag}: User blocked (ALLOWING TEMPORARILY)`);
+       // Allow blocked users temporarily as per request to fix RemoteStart flow issues
+       // return {
+       //     idTagInfo: {
+       //         status: 'Blocked',
+       //         parentIdTag: null
+       //     }
+       // };
   }
   
   // Optional: Check Balance
   if (user.wallet_bal < 10) { // Minimum 10 balance
-       return {
-          idTagInfo: {
-              status: 'Blocked', // Or ConcurrentTx? Invalid is better for balance
-              parentIdTag: null
-          }
-      };
+       logger.warn(`Authorization warning for tag ${idTag}: Low balance ${user.wallet_bal} (ALLOWING TEMPORARILY)`);
+       // return {
+       //    idTagInfo: {
+       //        status: 'Blocked', // Or ConcurrentTx? Invalid is better for balance
+       //        parentIdTag: null
+       //    }
+       // };
   }
 
   return {
