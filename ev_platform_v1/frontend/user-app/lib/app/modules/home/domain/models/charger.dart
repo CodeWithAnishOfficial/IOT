@@ -32,6 +32,34 @@ class Charger {
   });
 
   factory Charger.fromJson(Map<String, dynamic> json) {
+    var connectors = (json['connectors'] as List?)
+              ?.map((e) => Connector.fromJson(e))
+              .toList() ??
+          [];
+
+    // Logic to derive status from connectors if provided, matching WebSocket logic
+    String backendStatus = json['status']?.toString() ?? 'offline';
+    String derivedStatus = backendStatus;
+
+    // Only derive from connectors if the station is not explicitly offline
+    if (backendStatus.toLowerCase() != 'offline' && connectors.isNotEmpty) {
+       bool anyAvailable = connectors.any(
+          (c) => c.status.toLowerCase() == 'available' || c.status.toLowerCase() == 'preparing'
+       );
+       bool allFaulted = connectors.every(
+          (c) => c.status.toLowerCase() == 'faulted' || c.status.toLowerCase() == 'unavailable' || c.status.toLowerCase() == 'offline'
+       );
+       
+       if (anyAvailable) {
+          derivedStatus = 'online';
+       } else if (allFaulted) {
+          derivedStatus = 'offline';
+       } else {
+          // If not available and not all faulted, assume busy/charging
+          derivedStatus = 'busy';
+       }
+    }
+
     return Charger(
       chargerId: json['charger_id']?.toString() ?? '',
       name: json['name']?.toString(),
@@ -40,7 +68,7 @@ class Charger {
               ? Location.fromJson(json['location'])
               : null)
           : null,
-      status: json['status']?.toString() ?? 'offline',
+      status: derivedStatus,
       maxPowerKw: (json['max_power_kw'] as num?)?.toDouble() ?? 0.0,
       tariffId: json['tariff_id'] is Map ? null : json['tariff_id']?.toString(),
       siteId: json['site_id'] is Map ? null : json['site_id']?.toString(),
@@ -48,10 +76,7 @@ class Charger {
       modelName: json['modelName']?.toString(),
       distance: (json['distance'] as num?)?.toDouble(),
       costPerUnit: _parsePrice(json['cost_per_unit']) ?? _parsePrice(json['price_per_kwh']),
-      connectors: (json['connectors'] as List?)
-              ?.map((e) => Connector.fromJson(e))
-              .toList() ??
-          [],
+      connectors: connectors,
       images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
       facilities: (json['facilities'] as List?)?.map((e) => e.toString()).toList() ?? [],
     );

@@ -100,13 +100,19 @@ class ChargingController extends GetxController {
 
               // Update Status
               if (data['charger_status'] != null) {
-                   status.value = data['charger_status'];
+                   String newStatus = data['charger_status'];
+                   // Don't auto-set Completed status here, as it prevents finalizeSession logic from running correctly
+                   // if we haven't navigated yet.
+                   if (newStatus != 'Completed' && newStatus != 'completed') {
+                        status.value = newStatus;
+                   }
               }
 
               // Check if session is already completed (e.g. resumed after stop)
               if (data['charger_status'] == 'Completed' || data['charger_status'] == 'completed') {
                   print("Session is already completed. Finalizing...");
-                  handleSessionCompleted(data);
+                  // Force finalize because we are loading from scratch and it is already done
+                  handleSessionCompleted(data, force: true);
               }
           }
       } catch (e) {
@@ -199,6 +205,11 @@ class ChargingController extends GetxController {
                currentCost.value = energyDelivered.value * ratePerKwh;
             }
             
+            // Auto-detect Charging status if we see power/current flow but status is still Preparing
+            if (status.value == "Preparing" && (currentPower.value > 0 || currentAmps.value > 0)) {
+               status.value = "Charging";
+            }
+
             // Logic Update: Prioritize calculated Session Progress for prepaid sessions
             if (initialAmount > 0 && initialAmount != double.infinity) {
                 _calculateSoC();
@@ -224,6 +235,12 @@ class ChargingController extends GetxController {
             if (currentCost.value >= initialAmount) {
               stopCharging();
             }
+          } else if (event == 'station_status') {
+             // Handle station status updates (e.g. Preparing -> Charging)
+             final data = payload;
+             if (data['connectorId'].toString() == connectorId.toString()) {
+                 status.value = data['status'];
+             }
           } else if (event == 'session_completed') {
              // Handle completion
              print("ChargingController: Received session_completed");
@@ -275,7 +292,26 @@ class ChargingController extends GetxController {
           finalSessionData['stop_time'] = finalSessionData['timestamp'];
        } else if (finalSessionData['modified_date'] != null) {
           finalSessionData['stop_time'] = finalSessionData['modified_date'];
+       } else if (finalSessionData['updated_at'] != null) {
+          finalSessionData['stop_time'] = finalSessionData['updated_at'];
        }
+       
+       // Last resort: Calculate stop_time from start_time + duration (if valid)
+        if (finalSessionData['stop_time'] == null && durationString.value != "00:00:00") {
+            try {
+                List<String> parts = durationString.value.split(':');
+                if (parts.length == 3) {
+                    int h = int.parse(parts[0]);
+                    int m = int.parse(parts[1]);
+                    int s = int.parse(parts[2]);
+                    final duration = Duration(hours: h, minutes: m, seconds: s);
+                    final calculatedStop = _startTime.add(duration);
+                    finalSessionData['stop_time'] = calculatedStop.toIso8601String();
+                }
+            } catch (e) {
+                print("Error calculating stop_time: $e");
+            }
+        }
     }
     
     // Update display values if present

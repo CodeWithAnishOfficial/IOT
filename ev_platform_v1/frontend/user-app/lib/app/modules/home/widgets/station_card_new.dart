@@ -33,7 +33,7 @@ class StationCard extends StatelessWidget {
       statusText = "Busy";
     } else {
         // Offline or Faulted
-        statusColor = Colors.grey;
+        statusColor = AppColors.error;
         statusText = "Offline";
     }
 
