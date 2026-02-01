@@ -288,9 +288,9 @@ export class ChargingService {
     // If locked by current user, we ALLOW 'Preparing' status.
     // This handles the case where the user entered the page (triggering Preparing)
     // and then swipes to start.
-    if (connector.status === 'Preparing' && existingLock === userId) {
+    if (connector.status.toLowerCase() === 'preparing' && existingLock === userId) {
         logger.info(`Allowing 'Preparing' status for user ${userId} on ${stationId}:${connectorId} (Self-Locked)`);
-    } else if (connector.status === 'Charging') {
+    } else if (connector.status.toLowerCase() === 'charging') {
         // Check if this user owns the active session on this connector
         const activeSession = await ChargingSession.findOne({
             charger_id: stationId,
@@ -310,7 +310,7 @@ export class ChargingService {
         } else {
              throw new Error(`Connector is ${connector.status}`);
         }
-    } else if (connector.status !== 'Available') {
+    } else if (connector.status.toLowerCase() !== 'available') {
         throw new Error(`Connector is ${connector.status}`);
     }
 

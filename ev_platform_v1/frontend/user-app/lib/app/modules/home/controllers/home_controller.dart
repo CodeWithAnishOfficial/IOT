@@ -2320,6 +2320,9 @@ class HomeController extends GetxController {
         final List<dynamic> data = response['data'];
         // Use compute to parse JSON in background isolate
         stations.value = await compute(_parseStations, data);
+        
+        // Removed sorting by status to keep distance-based ordering (visibility of nearby offline stations)
+        
         _updateMarkers();
         _cacheStations(data);
 
@@ -2767,16 +2770,18 @@ class HomeController extends GetxController {
     for (var station in stationsToRender) {
       if (station.location == null) continue;
 
-      final isOnline = station.status.toLowerCase() == 'online';
-      final icon = isOnline
-          ? (_iconGreen ??
-                BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen,
-                ))
-          : (_iconOrange ??
-                BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueOrange,
-                ));
+      final status = station.status.toLowerCase();
+      BitmapDescriptor icon;
+      
+      if (status == 'online') {
+         icon = _iconGreen ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+      } else if (status == 'offline') {
+         // Use Red or Grey for offline
+         icon = _iconRed ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+      } else {
+         // Busy, etc.
+         icon = _iconOrange ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+      }
 
       newMarkers.add(
         Marker(
