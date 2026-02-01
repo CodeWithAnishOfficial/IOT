@@ -476,12 +476,12 @@ class HomeController extends GetxController {
                     "MOCK_SESSION_${DateTime.now().millisecondsSinceEpoch}")
                 .toString();
 
-        Get.snackbar(
-          "Success",
-          "Charging session started successfully!",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+        // Get.snackbar(
+        //   "Success",
+        //   "Charging session started successfully!",
+        //   backgroundColor: Colors.green,
+        //   colorText: Colors.white,
+        // );
 
         // 1. Initialize Controller & State
         // Ensure we don't have a stale controller registered
@@ -508,9 +508,7 @@ class HomeController extends GetxController {
         });
 
         // 2. Navigate to View (Push, don't replace, so Back works)
-        // Removed auto-navigation as per user request ("don't need to enter active session page")
-        // The ActiveSessionCard will appear on Home Screen instead.
-        // Get.to(() => ChargingView(controller: chargingController));
+        Get.to(() => ChargingView(controller: chargingController));
       } else {
         throw Exception(res['message'] ?? "Failed to start session");
       }
