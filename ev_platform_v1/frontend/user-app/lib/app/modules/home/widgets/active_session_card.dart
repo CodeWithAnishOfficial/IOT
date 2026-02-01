@@ -59,7 +59,7 @@ class _ActiveSessionCardState extends State<ActiveSessionCard> {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutBack,
             width: double.infinity,
-            height: _isExpanded ? 180 : 80, // Height expansion
+            height: _isExpanded ? 220 : 80, // Height expansion
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             decoration: BoxDecoration(
               color: const Color(0xFF000000).withOpacity(0.85), // Deep black/glass

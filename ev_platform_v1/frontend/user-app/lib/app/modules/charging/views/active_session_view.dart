@@ -120,12 +120,15 @@ class _ChargingViewState extends State<ChargingView> {
                                     ],
                                   ),
                                   const Spacer(),
-                                  Obx(() => Text(
-                                      "${widget.controller.soc.value.toInt()}%",
-                                      style: GoogleFonts.orbitron(
-                                        color: theme.textTheme.titleLarge?.color,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 48,
+                                  Obx(() => FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        "${widget.controller.soc.value.toInt()}%",
+                                        style: GoogleFonts.orbitron(
+                                          color: theme.textTheme.titleLarge?.color,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 48,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -208,12 +211,15 @@ class _ChargingViewState extends State<ChargingView> {
                                           ],
                                         ),
                                         const SizedBox(height: 8),
-                                        Obx(() => Text(
-                                            "${widget.controller.energyDelivered.value.toStringAsFixed(1)} kWh",
-                                            style: GoogleFonts.orbitron(
-                                              color: theme.textTheme.titleLarge?.color,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                        Obx(() => FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              "${widget.controller.energyDelivered.value.toStringAsFixed(3)} kWh",
+                                              style: GoogleFonts.orbitron(
+                                                color: theme.textTheme.titleLarge?.color,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -303,6 +309,41 @@ class _ChargingViewState extends State<ChargingView> {
               ),
             ),
           ),
+
+          // 5. Loading Overlay (Stopping)
+          Obx(() {
+            if (widget.controller.status.value == "Stopping") {
+              return Container(
+                color: Colors.black.withOpacity(0.7),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: Colors.white),
+                      const SizedBox(height: 20),
+                      Text(
+                        "Stopping Charger...",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "Please wait while we generate your invoice",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
         ],
       ),
     );
@@ -379,26 +420,32 @@ class _ChargingViewState extends State<ChargingView> {
             child: Icon(icon, color: theme.primaryColor, size: 20),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.poppins(color: theme.textTheme.bodySmall?.color, fontSize: 10),
-              ),
-              const SizedBox(height: 4),
-              Obx(() => Text(
-                  isCurrency
-                      ? "$unit${valueObx.value.toStringAsFixed(2)}"
-                      : "${valueObx.value.toStringAsFixed(2)} $unit",
-                  style: GoogleFonts.orbitron(
-                    color: theme.textTheme.titleLarge?.color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(color: theme.textTheme.bodySmall?.color, fontSize: 10),
+                ),
+                const SizedBox(height: 4),
+                Obx(() => FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      isCurrency
+                          ? "$unit${valueObx.value.toStringAsFixed(2)}"
+                          : "${valueObx.value.toStringAsFixed(2)} $unit",
+                      style: GoogleFonts.orbitron(
+                        color: theme.textTheme.titleLarge?.color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

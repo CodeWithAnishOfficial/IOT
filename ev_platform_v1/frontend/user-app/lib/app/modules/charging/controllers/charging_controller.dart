@@ -32,6 +32,7 @@ class ChargingController extends GetxController {
   // Full session details for Bill Summary
   final finalSessionData = <String, dynamic>{}.obs;
 
+  bool _isFinalizing = false;
   Timer? _timer;
   WebSocketService? _wsService;
   DateTime _startTime = DateTime.now();
@@ -85,7 +86,23 @@ class ChargingController extends GetxController {
                   currentCost.value = (data['consumed_amount'] as num).toDouble();
               }
               
-              _calculateSoC();
+              // Bind SOC from backend
+              // Logic Update: For prepaid sessions (finite amount), we prefer the calculated 
+              // "Session Progress %" over the vehicle SOC, unless the user explicitly wants vehicle SOC.
+              // Given the requirement "check calculation", we prioritize calculation here.
+              if (initialAmount > 0 && initialAmount != double.infinity) {
+                  _calculateSoC();
+              } else if (data['soc'] != null) {
+                  _updateSoc(data['soc']);
+              } else {
+                  _calculateSoC();
+              }
+
+              // Check if session is already completed (e.g. resumed after stop)
+              if (data['charger_status'] == 'Completed' || data['charger_status'] == 'completed') {
+                  print("Session is already completed. Finalizing...");
+                  handleSessionCompleted(data);
+              }
           }
       } catch (e) {
           print("Error fetching session details: $e");
@@ -151,7 +168,10 @@ class ChargingController extends GetxController {
             }
 
             if (payload['soc'] != null) {
-              soc.value = (payload['soc'] as num).toDouble();
+              // Only update if we are NOT in prepaid mode (handled below)
+              if (initialAmount <= 0 || initialAmount == double.infinity) {
+                 _updateSoc(payload['soc']);
+              }
             }
             
             if (payload['voltage'] != null) {
@@ -174,8 +194,26 @@ class ChargingController extends GetxController {
                currentCost.value = energyDelivered.value * ratePerKwh;
             }
             
-            // Calculate simulated SoC based on payment progress
-            _calculateSoC();
+            // Logic Update: Prioritize calculated Session Progress for prepaid sessions
+            if (initialAmount > 0 && initialAmount != double.infinity) {
+                _calculateSoC();
+            } else if (payload['soc'] != null) {
+              _updateSoc(payload['soc']);
+            } else {
+               _calculateSoC();
+            }
+            
+            // Force UI update by triggering value change (primitive refresh can be flaky in tight loops)
+            // Even if value is same, we want to notify listeners
+            soc.value = soc.value; 
+            energyDelivered.value = energyDelivered.value;
+            currentCost.value = currentCost.value;
+            currentPower.value = currentPower.value;
+            
+            soc.refresh();
+            energyDelivered.refresh();
+            currentCost.refresh();
+            currentPower.refresh();
 
             // Check limits
             if (currentCost.value >= initialAmount) {
@@ -198,13 +236,42 @@ class ChargingController extends GetxController {
     }
   }
 
-  void handleSessionCompleted(dynamic data) {
+  void handleSessionCompleted(dynamic data, {bool force = false}) {
     print("Handling Session Completed: $data");
     
-    // Safety check for status
-    if (status.value == "Completed") return;
+    // Prepare new data map
+    Map<String, dynamic> newData = Map<String, dynamic>.from(data);
+
+    // If we already have finalized data, we should be careful not to overwrite valid data with incomplete data
+    // (e.g. if polling returns stale data after WebSocket provided full data)
+    if (status.value == "Completed" && finalSessionData.isNotEmpty) {
+        // 1. Protect Stop Time: Don't overwrite existing stop_time with null
+        if (finalSessionData['stop_time'] != null && newData['stop_time'] == null) {
+             newData['stop_time'] = finalSessionData['stop_time'];
+        }
+        
+        // 2. Protect Cost: Don't overwrite non-zero cost with zero
+        double currentAmt = (finalSessionData['consumed_amount'] as num?)?.toDouble() ?? 0.0;
+        double newAmt = (newData['consumed_amount'] as num?)?.toDouble() ?? 0.0;
+        if (currentAmt > 0 && newAmt == 0) {
+             newData['consumed_amount'] = finalSessionData['consumed_amount'];
+             newData['cost'] = finalSessionData['cost'];
+             newData['unit_consumed'] = finalSessionData['unit_consumed'];
+        }
+    }
     
-    finalSessionData.value = Map<String, dynamic>.from(data);
+    finalSessionData.value = newData;
+    
+    // Fix for "Empty Stop Time" race condition
+    // If 'stop_time' is missing but 'timestamp' exists (from CDR event), use it.
+    // Also check 'modified_date' as a fallback since the backend updates it on completion.
+    if (finalSessionData['stop_time'] == null) {
+       if (finalSessionData['timestamp'] != null) {
+          finalSessionData['stop_time'] = finalSessionData['timestamp'];
+       } else if (finalSessionData['modified_date'] != null) {
+          finalSessionData['stop_time'] = finalSessionData['modified_date'];
+       }
+    }
     
     // Update display values if present
     if (data['unit_consumed'] != null) {
@@ -216,7 +283,29 @@ class ChargingController extends GetxController {
         currentCost.value = (data['cost'] as num).toDouble();
     }
 
-    finalizeSession();
+    // Only trigger navigation if not already completed
+    if (status.value != "Completed") {
+        // Check for essential data
+        bool hasStopTime = finalSessionData['stop_time'] != null;
+        
+        if (hasStopTime || force) {
+            finalizeSession();
+        } else {
+            print("Session data received but missing stop_time. Waiting for better data...");
+        }
+    }
+  }
+
+  void _updateSoc(dynamic rawVal) {
+    if (rawVal == null) return;
+    double val = (rawVal as num).toDouble();
+    
+    // Normalize SOC: If value is a ratio (<= 1.0 and > 0), convert to percentage
+    if (val <= 1.0 && val > 0.0) {
+      soc.value = val * 100;
+    } else {
+      soc.value = val;
+    }
   }
 
   void _calculateSoC() {
@@ -237,6 +326,9 @@ class ChargingController extends GetxController {
   }
 
   void finalizeSession() {
+    if (_isFinalizing || status.value == "Completed") return;
+    _isFinalizing = true;
+
     print("Finalizing session...");
     status.value = "Completed";
     _timer?.cancel();
@@ -260,12 +352,107 @@ class ChargingController extends GetxController {
       print("Error stopping session: $e");
     }
 
-    // Safety timeout: if no WS event in 5 seconds, finish locally
-    Future.delayed(const Duration(seconds: 5), () {
-       if (status.value != "Completed") {
-           finalizeSession();
-       }
+    // Start polling for completion immediately
+    // Check every 2 seconds, up to 10 times (20 seconds)
+    int attempts = 0;
+    Timer.periodic(const Duration(seconds: 2), (timer) async {
+      attempts++;
+      
+      // If already completed (e.g. via WebSocket), stop polling
+      if (status.value == "Completed") {
+        timer.cancel();
+        return;
+      }
+
+      print("Polling for session completion (Attempt $attempts)...");
+      bool isCompleted = await _checkCompletionStatus();
+      
+      if (isCompleted) {
+        timer.cancel();
+      } else if (attempts >= 10) {
+        timer.cancel();
+        print("Polling timeout. Forcing finish.");
+        // Final attempt to get data, or just close
+        await _fetchFinalDataAndFinish();
+      }
     });
+  }
+
+  Future<bool> _checkCompletionStatus() async {
+      try {
+          // 1. Check History (most reliable for completed sessions)
+          final historyResp = await _apiProvider.get('/charging/history');
+          if (historyResp['error'] == false && historyResp['data'] != null) {
+              final List history = historyResp['data'];
+              final session = history.firstWhere(
+                  (s) => s['session_id'].toString() == sessionId.toString(),
+                  orElse: () => null
+              );
+              
+              if (session != null) {
+                  print("Found session in history via polling: $session");
+                  handleSessionCompleted(session);
+                  return status.value == "Completed";
+              }
+          }
+
+          // 2. Check Active Session (to see if status changed to Completed)
+          final activeResp = await _apiProvider.get('/charging/active-session');
+          if (activeResp['data'] != null && activeResp['data']['session_id'].toString() == sessionId.toString()) {
+               final data = activeResp['data'];
+               if (data['charger_status'] == 'Completed' || data['charger_status'] == 'completed') {
+                   print("Found completed status in active-session endpoint");
+                   handleSessionCompleted(data);
+                   return status.value == "Completed";
+               }
+          }
+          
+          return false;
+      } catch (e) {
+          print("Error checking completion status: $e");
+          return false;
+      }
+  }
+
+  Future<void> _fetchFinalDataAndFinish() async {
+      try {
+          // 1. Try fetching active session first (in case it's still closing)
+          final activeResp = await _apiProvider.get('/charging/active-session');
+          if (activeResp['data'] != null && activeResp['data']['session_id'].toString() == sessionId.toString()) {
+               final data = activeResp['data'];
+               // If it's still 'active' but we timed out stopping, maybe force close locally?
+               // But usually we want 'completed' data.
+               // Let's check if the status in DB says completed.
+               if (data['charger_status'] == 'Completed' || data['charger_status'] == 'completed') {
+                   handleSessionCompleted(data, force: true);
+                   return;
+               }
+          }
+
+          // 2. If not in active (or not completed there), check history
+          final historyResp = await _apiProvider.get('/charging/history');
+          if (historyResp['error'] == false && historyResp['data'] != null) {
+              final List history = historyResp['data'];
+              final session = history.firstWhere(
+                  (s) => s['session_id'].toString() == sessionId.toString(),
+                  orElse: () => null
+              );
+              
+              if (session != null) {
+                  print("Found session in history: $session");
+                  handleSessionCompleted(session, force: true);
+                  return;
+              }
+          }
+          
+          // 3. If still nothing, just finish with what we have locally
+          print("Could not fetch final data. Finishing with local values.");
+          finalizeSession();
+          
+      } catch (e) {
+          print("Error fetching final data: $e");
+          finalizeSession();
+      }
   }
 
   Future<void> downloadInvoice() async {

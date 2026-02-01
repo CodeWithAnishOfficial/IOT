@@ -53,13 +53,13 @@ class StationCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Image Section
               Padding(
-                padding: const EdgeInsets.only(top: 8.0), // Move image down slightly
+                padding: const EdgeInsets.only(top: 20.0), // Move image down slightly
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -84,7 +84,6 @@ class StationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 4),
                     Text(
                       station.name ?? "Unknown Station",
                       maxLines: 1,
@@ -124,12 +123,15 @@ class StationCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          statusText,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: statusColor,
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          child: Text(
+                            statusText,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: statusColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

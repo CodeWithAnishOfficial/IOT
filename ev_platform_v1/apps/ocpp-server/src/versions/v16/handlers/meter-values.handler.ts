@@ -57,18 +57,31 @@ export async function handleMeterValues(connection: OCPPConnection, payload: any
              }
 
              // Update Session Logic
+             let shouldSave = false;
+
              if (energyRegister) {
                  const currentEnergy = parseFloat(energyRegister);
                  if (!isNaN(currentEnergy)) {
                      const unit = energyRegisterSample?.unit || 'Wh';
-                     const rawDelta = Math.max(0, currentEnergy - session.start_meter_value);
                      
-                     // Normalize delta to Wh for storage consistency
-                     let deltaWh = rawDelta;
-                     if (unit.toLowerCase() === 'kwh' || unit.toLowerCase() === 'kw') {
-                         deltaWh = rawDelta * 1000;
-                     }
+                     // Helper to normalize to Wh
+                     const toWh = (val: number, u: string) => {
+                         if (!u) return val; // Assume Wh if no unit
+                         if (u.toLowerCase() === 'kwh' || u.toLowerCase() === 'kw') return val * 1000;
+                         return val;
+                     };
+
+                     // Normalize both current reading and start reading to Wh before subtracting
+                     const currentWh = toWh(currentEnergy, unit);
                      
+                     // Start Meter Value is always in Wh (OCPP 1.6 StartTransaction spec)
+                     // So we do NOT convert it using the current unit
+                     const startWh = session.start_meter_value;
+
+                     const deltaWh = Math.max(0, currentWh - startWh);
+                     
+                     logger.info(`MV Calc: Start=${startWh}Wh, Current=${currentEnergy} ${unit} -> ${currentWh}Wh, Delta=${deltaWh}Wh`);
+
                      // Update unit_consumed (Always in Wh) and current_meter_value (Raw)
                      session.unit_consumed = deltaWh;
                      session.current_meter_value = currentEnergy;
@@ -81,8 +94,40 @@ export async function handleMeterValues(connection: OCPPConnection, payload: any
                         session.price = session.consumed_amount; 
                      }
                      
-                     await session.save();
+                     shouldSave = true;
                  }
+             }
+
+             // SOC Calculation Strategy
+             // If Prepaid (amount_to_charge > 0): Calculate 'Session Progress' as SOC
+             // If Postpaid: Use Charger's SOC
+             
+             const chargerSoc = soc ? parseFloat(soc) : null;
+             
+             if (session.amount_to_charge && session.amount_to_charge > 0) {
+                 // Prepaid Logic
+                 const currentCost = session.consumed_amount || 0;
+                 let calculatedSoc = (currentCost / session.amount_to_charge) * 100;
+                 
+                 // Clamp 0-100
+                 if (calculatedSoc > 100) calculatedSoc = 100;
+                 if (calculatedSoc < 0) calculatedSoc = 0;
+                 
+                 const newSoc = parseFloat(calculatedSoc.toFixed(1));
+                 if (session.soc !== newSoc) {
+                     session.soc = newSoc;
+                     shouldSave = true;
+                 }
+             } else if (chargerSoc !== null) {
+                 // Postpaid Logic: Update only if charger sends SOC
+                 if (session.soc !== chargerSoc) {
+                     session.soc = chargerSoc;
+                     shouldSave = true;
+                 }
+             }
+
+             if (shouldSave) {
+                 await session.save();
              }
 
              // Publish Progress
@@ -106,7 +151,7 @@ export async function handleMeterValues(connection: OCPPConnection, payload: any
                       voltage: voltage ? parseFloat(voltage) : 0,
                       current: currentImport ? parseFloat(currentImport) : 0,
                       cost: session.consumed_amount || 0,
-                      soc: soc ? parseFloat(soc) : null,
+                      soc: session.soc || 0,
                       timestamp: new Date()
                   });
               } catch (err) {

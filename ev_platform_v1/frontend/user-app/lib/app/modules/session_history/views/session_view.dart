@@ -41,7 +41,10 @@ class SessionView extends GetView<SessionHistoryController> {
               child: Obx(() {
                 if (controller.isLoading.value) {
                   return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     itemCount: 5, // Show 5 shimmer items
                     separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) => _buildShimmerItem(context),
@@ -76,7 +79,10 @@ class SessionView extends GetView<SessionHistoryController> {
                   color: AppColors.primary,
                   child: ListView.separated(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     itemCount: controller.sessions.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
@@ -97,8 +103,10 @@ class SessionView extends GetView<SessionHistoryController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isActive = session.status.toLowerCase() == 'active';
-    final dateStr = DateFormat('MMM dd, yyyy').format(session.startTime);
-    final timeStr = DateFormat('HH:mm').format(session.startTime);
+    final dateStr = DateFormat(
+      'MMM dd, yyyy',
+    ).format(session.startTime.toLocal());
+    final timeStr = DateFormat('hh:mm a').format(session.startTime.toLocal());
 
     return GestureDetector(
       onTap: () => Get.to(() => SessionDetailView(session: session)),
@@ -121,9 +129,11 @@ class SessionView extends GetView<SessionHistoryController> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isActive 
-                    ? AppColors.success.withOpacity(0.1) 
-                    : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+                color: isActive
+                    ? AppColors.success.withOpacity(0.1)
+                    : (isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -148,16 +158,16 @@ class SessionView extends GetView<SessionHistoryController> {
                 ],
               ),
             ),
-            
+
             const SizedBox(width: 16),
-            
+
             // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Station ID: ${session.chargerId}",
+                    session.stationName,
                     style: GoogleFonts.poppins(
                       color: theme.textTheme.titleMedium?.color,
                       fontSize: 14,
@@ -169,21 +179,27 @@ class SessionView extends GetView<SessionHistoryController> {
                     children: [
                       Icon(Icons.flash_on, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(
-                        "${session.totalEnergy.toStringAsFixed(1)} kWh",
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey[600],
-                          fontSize: 12,
+                      Flexible(
+                        child: Text(
+                          "${session.totalEnergy.toStringAsFixed(1)} kWh",
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Icon(Icons.schedule, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(
-                        timeStr,
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey[600],
-                          fontSize: 12,
+                      Flexible(
+                        child: Text(
+                          timeStr,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -191,7 +207,7 @@ class SessionView extends GetView<SessionHistoryController> {
                 ],
               ),
             ),
-            
+
             // Cost
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -206,9 +222,14 @@ class SessionView extends GetView<SessionHistoryController> {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isActive ? AppColors.success : Colors.grey.withOpacity(0.1),
+                    color: isActive
+                        ? AppColors.success
+                        : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -275,14 +296,18 @@ class SessionView extends GetView<SessionHistoryController> {
                       width: 60,
                       height: 12,
                       baseColor: isDark ? Colors.white10 : Colors.grey[200],
-                      highlightColor: isDark ? Colors.white24 : Colors.grey[100],
+                      highlightColor: isDark
+                          ? Colors.white24
+                          : Colors.grey[100],
                     ),
                     const SizedBox(width: 12),
                     ShimmerBox(
                       width: 40,
                       height: 12,
                       baseColor: isDark ? Colors.white10 : Colors.grey[200],
-                      highlightColor: isDark ? Colors.white24 : Colors.grey[100],
+                      highlightColor: isDark
+                          ? Colors.white24
+                          : Colors.grey[100],
                     ),
                   ],
                 ),

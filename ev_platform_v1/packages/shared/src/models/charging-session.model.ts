@@ -55,6 +55,8 @@ export interface IChargingSession extends Document {
   transactionState?: string; // "Completed"
   stop_reason?: string;
   
+  soc?: number;
+  
   auth_tag?: string;
 }
 
@@ -112,6 +114,8 @@ const ChargingSessionSchema: Schema = new Schema({
   
   transactionState: { type: String },
   stop_reason: { type: String },
+  
+  soc: { type: Number, default: 0 },
   
   auth_tag: { type: String }
 });

@@ -34,7 +34,7 @@ class WebSocketService {
       // Listen to incoming frames
       _subscription = _channel!.stream.listen(
             (data) {
-          debugPrint('WebSocket received data');
+          debugPrint('WebSocket received data: $data');
 
           // Reset heartbeat timer on any frame
           _resetHeartbeatTimeout();

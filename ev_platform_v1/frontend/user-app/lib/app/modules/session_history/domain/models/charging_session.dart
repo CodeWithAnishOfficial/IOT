@@ -2,6 +2,7 @@ class ChargingSession {
   final String sessionId;
   final int? transactionId;
   final String chargerId;
+  final String stationName;
   final int connectorId;
   final String userId;
   final DateTime startTime;
@@ -16,6 +17,7 @@ class ChargingSession {
     required this.sessionId,
     this.transactionId,
     required this.chargerId,
+    this.stationName = 'Unknown Station',
     required this.connectorId,
     required this.userId,
     required this.startTime,
@@ -51,6 +53,7 @@ class ChargingSession {
       sessionId: json['session_id'].toString(),
       transactionId: json['transaction_id'],
       chargerId: json['charger_id'] ?? 'Unknown',
+      stationName: json['station_name'] ?? 'Unknown Station',
       connectorId: json['connector_id'] ?? 1,
       userId: json['user_id'].toString(),
       startTime: parseDate(json['start_time']),

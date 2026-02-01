@@ -90,6 +90,8 @@ const start = async () => {
             }
         });
         logger.info('Started consuming events');
+        // Start WebSocket Heartbeat
+        sse_service_1.SseService.startHeartbeat(30000);
         // Create HTTP Server
         const httpServer = (0, http_1.createServer)(app);
         // Setup WebSocket Server

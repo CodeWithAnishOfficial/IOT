@@ -32,6 +32,7 @@ async function handleStartTransaction(connection, payload) {
         pendingSession.lastWsPing = new Date();
         await pendingSession.save();
         sessionId = pendingSession.session_id;
+        userId = pendingSession.email_id; // Use email_id for WS targeting
         // userId = pendingSession.user_id; // Keep as is
     }
     else {
@@ -53,6 +54,7 @@ async function handleStartTransaction(connection, payload) {
             };
         }
         logger.info(`Authorized user ${user.email_id} for ad-hoc session`);
+        userId = user.email_id; // Use email_id for WS targeting
         // Create active session
         // Generate numeric ID
         sessionId = Math.floor(1000000 + Math.random() * 9000000);
@@ -83,6 +85,7 @@ async function handleStartTransaction(connection, payload) {
             sessionId,
             userId,
             chargerId: connection.id,
+            connectorId,
             transactionId,
             status: 'active',
             timestamp

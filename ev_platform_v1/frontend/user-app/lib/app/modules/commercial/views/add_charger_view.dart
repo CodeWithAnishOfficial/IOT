@@ -64,6 +64,7 @@ class _AddChargerViewState extends State<AddChargerView> {
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition();
+    if (!mounted) return;
     setState(() {
       _selectedLocation = LatLng(position.latitude, position.longitude);
     });
@@ -79,6 +80,7 @@ class _AddChargerViewState extends State<AddChargerView> {
   Future<void> _getAddressFromLatLng(LatLng pos) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+      if (!mounted) return;
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
         String address = '${place.street}, ${place.subLocality}, ${place.locality}, ${place.postalCode}';
@@ -648,6 +650,7 @@ class _AddChargerViewState extends State<AddChargerView> {
 
   void _openLocationPicker() async {
     final result = await Get.to(() => const LocationPickerView());
+    if (!mounted) return;
     if (result != null && result is Map) {
       final lat = result['lat'];
       final lng = result['lng'];
