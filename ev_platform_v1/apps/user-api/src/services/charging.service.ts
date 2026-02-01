@@ -118,6 +118,7 @@ export class ChargingService {
         consumed_amount: 0,
         price: 0,
         unit_price: station.price_per_kwh || 15.0, // Default to 15 if not set
+        amount_to_charge: amount, // Save amount to charge for SOC simulation
         created_date: new Date(),
         modified_date: new Date(),
         stopPending: false,
@@ -174,8 +175,56 @@ export class ChargingService {
          throw new Error('Unauthorized');
       }
 
+      // Check if session is stuck in 'stopping' state
+      if (session.charger_status && session.charger_status.toLowerCase() === 'stopping') {
+          const lastUpdate = new Date(session.modified_date);
+          const now = new Date();
+          const diffSeconds = (now.getTime() - lastUpdate.getTime()) / 1000;
+          
+          if (diffSeconds > 30) { // 30 seconds timeout
+              logger.warn(`Session ${sessionId} stuck in stopping state for ${diffSeconds}s. Forcing completion.`);
+              
+              session.charger_status = 'Completed';
+              session.stop_time = now;
+              session.stop_reason = 'ForceStop_Timeout';
+              
+               // Ensure price/cost is final
+              if (!session.consumed_amount) session.consumed_amount = session.price || 0;
+              
+              await session.save();
+              
+              return {
+                  status: 'stopped_timeout',
+                  message: 'Session force stopped (Timeout)'
+              };
+          }
+      }
+
       if (['completed', 'failed', 'stopped'].includes(session.charger_status)) {
          throw new Error('Session already ended');
+      }
+
+      // 0. Check Station Status First
+      const station = await Charger.findOne({ charger_id: session.charger_id });
+      let isOffline = !station || station.status === 'offline';
+
+      if (isOffline) {
+          logger.warn(`Station ${session.charger_id} is offline. Forcing session stop.`);
+          
+          // Force Stop Logic
+          session.charger_status = 'Completed';
+          session.stop_time = new Date(); // Update stop_time
+          session.stop_reason = 'ForceStop_Offline';
+          
+          // Ensure price/cost is final (fallback to last known)
+          if (!session.consumed_amount) session.consumed_amount = session.price || 0;
+          
+          await session.save();
+          
+          return {
+              status: 'stopped_offline',
+              message: 'Session force stopped (Charger Offline)'
+          };
       }
 
       // Publish RemoteStopTransaction
@@ -328,8 +377,19 @@ export class ChargingService {
   static async getHistory(userId: string) {
     // Find all sessions for this user, sorted by date desc
     const sessions = await ChargingSession.find({ email_id: userId })
-      .sort({ created_date: -1 });
-    return sessions;
+      .sort({ created_date: -1 })
+      .lean();
+
+    // Enrich with station name
+    const enrichedSessions = await Promise.all(sessions.map(async (session: any) => {
+        const charger = await Charger.findOne({ charger_id: session.charger_id }).select('name').lean();
+        return {
+            ...session,
+            station_name: charger ? charger.name : 'Unknown Station'
+        };
+    }));
+
+    return enrichedSessions;
   }
 
   static async getSessionDetails(userId: string, sessionId: string) {

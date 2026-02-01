@@ -8,24 +8,31 @@ const redis = shared_1.RedisService.getInstance();
 const paymentService = new payment_service_1.PaymentService();
 class ChargingService {
     static async startSession(userId, stationId, connectorId, amount, paymentDetails) {
+        logger.info(`[StartSession] Request for User: ${userId}, Station: ${stationId}, Connector: ${connectorId}`);
         try {
             // 1. Validate User
             const user = await shared_1.User.findOne({ email_id: userId });
             if (!user) {
+                logger.error(`[StartSession] User not found: ${userId}`);
                 throw new Error('User not found');
             }
+            logger.info(`[StartSession] User found: ${user.user_id}`);
             // 1b. Verify Lock
             const lockKey = `lock:${stationId}:${connectorId}`;
             const existingLock = await redis.get(lockKey);
             if (existingLock && existingLock !== userId) {
+                logger.warn(`[StartSession] Connector ${stationId}:${connectorId} is reserved by ${existingLock}, not ${userId}`);
                 throw new Error('Connector is reserved by another user');
             }
+            logger.info(`[StartSession] Lock verified (Held by user or free)`);
             // 2. Validate Payment OR Balance
             let isDirectPayment = false;
             if (paymentDetails) {
+                logger.info(`[StartSession] Verifying payment: ${paymentDetails.paymentId}`);
                 // Verify Razorpay Payment
                 const isValid = await paymentService.verifyPayment(paymentDetails.orderId, paymentDetails.paymentId, paymentDetails.signature);
                 if (!isValid) {
+                    logger.error(`[StartSession] Invalid payment signature`);
                     throw new Error('Invalid payment signature');
                 }
                 isDirectPayment = true;
@@ -52,15 +59,20 @@ class ChargingService {
             else {
                 // Fallback to Wallet Check
                 if (user.wallet_bal < amount) {
+                    logger.error(`[StartSession] Insufficient wallet balance: ${user.wallet_bal} < ${amount}`);
                     throw new Error('Insufficient wallet balance');
                 }
+                logger.info(`[StartSession] Wallet balance sufficient`);
             }
             // 3. Validate Station
             const station = await shared_1.Charger.findOne({ charger_id: stationId });
             if (!station) {
+                logger.error(`[StartSession] Station not found: ${stationId}`);
                 throw new Error('Station not found');
             }
+            logger.info(`[StartSession] Station found: ${stationId}, Status: ${station.status}`);
             if (station.status === 'offline') {
+                logger.warn(`Station ${stationId} is marked offline in DB. Blocking startSession.`);
                 throw new Error('Station is offline');
             }
             // 3. Create Session Record (Pending)
@@ -83,7 +95,8 @@ class ChargingService {
                 unit_consumed: 0,
                 consumed_amount: 0,
                 price: 0,
-                unit_price: 0, // Should fetch from tariff?
+                unit_price: station.price_per_kwh || 15.0, // Default to 15 if not set
+                amount_to_charge: amount, // Save amount to charge for SOC simulation
                 created_date: new Date(),
                 modified_date: new Date(),
                 stopPending: false,
@@ -172,9 +185,6 @@ class ChargingService {
         if (!connector) {
             throw new Error('Connector not found');
         }
-        if (connector.status !== 'Available') {
-            throw new Error(`Connector is ${connector.status}`);
-        }
         // Check for Lock
         const lockKey = `lock:${stationId}:${connectorId}`;
         const existingLock = await redis.get(lockKey);
@@ -183,6 +193,36 @@ class ChargingService {
         }
         // Set Lock (TTL 5 minutes)
         await redis.set(lockKey, userId, 300);
+        // If locked by current user, we ALLOW 'Preparing' status.
+        // This handles the case where the user entered the page (triggering Preparing)
+        // and then swipes to start.
+        if (connector.status === 'Preparing' && existingLock === userId) {
+            logger.info(`Allowing 'Preparing' status for user ${userId} on ${stationId}:${connectorId} (Self-Locked)`);
+        }
+        else if (connector.status === 'Charging') {
+            // Check if this user owns the active session on this connector
+            const activeSession = await shared_1.ChargingSession.findOne({
+                charger_id: stationId,
+                connector_id: Number(connectorId),
+                email_id: userId,
+                charger_status: { $in: ['Charging', 'SuspendedEV', 'SuspendedEVSE'] }
+            });
+            if (activeSession) {
+                logger.info(`User ${userId} attempting to access own active session on ${stationId}:${connectorId}`);
+                return {
+                    allowed: false,
+                    activeSession: true,
+                    sessionId: activeSession.session_id,
+                    message: 'Active session found'
+                };
+            }
+            else {
+                throw new Error(`Connector is ${connector.status}`);
+            }
+        }
+        else if (connector.status !== 'Available') {
+            throw new Error(`Connector is ${connector.status}`);
+        }
         // Trigger DataTransfer "Preparing" as requested
         // This sends [2, requestId, "DataTransfer", payload] to charger via OCPP Server
         const commandPayload = {

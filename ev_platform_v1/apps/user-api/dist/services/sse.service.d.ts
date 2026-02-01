@@ -6,5 +6,6 @@ export declare class SseService {
     static addWsClient(ws: WebSocket, userId: string): string;
     static sendToUser(userId: string, event: string, data: any): void;
     static broadcast(event: string, data: any): void;
+    static startHeartbeat(intervalMs?: number): void;
     static addClient(res: Response, userId: string): string;
 }

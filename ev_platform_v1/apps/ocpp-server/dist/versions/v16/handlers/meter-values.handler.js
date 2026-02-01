@@ -12,13 +12,20 @@ async function handleMeterValues(connection, payload) {
             for (const mv of meterValue) {
                 const timestamp = mv.timestamp;
                 const sampledValues = mv.sampledValue || [];
-                const voltage = getValue(sampledValues, 'Voltage');
-                const currentImport = getValue(sampledValues, 'Current.Import');
-                const powerImport = getValue(sampledValues, 'Power.Active.Import');
-                const energyRegister = getValue(sampledValues, 'Energy.Active.Import.Register');
-                const frequency = getValue(sampledValues, 'Frequency');
-                const powerFactor = getValue(sampledValues, 'Power.Factor');
-                const soc = getValue(sampledValues, 'SoC');
+                const voltageSample = getSample(sampledValues, 'Voltage');
+                const currentImportSample = getSample(sampledValues, 'Current.Import');
+                const powerImportSample = getSample(sampledValues, 'Power.Active.Import');
+                const energyRegisterSample = getSample(sampledValues, 'Energy.Active.Import.Register');
+                const frequencySample = getSample(sampledValues, 'Frequency');
+                const powerFactorSample = getSample(sampledValues, 'Power.Factor');
+                const socSample = getSample(sampledValues, 'SoC');
+                const voltage = voltageSample?.value;
+                const currentImport = currentImportSample?.value;
+                const powerImport = powerImportSample?.value;
+                const energyRegister = energyRegisterSample?.value;
+                const frequency = frequencySample?.value;
+                const powerFactor = powerFactorSample?.value;
+                const soc = socSample?.value;
                 // Create MeterValue Document matching the requested structure
                 try {
                     await shared_1.MeterValue.create({
@@ -45,34 +52,72 @@ async function handleMeterValues(connection, payload) {
                     logger.error('Failed to save MeterValue', err);
                 }
                 // Update Session Logic
+                let shouldSave = false;
+                if (soc) {
+                    session.soc = parseFloat(soc);
+                    shouldSave = true;
+                }
                 if (energyRegister) {
                     const currentEnergy = parseFloat(energyRegister);
                     if (!isNaN(currentEnergy)) {
-                        // Update unit_consumed and current_meter_value
-                        session.unit_consumed = Math.max(0, currentEnergy - session.start_meter_value);
+                        const unit = energyRegisterSample?.unit || 'Wh';
+                        const rawDelta = Math.max(0, currentEnergy - session.start_meter_value);
+                        // Normalize delta to Wh for storage consistency
+                        let deltaWh = rawDelta;
+                        if (unit.toLowerCase() === 'kwh' || unit.toLowerCase() === 'kw') {
+                            deltaWh = rawDelta * 1000;
+                        }
+                        // Update unit_consumed (Always in Wh) and current_meter_value (Raw)
+                        session.unit_consumed = deltaWh;
                         session.current_meter_value = currentEnergy;
                         // Update Cost based on unit_price
                         if (session.unit_price) {
-                            session.consumed_amount = session.unit_consumed * session.unit_price;
+                            // Cost calculation uses kWh
+                            const kwhConsumption = deltaWh / 1000.0;
+                            session.consumed_amount = kwhConsumption * session.unit_price;
                             session.price = session.consumed_amount;
                         }
-                        await session.save();
+                        shouldSave = true;
                     }
+                }
+                // Fallback: If SoC is not provided by charger, calculate it based on amount_to_charge (Simulation)
+                if (!session.soc && session.amount_to_charge && session.unit_price && session.unit_price > 0) {
+                    const maxEnergy = session.amount_to_charge / session.unit_price; // kWh
+                    if (maxEnergy > 0) {
+                        const currentKwh = session.unit_consumed / 1000.0;
+                        let calculatedSoc = (currentKwh / maxEnergy) * 100;
+                        // Clamp 0-100
+                        if (calculatedSoc > 100)
+                            calculatedSoc = 100;
+                        if (calculatedSoc < 0)
+                            calculatedSoc = 0;
+                        session.soc = parseFloat(calculatedSoc.toFixed(1));
+                        shouldSave = true;
+                    }
+                }
+                if (shouldSave) {
+                    await session.save();
                 }
                 // Publish Progress
                 try {
                     const rabbit = shared_1.RabbitMQService.getInstance();
+                    // Normalize Power to W (for Frontend)
+                    let powerForApp = powerImport ? parseFloat(powerImport) : 0;
+                    const powerUnit = powerImportSample?.unit || 'W';
+                    if (powerUnit.toLowerCase() === 'kw') {
+                        powerForApp = powerForApp * 1000;
+                    }
                     // Use email_id as userId because User-API uses email for WS identification
                     await rabbit.publish('charging_progress', {
                         sessionId: session.session_id,
                         userId: session.email_id,
                         transactionId,
-                        energyConsumed: session.unit_consumed,
-                        power: powerImport ? parseFloat(powerImport) : 0,
+                        energyConsumed: session.unit_consumed, // Already normalized to Wh
+                        power: powerForApp,
                         voltage: voltage ? parseFloat(voltage) : 0,
                         current: currentImport ? parseFloat(currentImport) : 0,
                         cost: session.consumed_amount || 0,
-                        soc: soc ? parseFloat(soc) : null,
+                        soc: session.soc || 0,
                         timestamp: new Date()
                     });
                 }
@@ -87,10 +132,9 @@ async function handleMeterValues(connection, payload) {
     }
     return {};
 }
-function getValue(sampledValues, measurand) {
+function getSample(sampledValues, measurand) {
     if (!sampledValues)
         return null;
-    const sample = sampledValues.find((s) => (s.measurand || 'Energy.Active.Import.Register') === measurand);
-    return sample ? String(sample.value) : null;
+    return sampledValues.find((s) => (s.measurand || 'Energy.Active.Import.Register') === measurand) || null;
 }
 //# sourceMappingURL=meter-values.handler.js.map
