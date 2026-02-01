@@ -38,9 +38,11 @@ const TripStopSchema = new Schema({
   name: { type: String },
   address: { type: String },
   location: {
-    address: { type: String },
-    lat: { type: Number },
-    lng: { type: Number },
+    type: new Schema({
+      address: { type: String },
+      lat: { type: Number },
+      lng: { type: Number },
+    }, { _id: false })
   }
 }, { _id: false });
 
