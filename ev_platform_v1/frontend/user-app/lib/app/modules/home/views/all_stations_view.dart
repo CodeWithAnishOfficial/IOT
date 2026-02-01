@@ -313,26 +313,30 @@ class AllStationsView extends StatelessWidget {
 
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isAvailable
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isAvailable ? "Open 24 Hours" : "Closed",
-                          style: GoogleFonts.poppins(
-                            color: isAvailable ? Colors.green : Colors.red,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isAvailable
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isAvailable ? "Open 24 Hours" : "Closed",
+                            style: GoogleFonts.poppins(
+                              color: isAvailable ? Colors.green : Colors.red,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 4),
                       const Spacer(),
                       Text(
                         "${station.distance?.toStringAsFixed(1) ?? '--'} km",

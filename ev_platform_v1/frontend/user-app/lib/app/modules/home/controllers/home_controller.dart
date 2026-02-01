@@ -711,7 +711,11 @@ class HomeController extends GetxController {
         final sessionId = data['session_id']?.toString() ?? '';
         final connectorId = data['connector_id']?.toString() ?? 'UNKNOWN';
         // If amount is missing (restored session), use Infinity to prevent auto-stop
-        final amount = (data['amount'] as num?)?.toDouble() ?? double.infinity;
+        // Backend stores it as 'amount_to_charge'
+        final amount =
+            (data['amount_to_charge'] as num?)?.toDouble() ??
+            (data['amount'] as num?)?.toDouble() ??
+            double.infinity;
 
         print("Found active session: $sessionId");
 
@@ -882,7 +886,7 @@ class HomeController extends GetxController {
 
       // Using User API Port 3001
       // Use public IP for all platforms for consistency
-      final wsUrl = "ws://192.168.1.8:3001?token=$token";
+      final wsUrl = "ws://64.227.181.90:3001?token=$token";
 
       _wsService = WebSocketService(wsUrl);
 
@@ -945,7 +949,8 @@ class HomeController extends GetxController {
 
     final sessionId = payload['sessionId']?.toString();
     // Handle key variation (connector_id vs connectorId)
-    final connectorId = payload['connector_id']?.toString() ??
+    final connectorId =
+        payload['connector_id']?.toString() ??
         payload['connectorId']?.toString();
 
     if (sessionId != null && connectorId != null) {
@@ -986,17 +991,17 @@ class HomeController extends GetxController {
     print("WS Session Completed Event: $payload");
     // ChargingController's own WS listener handles the logic and view transition.
     // This is just a fallback to ensure the Home View card is cleared.
-    
-    final sessionId = payload['sessionId']?.toString() ?? payload['session_id']?.toString();
-    
+
+    final sessionId =
+        payload['sessionId']?.toString() ?? payload['session_id']?.toString();
+
     if (currentSession.value != null &&
         currentSession.value?.sessionId == sessionId) {
-        
-       // Ensure status is marked completed so the 'ever' listener fires
-       if (currentSession.value?.status.value != "Completed") {
-           currentSession.value?.status.value = "Completed";
-       }
-       currentSession.value = null;
+      // Ensure status is marked completed so the 'ever' listener fires
+      if (currentSession.value?.status.value != "Completed") {
+        currentSession.value?.status.value = "Completed";
+      }
+      currentSession.value = null;
     }
   }
 
@@ -1034,22 +1039,30 @@ class HomeController extends GetxController {
           if (cIndex != -1) {
             connectors[cIndex] = connectors[cIndex].copyWith(status: status);
             station = station.copyWith(connectors: connectors);
-            
+
             // Derive Station Status from Connectors
             // If any connector is Available, station is Online
             // Else if all are Faulted/Offline, station is Offline
             // Else Busy/Charging
-            
-            bool anyAvailable = connectors.any((c) => c.status.toLowerCase() == 'available' || c.status.toLowerCase() == 'preparing');
-            bool allFaulted = connectors.every((c) => c.status.toLowerCase() == 'faulted' || c.status.toLowerCase() == 'unavailable');
-            
+
+            bool anyAvailable = connectors.any(
+              (c) =>
+                  c.status.toLowerCase() == 'available' ||
+                  c.status.toLowerCase() == 'preparing',
+            );
+            bool allFaulted = connectors.every(
+              (c) =>
+                  c.status.toLowerCase() == 'faulted' ||
+                  c.status.toLowerCase() == 'unavailable',
+            );
+
             if (anyAvailable) {
-                station = station.copyWith(status: 'online');
+              station = station.copyWith(status: 'online');
             } else if (allFaulted) {
-                station = station.copyWith(status: 'offline');
+              station = station.copyWith(status: 'offline');
             } else {
-                // All busy/charging
-                station = station.copyWith(status: 'busy');
+              // All busy/charging
+              station = station.copyWith(status: 'busy');
             }
           }
         }
@@ -2327,7 +2340,7 @@ class HomeController extends GetxController {
       // Try loading cached data first
       bool loadedFromCache = await _loadCachedStations();
       if (!loadedFromCache) {
-         _loadMockData(latitude, longitude);
+        _loadMockData(latitude, longitude);
       }
 
       // Only show snackbar if not silent

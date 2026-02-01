@@ -53,6 +53,17 @@ class SseService {
             }
         });
     }
+    static startHeartbeat(intervalMs = 30000) {
+        setInterval(() => {
+            this.clients.forEach(client => {
+                if (client.type === 'ws') {
+                    if (client.ws.readyState === ws_1.default.OPEN) {
+                        client.ws.send(JSON.stringify({ event: 'ping', data: {} }));
+                    }
+                }
+            });
+        }, intervalMs);
+    }
     // Backward compatibility
     static addClient(res, userId) {
         return this.addSseClient(res, userId);

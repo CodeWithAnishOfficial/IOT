@@ -165,6 +165,11 @@ class OCPPServer {
     processMessage(connection, message) {
         try {
             const msgString = message.toString();
+            // Keep connection alive on any activity
+            if (connection) {
+                connection.isAlive = true;
+                connection.lastHeartbeat = new Date();
+            }
             try {
                 const parsed = JSON.parse(msgString);
                 this.logger.info(`[${connection.id}] >>`, parsed);

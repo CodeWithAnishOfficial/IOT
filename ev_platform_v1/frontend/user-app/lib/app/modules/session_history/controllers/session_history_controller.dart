@@ -22,6 +22,13 @@ class SessionHistoryController extends GetxController {
     fetchSessions();
     connectToSse();
   }
+  
+  @override
+  void onReady() {
+    super.onReady();
+    // Re-fetch when view becomes ready to ensure data is fresh
+    fetchSessions();
+  }
 
   Future<void> fetchSessions() async {
     try {
@@ -32,15 +39,18 @@ class SessionHistoryController extends GetxController {
         final List<dynamic> data = response['data'];
         final allSessions = data.map((e) => ChargingSession.fromJson(e)).toList();
         
-        // Filter: Only show completed/stopped/failed sessions
-        // Exclude 'Charging', 'Pending', 'Started', etc.
+        // Filter: Only show completed/stopped/failed sessions, including 'stopping'
         sessions.value = allSessions.where((s) {
            final st = s.status.toLowerCase();
            return st == 'completed' || 
                   st == 'finished' || 
                   st == 'stopped' || 
+                  st == 'stopping' ||
                   st == 'failed';
         }).toList();
+        
+        // Ensure strictly sorted by start time (newest first)
+        sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
       }
     } catch (e) {
       print('Error fetching sessions: $e');
@@ -98,17 +108,19 @@ class SessionHistoryController extends GetxController {
               try {
                 final jsonData = json.decode(jsonStr);
                 
-                // Update specific session if sessionId is present
-                if (jsonData['sessionId'] != null) {
-                  final sId = jsonData['sessionId'].toString();
+                // Update specific session if sessionId is present (Handle both camelCase and snake_case)
+                final sId = jsonData['sessionId']?.toString() ?? jsonData['session_id']?.toString();
+                
+                if (sId != null) {
                   final index = sessions.indexWhere((s) => s.sessionId == sId);
                   
                   if (index != -1) {
                     final oldSession = sessions[index];
                     
                     String newStatus = oldSession.status;
-                    if (jsonData['status'] != null) {
-                       newStatus = jsonData['status'];
+                    final statusVal = jsonData['status'] ?? jsonData['charger_status'];
+                    if (statusVal != null) {
+                       newStatus = statusVal;
                        // Update banner if it's the latest relevant status
                        currentStatus.value = 'Status: $newStatus';
                     }
@@ -116,30 +128,57 @@ class SessionHistoryController extends GetxController {
                     double newEnergy = oldSession.totalEnergy;
                     if (jsonData['energyConsumed'] != null) {
                       newEnergy = (jsonData['energyConsumed'] as num).toDouble();
+                    } else if (jsonData['unit_consumed'] != null) {
+                      newEnergy = (jsonData['unit_consumed'] as num).toDouble();
                     }
                     
+                    double newCost = oldSession.cost;
+                    if (jsonData['cost'] != null) {
+                       newCost = (jsonData['cost'] as num).toDouble();
+                    } else if (jsonData['consumed_amount'] != null) {
+                       newCost = (jsonData['consumed_amount'] as num).toDouble();
+                    }
+                    
+                    DateTime? newStopTime = oldSession.stopTime;
+                    if (jsonData['stop_time'] != null) {
+                       newStopTime = DateTime.parse(jsonData['stop_time']);
+                    } else if (jsonData['modified_date'] != null && 
+                              (newStatus.toLowerCase() == 'completed' || newStatus.toLowerCase() == 'finished')) {
+                       // Fallback to modified_date if stop_time is missing but status is completed
+                       newStopTime = DateTime.parse(jsonData['modified_date']);
+                    }
+
+                    double? newMeterStop = oldSession.meterStop;
+                    if (jsonData['meter_stop'] != null) {
+                       newMeterStop = (jsonData['meter_stop'] as num).toDouble();
+                    }
+
                     // Replace with new object to trigger UI update for that item
                     sessions[index] = ChargingSession(
                       sessionId: oldSession.sessionId,
                       transactionId: oldSession.transactionId,
                       chargerId: oldSession.chargerId,
+                      stationName: oldSession.stationName,
                       connectorId: oldSession.connectorId,
                       userId: oldSession.userId,
                       startTime: oldSession.startTime,
-                      stopTime: oldSession.stopTime,
+                      stopTime: newStopTime,
                       meterStart: oldSession.meterStart,
-                      meterStop: oldSession.meterStop,
+                      meterStop: newMeterStop,
                       totalEnergy: newEnergy,
-                      cost: oldSession.cost, // Assuming cost isn't sent in progress, or add logic if it is
+                      cost: newCost,
                       status: newStatus,
                     );
                   } else {
-                    // New session? Refresh list
-                     if (jsonData['status'] == 'active') {
+                    // New session or not in list?
+                    // If it's a "Completed" event for a session we don't have (maybe because it was 'active' and filtered out)
+                    // We should trigger a fetch
+                    final statusVal = jsonData['status'] ?? jsonData['charger_status'];
+                    if (statusVal != null && ['completed', 'stopped', 'finished'].contains(statusVal.toString().toLowerCase())) {
                         fetchSessions();
-                     }
+                    }
                   }
-                } else if (jsonData['status'] != null) {
+                } else if (jsonData['status'] != null || jsonData['charger_status'] != null) {
                    // Fallback for global status updates without sessionId
                    currentStatus.value = 'Status: ${jsonData['status']}';
                    fetchSessions();

@@ -14,8 +14,18 @@ export declare class ChargingService {
     }>;
     static checkConnectorStatus(stationId: string, connectorId: string | number, userId: string): Promise<{
         allowed: boolean;
+        activeSession: boolean;
+        sessionId: number;
+        message: string;
+        status?: undefined;
+        lock?: undefined;
+    } | {
+        allowed: boolean;
         status: string;
         lock: string;
+        activeSession?: undefined;
+        sessionId?: undefined;
+        message?: undefined;
     }>;
     static releaseLock(stationId: string, connectorId: string | number, userId: string): Promise<{
         released: boolean;
@@ -77,6 +87,7 @@ export declare class ChargingService {
         lastWsPing?: Date;
         transactionState?: string;
         stop_reason?: string;
+        soc?: number;
         auth_tag?: string;
         _id: import("mongoose").Types.ObjectId;
         $locals: Record<string, unknown>;

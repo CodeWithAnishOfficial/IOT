@@ -84,7 +84,7 @@ class SessionDetailView extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          DateFormat('dd MMM yyyy, HH:mm').format(session.startTime),
+                          DateFormat('dd MMM yyyy, hh:mm a').format(session.startTime.toLocal()),
                           style: GoogleFonts.poppins(
                             color: Colors.grey,
                             fontSize: 12,
@@ -103,13 +103,25 @@ class SessionDetailView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.grey.withOpacity(0.2)),
                   ),
-                  child: Text(
-                    "ID: ${session.chargerId}",
-                    style: GoogleFonts.poppins(
-                      color: theme.textTheme.bodyMedium?.color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        session.stationName,
+                        style: GoogleFonts.poppins(
+                          color: theme.textTheme.bodyMedium?.color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        "ID: ${session.chargerId}",
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -203,9 +215,9 @@ class SessionDetailView extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildSummaryRow(theme, "Duration", durationStr),
                   const SizedBox(height: 16),
-                  _buildSummaryRow(theme, "Start Time", DateFormat('HH:mm').format(session.startTime)),
+                  _buildSummaryRow(theme, "Start Time", DateFormat('dd MMM yyyy, hh:mm a').format(session.startTime.toLocal())),
                    const SizedBox(height: 16),
-                  _buildSummaryRow(theme, "End Time", session.stopTime != null ? DateFormat('HH:mm').format(session.stopTime!) : "-"),
+                  _buildSummaryRow(theme, "End Time", session.stopTime != null ? DateFormat('dd MMM yyyy, hh:mm a').format(session.stopTime!.toLocal()) : "-"),
                   
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),

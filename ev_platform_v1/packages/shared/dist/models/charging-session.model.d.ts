@@ -41,6 +41,7 @@ export interface IChargingSession extends Document {
     lastWsPing?: Date;
     transactionState?: string;
     stop_reason?: string;
+    soc?: number;
     auth_tag?: string;
 }
 export declare const ChargingSession: mongoose.Model<IChargingSession, {}, {}, {}, mongoose.Document<unknown, {}, IChargingSession, {}, mongoose.DefaultSchemaOptions> & IChargingSession & Required<{

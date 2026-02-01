@@ -78,6 +78,7 @@ const ChargingSessionSchema = new mongoose_1.Schema({
     lastWsPing: { type: Date },
     transactionState: { type: String },
     stop_reason: { type: String },
+    soc: { type: Number, default: 0 },
     auth_tag: { type: String }
 });
 // Middleware to update modified_date
