@@ -323,7 +323,9 @@ class HomeController extends GetxController {
           });
 
           // Navigate directly
-          Get.to(() => ChargingView(controller: chargingController));
+          // Get.to(() => ChargingView(controller: chargingController));
+          if (Get.isDialogOpen == true) Get.back();
+          Get.snackbar("Active Session", "You have an active session. Check the home screen.");
           return;
         }
       }
@@ -506,7 +508,9 @@ class HomeController extends GetxController {
         });
 
         // 2. Navigate to View (Push, don't replace, so Back works)
-        Get.to(() => ChargingView(controller: chargingController));
+        // Removed auto-navigation as per user request ("don't need to enter active session page")
+        // The ActiveSessionCard will appear on Home Screen instead.
+        // Get.to(() => ChargingView(controller: chargingController));
       } else {
         throw Exception(res['message'] ?? "Failed to start session");
       }
