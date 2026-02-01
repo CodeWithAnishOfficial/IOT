@@ -169,17 +169,27 @@ class _ChargingViewState extends State<ChargingView> {
                                           ],
                                         ),
                                         const SizedBox(height: 8),
-                                        Obx(() => Text(
-                                            widget.controller.status.value,
+                                        Obx(() {
+                                          final status = widget.controller.status.value;
+                                          Color statusColor = AppColors.success;
+                                          
+                                          if (status == "Preparing") {
+                                            statusColor = Colors.orange;
+                                          } else if (status == "Stopping") {
+                                            statusColor = AppColors.error;
+                                          }
+                                          
+                                          return Text(
+                                            status,
                                             style: GoogleFonts.poppins(
-                                              color: AppColors.success,
+                                              color: statusColor,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 16,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
+                                          );
+                                        }),
                                         const SizedBox(height: 4),
                                         if (widget.controller.status.value == "Charging")
                                           _ThreeBlinkingDots(),
