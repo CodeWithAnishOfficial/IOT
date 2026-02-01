@@ -22,7 +22,7 @@ class ChargingController extends GetxController {
   final voltage = 0.0.obs; // V
   final currentAmps = 0.0.obs; // A
   final soc = 0.0.obs; // Battery %
-  final status = "Charging".obs;
+  final status = "Preparing".obs;
   
   // Static Charger Details
   final stationIdLabel = "ID: ...".obs;
@@ -98,6 +98,11 @@ class ChargingController extends GetxController {
                   _calculateSoC();
               }
 
+              // Update Status
+              if (data['charger_status'] != null) {
+                   status.value = data['charger_status'];
+              }
+
               // Check if session is already completed (e.g. resumed after stop)
               if (data['charger_status'] == 'Completed' || data['charger_status'] == 'completed') {
                   print("Session is already completed. Finalizing...");
@@ -118,7 +123,7 @@ class ChargingController extends GetxController {
 
   void startSession() {
     // 1. Start Local Timer for Duration (Visual)
-    status.value = "Charging";
+    // status.value = "Charging"; // Removed: Don't force charging status
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final now = DateTime.now();
