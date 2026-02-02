@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-
   # ---------- INFRA ----------
   redis:
     image: redis:alpine
@@ -140,9 +139,8 @@ services:
     build:
       context: ../../charger
       dockerfile: Dockerfile
-    depends_on:
-      - ocpp-server
-    networks: [ev-network]
+    environment:
+      OCPP_SERVER_URL: ws://64.227.181.90:9220
     profiles: [simulation, all]
 
 networks:
