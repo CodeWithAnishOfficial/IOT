@@ -132,6 +132,16 @@ services:
     networks: [ev-network]
     profiles: [frontend, all]
 
+  # ---------- SIMULATION ----------
+  charger-sim:
+    build:
+      context: ../../charger
+      dockerfile: Dockerfile
+    depends_on:
+      - ocpp-server
+    networks: [ev-network]
+    profiles: [simulation, all]
+
 networks:
   ev-network:
     driver: bridge
